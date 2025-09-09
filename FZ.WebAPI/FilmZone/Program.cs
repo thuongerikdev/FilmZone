@@ -11,37 +11,59 @@ namespace FZ.WebAPI
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            //new DotNetEnv.EnvLoader().Load();
-            builder.Configuration.AddEnvironmentVariables(); // mặc định đã có
-
-
-
+            // Load env
+            builder.Configuration.AddEnvironmentVariables();
             try
             {
-                // chỉ load nếu file tồn tại
                 var envPath = Path.Combine(AppContext.BaseDirectory, ".env");
-                if (File.Exists(envPath))
-                    DotNetEnv.Env.Load(envPath);
+                if (File.Exists(envPath)) DotNetEnv.Env.Load(envPath);
             }
-            catch { /* ignore */ }
+            catch { }
 
-            // Modules
+            // ===== KESTREL: HTTP ONLY trên Fly (Production), Dev thì giữ cấu hình HTTPS nếu có =====
+            builder.WebHost.ConfigureKestrel((context, options) =>
+            {
+                if (context.HostingEnvironment.IsDevelopment())
+                {
+                    // cho phép dùng endpoints trong appsettings.Development.json (nếu có)
+                    options.Configure(context.Configuration.GetSection("Kestrel"));
+                }
+                else
+                {
+                    // ép chỉ nghe HTTP:8080 trong container
+                    options.ListenAnyIP(8080);
+                }
+            });
+
+            // Modules & Services
             builder.ConfigureAuth(typeof(Program).Namespace);
 
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
 
-            // Redis cache (tuỳ dùng)
-            builder.Services.AddStackExchangeRedisCache(options =>
+            // Redis
+            builder.Services.AddStackExchangeRedisCache(opt =>
             {
-                options.Configuration = builder.Configuration["Redis:ConnectionString"]; // ✅
-                options.InstanceName = "SampleInstance";
+                // Env: Redis__ConnectionString => "Redis:ConnectionString"
+                opt.Configuration = builder.Configuration["Redis:ConnectionString"];
+                opt.InstanceName = "FilmZone";
+            });
+
+            // CORS cho FE
+            builder.Services.AddCors(opt =>
+            {
+                var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+                               ?? new[] { builder.Configuration["Frontend:AppUrl"] ?? "http://localhost:5173" };
+                opt.AddPolicy("FE", p => p.WithOrigins(origins)
+                                          .AllowAnyHeader()
+                                          .AllowAnyMethod()
+                                          .AllowCredentials());
             });
 
             // Swagger
             builder.Services.AddSwaggerGen(option =>
             {
-                option.SwaggerDoc("v1", new OpenApiInfo { Title = "Demo API", Version = "v1" });
+                option.SwaggerDoc("v1", new OpenApiInfo { Title = "FilmZone API", Version = "v1" });
                 option.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
                 {
                     In = ParameterLocation.Header,
@@ -55,9 +77,7 @@ namespace FZ.WebAPI
                 {
                     {
                         new OpenApiSecurityScheme
-                        {
-                            Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
-                        },
+                        { Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" } },
                         Array.Empty<string>()
                     }
                 });
@@ -70,25 +90,33 @@ namespace FZ.WebAPI
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
-            app.UseForwardedHeaders();
 
-            app.UseHttpsRedirection();
+            // Nhận X-Forwarded-* từ Fly edge
+            var fwd = new ForwardedHeadersOptions
+            {
+                ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+            };
+            fwd.KnownNetworks.Clear();
+            fwd.KnownProxies.Clear();
+            app.UseForwardedHeaders(fwd);
 
+            // KHÔNG redirect HTTPS trong container (Fly đã terminate TLS bên ngoài)
+            if (app.Environment.IsDevelopment())
+            {
+                app.UseHttpsRedirection();
+            }
 
             app.UseRouting();
 
-            // CORS cho FE (gửi cookie)
             app.UseCors("FE");
 
-            // Map cookie -> Authorization header Bearer (phải trước Authenticate)
+            // Map cookie -> Authorization header
             app.UseMiddleware<CookieJwtMiddleware>();
 
             app.UseAuthentication();
             app.UseAuthorization();
 
             app.MapControllers();
-
-
 
             app.Run();
         }
