@@ -33,6 +33,19 @@ RUN dotnet publish "FZ.WebAPI.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-# (tùy chọn) ép Kestrel lắng nghe 8080
-ENV ASPNETCORE_URLS=http://+:8080
-ENTRYPOINT ["dotnet", "FZ.WebAPI.dll"]
+
+# Tạo entrypoint: nếu có PFX thì bật HTTPS:8081, không thì chỉ HTTP:8080
+RUN mkdir -p /https \
+ && printf '#!/bin/sh\nset -e\n\
+if [ -n "$KESTREL_PFX_BASE64" ] && [ -n "$KESTREL_PFX_PASSWORD" ]; then \n\
+  echo "$KESTREL_PFX_BASE64" | base64 -d > /https/server.pfx; \n\
+  export ASPNETCORE_Kestrel__Certificates__Default__Path=/https/server.pfx; \n\
+  export ASPNETCORE_Kestrel__Certificates__Default__Password="$KESTREL_PFX_PASSWORD"; \n\
+  export ASPNETCORE_URLS="http://+:8080;https://+:8081"; \n\
+else \n\
+  export ASPNETCORE_URLS="http://+:8080"; \n\
+fi\n\
+exec dotnet FZ.WebAPI.dll\n' > /entrypoint.sh \
+ && chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
