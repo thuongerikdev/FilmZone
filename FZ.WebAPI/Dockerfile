@@ -13,11 +13,11 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["FilmZone/FZ.WebAPI.csproj", "FilmZone/"]
-COPY ["../Services/Auth/FZ.Auth.ApplicationService/FZ.Auth.ApplicationService.csproj", "Services/Auth/FZ.Auth.ApplicationService/"]
-COPY ["../Services/Shared/FZ.Constant/FZ.Constant.csproj", "Services/Shared/FZ.Constant/"]
-COPY ["../Services/Auth/FZ.Auth.Dtos/FZ.Auth.Dtos.csproj", "Services/Auth/FZ.Auth.Dtos/"]
-COPY ["../Services/Auth/FZ.Auth.Infrastructure/FZ.Auth.Infrastructure.csproj", "Services/Auth/FZ.Auth.Infrastructure/"]
-COPY ["../Services/Auth/FZ.Auth.Domain/FZ.Auth.Domain.csproj", "Services/Auth/FZ.Auth.Domain/"]
+COPY ["Services/Auth/FZ.Auth.ApplicationService/FZ.Auth.ApplicationService.csproj", "Services/Auth/FZ.Auth.ApplicationService/"]
+COPY ["Services/Shared/FZ.Constant/FZ.Constant.csproj", "Services/Shared/FZ.Constant/"]
+COPY ["Services/Auth/FZ.Auth.Dtos/FZ.Auth.Dtos.csproj", "Services/Auth/FZ.Auth.Dtos/"]
+COPY ["Services/Auth/FZ.Auth.Infrastructure/FZ.Auth.Infrastructure.csproj", "Services/Auth/FZ.Auth.Infrastructure/"]
+COPY ["Services/Auth/FZ.Auth.Domain/FZ.Auth.Domain.csproj", "Services/Auth/FZ.Auth.Domain/"]
 RUN dotnet restore "./FilmZone/FZ.WebAPI.csproj"
 COPY . .
 WORKDIR "/src/FilmZone"
