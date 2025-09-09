@@ -1,0 +1,46 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<LangVersion>latest</LangVersion>
+	  <UserSecretsId>8d594c6c-f718-4e5e-b2ad-3ab4a48831c8</UserSecretsId>
+	  <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+  </PropertyGroup>
+
+	<ItemGroup>
+		<!-- Auth / Security -->
+		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.10" />
+		<PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="8.0.10" />
+
+		<!-- EF Core -->
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.10" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.10" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.10">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+
+		<!-- Redis (đồng bộ .NET 8 để tránh lệch phiên bản) -->
+		<PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="9.0.2" />
+
+		<!-- Swagger -->
+		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+
+		<!-- Khác -->
+		<PackageReference Include="DotNetEnv" Version="3.1.1" />
+		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.20.1" />
+		<PackageReference Include="RestSharp" Version="112.1.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Services\Auth\FZ.Auth.ApplicationService\FZ.Auth.ApplicationService.csproj" />
+		<ProjectReference Include="..\Services\Auth\FZ.Auth.Domain\FZ.Auth.Domain.csproj" />
+		<ProjectReference Include="..\Services\Auth\FZ.Auth.Dtos\FZ.Auth.Dtos.csproj" />
+		<ProjectReference Include="..\Services\Auth\FZ.Auth.Infrastructure\FZ.Auth.Infrastructure.csproj" />
+		<ProjectReference Include="..\Services\Shared\FZ.Constant\FZ.Constant.csproj" />
+	</ItemGroup>
+
+	<!-- appsettings.json mặc định đã được include, không cần cấu hình thêm trừ khi bạn muốn behavior đặc biệt -->
+</Project>
