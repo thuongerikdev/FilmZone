@@ -2,14 +2,13 @@
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
 WORKDIR /app
 EXPOSE 8080
-EXPOSE 8081
 
 # --- Build stage (SDK) ---
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
-# copy csproj để restore
+# copy csproj để restore (đường dẫn tính từ context: FZ.WebAPI)
 COPY ["FilmZone/FZ.WebAPI.csproj", "FilmZone/"]
 COPY ["Services/Auth/FZ.Auth.ApplicationService/FZ.Auth.ApplicationService.csproj", "Services/Auth/FZ.Auth.ApplicationService/"]
 COPY ["Services/Shared/FZ.Constant/FZ.Constant.csproj", "Services/Shared/FZ.Constant/"]
@@ -34,18 +33,7 @@ FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 
-# Tạo entrypoint: nếu có PFX thì bật HTTPS:8081, không thì chỉ HTTP:8080
-RUN mkdir -p /https \
- && printf '#!/bin/sh\nset -e\n\
-if [ -n "$KESTREL_PFX_BASE64" ] && [ -n "$KESTREL_PFX_PASSWORD" ]; then \n\
-  echo "$KESTREL_PFX_BASE64" | base64 -d > /https/server.pfx; \n\
-  export ASPNETCORE_Kestrel__Certificates__Default__Path=/https/server.pfx; \n\
-  export ASPNETCORE_Kestrel__Certificates__Default__Password="$KESTREL_PFX_PASSWORD"; \n\
-  export ASPNETCORE_URLS="http://+:8080;https://+:8081"; \n\
-else \n\
-  export ASPNETCORE_URLS="http://+:8080"; \n\
-fi\n\
-exec dotnet FZ.WebAPI.dll\n' > /entrypoint.sh \
- && chmod +x /entrypoint.sh
+# HTTP-only trong container
+ENV ASPNETCORE_URLS=http://+:8080
 
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["dotnet", "FZ.WebAPI.dll"]
