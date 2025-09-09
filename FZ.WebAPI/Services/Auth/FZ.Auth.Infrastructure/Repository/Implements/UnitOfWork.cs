@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 
 namespace FZ.Auth.Infrastructure.Repository.Implements
 {
+
     public sealed class UnitOfWork : IUnitOfWork
     {
         private readonly AuthDbContext _db;
