@@ -2,17 +2,18 @@ name: Build & Deploy FilmZone API
 
 on:
   push:
-    branches: [ main ]          # chạy cho mọi thay đổi vào main
+    branches: [ main ]
   pull_request:
-    branches: [ main ]          # build khi có PR vào main
-  workflow_dispatch:             # cho chạy tay khi cần
+    branches: [ main ]
+  workflow_dispatch:
 
 concurrency:
   group: filmzone-api
   cancel-in-progress: true
 
 env:
-  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/filmzone
+  # IMAGE_NAME nên có prefix docker.io/ để deploy tham chiếu đúng registry
+  IMAGE_NAME: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/filmzone
 
 jobs:
   build-push-deploy:
@@ -37,6 +38,7 @@ jobs:
       - name: Build & Push Docker image
         uses: docker/build-push-action@v6
         with:
+          # Build context là FZ.WebAPI (khớp với Dockerfile)
           context: FZ.WebAPI
           file: FZ.WebAPI/Dockerfile
           push: true
@@ -49,8 +51,15 @@ jobs:
       - name: Setup flyctl
         uses: superfly/flyctl-actions/setup-flyctl@master
 
-      - name: Login to Fly.io
+      - name: Login to Fly.io (non-interactive)
         run: flyctl auth login --access-token "${FLY_API_TOKEN}"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Sanity check (optional)
+        run: |
+          flyctl auth whoami
+          flyctl status --app filmzone-api || true
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
@@ -58,7 +67,7 @@ jobs:
         run: |
           flyctl deploy \
             --app filmzone-api \
-            --image docker.io/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            --image ${{ env.IMAGE_NAME }}:${{ github.sha }} \
             --remote-only \
             --strategy immediate
         env:
