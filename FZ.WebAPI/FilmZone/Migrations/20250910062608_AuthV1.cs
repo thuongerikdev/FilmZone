@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace FZ.WebAPI.Migrations
 {
     /// <inheritdoc />
-    public partial class AuthV2 : Migration
+    public partial class AuthV1 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -54,9 +54,9 @@ namespace FZ.WebAPI.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     userName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     email = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
-                    phoneNumber = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false),
+                    phoneNumber = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: true),
                     passwordHash = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    googleSub = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    googleSub = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     isEmailVerified = table.Column<bool>(type: "bit", nullable: false),
                     status = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false),
                     tokenVersion = table.Column<int>(type: "int", nullable: false),
@@ -156,11 +156,17 @@ namespace FZ.WebAPI.Migrations
                     mfaID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     userID = table.Column<int>(type: "int", nullable: false),
-                    type = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    secret = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    type = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false),
+                    status = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false),
+                    secret = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     isEnabled = table.Column<bool>(type: "bit", nullable: false),
-                    recoveryCodes = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    updatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    label = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: true),
+                    recoveryCodes = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    enrollmentStartedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    enabledAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    lastVerifiedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    updatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -185,7 +191,8 @@ namespace FZ.WebAPI.Migrations
                     codeHash = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     createdAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     expiresAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    consumedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    consumedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    purpose = table.Column<string>(type: "nvarchar(max)", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -209,8 +216,8 @@ namespace FZ.WebAPI.Migrations
                     userID = table.Column<int>(type: "int", nullable: false),
                     firstName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     lastName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    avatar = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    gender = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false),
+                    avatar = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    gender = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: true),
                     dateOfBirth = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
@@ -333,6 +340,13 @@ namespace FZ.WebAPI.Migrations
                 schema: "auth",
                 table: "AuthMfaSecret",
                 column: "userID",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AuthMfaSecret_userID_type",
+                schema: "auth",
+                table: "AuthMfaSecret",
+                columns: new[] { "userID", "type" },
                 unique: true);
 
             migrationBuilder.CreateIndex(

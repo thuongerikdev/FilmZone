@@ -2,6 +2,7 @@
 using FZ.Auth.ApplicationService.StartUp;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.OpenApi.Models;
+using System.Text.RegularExpressions;
 
 namespace FZ.WebAPI
 {
@@ -11,56 +12,71 @@ namespace FZ.WebAPI
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Ưu tiên ENV (Fly secrets)
-            builder.Configuration.AddEnvironmentVariables();
-
-            // .env chỉ cho DEV
-            if (builder.Environment.IsDevelopment())
+            // === 1) LOAD .env (DEV) TRƯỚC: thử nhiều vị trí ===
+            try
             {
-                var envPath = Path.Combine(AppContext.BaseDirectory, ".env");
-                if (File.Exists(envPath)) DotNetEnv.Env.Load(envPath);
+                // Ưu tiên ContentRoot (thư mục project) → thường là nơi bạn đặt .env
+                var candidates = new[]
+                {
+                    builder.Environment.ContentRootPath,              // <project folder>
+                    Directory.GetCurrentDirectory(),                  // đôi khi trùng ContentRoot
+                    AppContext.BaseDirectory                          // bin/Debug/netX.Y/
+                }
+                .Where(p => !string.IsNullOrWhiteSpace(p))
+                .Select(p => Path.Combine(p!, ".env"))
+                .Distinct()
+                .ToList();
+
+                foreach (var envPath in candidates)
+                {
+                    if (File.Exists(envPath))
+                    {
+                        DotNetEnv.Env.Load(envPath);
+                        Console.WriteLine($"[BOOT] Loaded .env from: {envPath}");
+                        break;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[BOOT] .env load failed: " + ex.Message);
             }
 
-            // Kestrel: Prod (Fly) chỉ HTTP:8080, Dev muốn gì giữ ở appsettings.Development.json
-            builder.WebHost.ConfigureKestrel((ctx, opt) =>
+            // === 2) MERGE ENV VARS vào Configuration sau khi đã load .env ===
+            builder.Configuration.AddEnvironmentVariables();
+
+            // (Tuỳ chọn) In ra connection string (đã mask) để xác minh
+            try
             {
-                if (ctx.HostingEnvironment.IsDevelopment())
-                {
-                    // dev có thể cấu hình trong appsettings.Development.json nếu thích
-                    opt.Configure(ctx.Configuration.GetSection("Kestrel"));
-                }
+                var raw = builder.Configuration.GetConnectionString("Default")
+                          ?? builder.Configuration["ConnectionStrings:Default"];
+                if (string.IsNullOrWhiteSpace(raw))
+                    Console.WriteLine("[BOOT] ConnectionStrings:Default = <NULL>");
                 else
                 {
-                    opt.ListenAnyIP(8080); // PROD: HTTP only
+                    var masked = Regex.Replace(raw, @"Password=[^;]*", "Password=***", RegexOptions.IgnoreCase);
+                    Console.WriteLine("[BOOT] ConnectionStrings:Default (masked) = " + masked);
                 }
-            });
+            }
+            catch { /* ignore */ }
 
-            // Services
+            // === 3) Modules (đăng ký DbContext sẽ đọc từ Configuration ở trên) ===
             builder.ConfigureAuth(typeof(Program).Namespace);
+
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
 
-            builder.Services.AddStackExchangeRedisCache(o =>
+            // Redis cache (tuỳ dùng) - đọc Redis__ConnectionString từ env/.env
+            builder.Services.AddStackExchangeRedisCache(options =>
             {
-                // Redis__ConnectionString (secret) → "Redis:ConnectionString"
-                o.Configuration = builder.Configuration["Redis:ConnectionString"];
-                o.InstanceName = "FilmZone";
+                options.Configuration = builder.Configuration["Redis:ConnectionString"]; // map Redis__ConnectionString
+                options.InstanceName = "SampleInstance";
             });
 
-            builder.Services.AddCors(opt =>
-            {
-                var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-                             ?? new[] { builder.Configuration["Frontend:AppUrl"] ?? "http://localhost:3000" };
-                opt.AddPolicy("FE", p => p
-                    .WithOrigins(origins)
-                    .AllowAnyHeader()
-                    .AllowAnyMethod()
-                    .AllowCredentials());
-            });
-
+            // Swagger
             builder.Services.AddSwaggerGen(option =>
             {
-                option.SwaggerDoc("v1", new OpenApiInfo { Title = "FilmZone API", Version = "v1" });
+                option.SwaggerDoc("v1", new OpenApiInfo { Title = "Demo API", Version = "v1" });
                 option.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
                 {
                     In = ParameterLocation.Header,
@@ -73,7 +89,10 @@ namespace FZ.WebAPI
                 option.AddSecurityRequirement(new OpenApiSecurityRequirement
                 {
                     {
-                        new OpenApiSecurityScheme { Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" } },
+                        new OpenApiSecurityScheme
+                        {
+                            Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
+                        },
                         Array.Empty<string>()
                     }
                 });
@@ -81,34 +100,28 @@ namespace FZ.WebAPI
 
             var app = builder.Build();
 
-            // ✅ Luôn bật Swagger ở mọi môi trường
-            app.UseSwagger();
-            app.UseSwaggerUI(c =>
-            {
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "FilmZone API v1");
-                c.RoutePrefix = "swagger"; // UI tại /swagger
-            });
-
-            // Dev mới dùng HTTPS redirect (Prod Fly chạy HTTP:8080)
             if (app.Environment.IsDevelopment())
             {
-                app.UseHttpsRedirection();
+                app.UseSwagger();
+                app.UseSwaggerUI();
             }
 
-            // Forwarded headers từ Fly edge
-            var fwd = new ForwardedHeadersOptions
-            {
-                ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-            };
-            fwd.KnownNetworks.Clear();
-            fwd.KnownProxies.Clear();
-            app.UseForwardedHeaders(fwd);
+            app.UseForwardedHeaders();
+
+            // Nếu bạn đang chạy HTTP thuần (không cert local), cân nhắc tắt dòng dưới khi DEV để tránh 30x->https:
+            // app.UseHttpsRedirection();
 
             app.UseRouting();
+
+            // CORS cho FE (gửi cookie)
             app.UseCors("FE");
+
+            // Map cookie -> Authorization header Bearer (phải trước Authenticate)
             app.UseMiddleware<CookieJwtMiddleware>();
+
             app.UseAuthentication();
             app.UseAuthorization();
+
             app.MapControllers();
 
             app.Run();

@@ -1,5 +1,7 @@
 ﻿using FZ.Auth.ApplicationService.MFAService.Abtracts;
 using FZ.Auth.ApplicationService.MFAService.Implements;
+using FZ.Auth.ApplicationService.MFAService.Implements.Account;
+using FZ.Auth.ApplicationService.MFAService.Implements.Role;
 using FZ.Auth.ApplicationService.MFAService.Implements.User;
 using FZ.Auth.Infrastructure;
 using FZ.Auth.Infrastructure.Repository.Abtracts;
@@ -14,45 +16,37 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using StackExchange.Redis;
 using System;
 using System.Linq;
 using System.Net;
-using System.Net.Sockets;
 using System.Net.Http;
+using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Text;
-using FZ.Auth.ApplicationService.MFAService.Implements.Role;
-using FZ.Auth.ApplicationService.MFAService.Implements.Account;
 
 namespace FZ.Auth.ApplicationService.StartUp
 {
     public static class AuthStartUp
     {
-        /// <summary>
-        /// Register all Auth services, DB, Redis, AuthN/Z, CORS.
-        /// Call this in Program.cs BEFORE Build().
-        /// </summary>
         public static void ConfigureAuth(this WebApplicationBuilder builder, string? assemblyName)
         {
-           
-
-            // ✅ Trong ConfigureAuth:
+            // === DB ===
             builder.Services.AddDbContext<AuthDbContext>(
-               options =>
-               {
-                   options.UseSqlServer(
-                       builder.Configuration.GetConnectionString("Default"),
-                       sqlOptions =>
-                       {
-                           sqlOptions.MigrationsAssembly(assemblyName);
-                           sqlOptions.MigrationsHistoryTable(DbSchema.TableMigrationsHistory, DbSchema.Auth);
-                       });
-               },
-               ServiceLifetime.Scoped
-           );
-
+                options =>
+                {
+                    options.UseSqlServer(
+                        builder.Configuration.GetConnectionString("Default"),
+                        sqlOptions =>
+                        {
+                            sqlOptions.MigrationsAssembly(assemblyName);
+                            sqlOptions.MigrationsHistoryTable(DbSchema.TableMigrationsHistory, DbSchema.Auth);
+                        });
+                },
+                ServiceLifetime.Scoped
+            );
 
             // === Redis ===
             builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
@@ -61,10 +55,7 @@ namespace FZ.Auth.ApplicationService.StartUp
                 return ConnectionMultiplexer.Connect(configuration);
             });
 
-
             builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("MailSettings"));
-
-
 
             // === Common infrastructure ===
             builder.Services.AddHttpContextAccessor();
@@ -84,8 +75,6 @@ namespace FZ.Auth.ApplicationService.StartUp
             builder.Services.AddScoped<IPasswordResetRepository, PasswordResetRepository>();
             builder.Services.AddScoped<IResetTicketStore, ResetTicketStore>();
 
-
-
             // === UoW & Services ===
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
             builder.Services.AddScoped<IAuthRegisterService, AuthRegisterService>();
@@ -96,12 +85,11 @@ namespace FZ.Auth.ApplicationService.StartUp
             builder.Services.AddScoped<IPasswordChangeService, PasswordChangeService>();
             builder.Services.AddScoped<IMfaService, MfaService>();
 
-
-
-
             // === Authentication (JWT bearer as default) ===
             var secretKey = builder.Configuration["Jwt:SecretKey"] ?? "A_very_long_and_secure_secret_key_1234567890";
             var key = Encoding.UTF8.GetBytes(secretKey);
+
+            var isDev = builder.Environment.IsDevelopment();
 
             builder.Services
                 .AddAuthentication(options =>
@@ -112,7 +100,7 @@ namespace FZ.Auth.ApplicationService.StartUp
                 })
                 .AddJwtBearer(options =>
                 {
-                    options.RequireHttpsMetadata = true; // set false only for local dev
+                    options.RequireHttpsMetadata = !isDev; // dev: false, prod: true
                     options.SaveToken = true;
                     options.TokenValidationParameters = new TokenValidationParameters
                     {
@@ -123,7 +111,6 @@ namespace FZ.Auth.ApplicationService.StartUp
                         ValidateLifetime = true,
                         ClockSkew = TimeSpan.FromSeconds(30)
                     };
-
                     options.Events = new JwtBearerEvents
                     {
                         OnAuthenticationFailed = ctx =>
@@ -137,33 +124,41 @@ namespace FZ.Auth.ApplicationService.StartUp
                             if (!ctx.Response.HasStarted)
                             {
                                 ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                                ctx.Response.Headers.TryAdd("WWW-Authenticate", "Bearer error=\"invalid_token\", error_description=\"The access token is expired\"");
+                                ctx.Response.Headers.TryAdd("WWW-Authenticate",
+                                    "Bearer error=\"invalid_token\", error_description=\"The access token is expired\"");
                             }
                             ctx.HandleResponse();
                             return Task.CompletedTask;
                         }
                     };
                 })
-                // External cookie for OAuth handshakes
-                .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, opt =>
+                // Cookie dành RIÊNG cho handshake OAuth (đặt tên khác "External")
+                .AddCookie("External", opt =>
                 {
                     opt.Cookie.Name = "external.auth";
                     opt.Cookie.SameSite = SameSiteMode.None;
                     opt.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-                })
-                // Google OAuth (optional)
-                .AddGoogle(options =>
+                });
+
+            // === Google OAuth (optional) ===
+            var googleClientId = builder.Configuration["Google:ClientId"] ?? builder.Configuration["Authentication:Google:ClientId"];
+            var googleClientSecret = builder.Configuration["Google:ClientSecret"] ?? builder.Configuration["Authentication:Google:ClientSecret"];
+            var googleCallbackPath = builder.Configuration["Google:CallbackPath"] ?? builder.Configuration["Authentication:Google:CallbackPath"] ?? "/signin-google";
+
+            if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(googleClientSecret))
+            {
+                builder.Services.AddAuthentication().AddGoogle("Google", options =>
                 {
-                    options.ClientId = builder.Configuration["Google:ClientId"]!;
-                    options.ClientSecret = builder.Configuration["Google:ClientSecret"]!;
-                    options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-                    options.CallbackPath = "/signin-google";
+                    options.ClientId = googleClientId!;
+                    options.ClientSecret = googleClientSecret!;
+                    options.SignInScheme = "External";          // dùng cookie "External", không phải "Cookies"
+                    options.CallbackPath = googleCallbackPath;
                     options.SaveTokens = true;
 
                     options.CorrelationCookie.SameSite = SameSiteMode.None;
                     options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
 
-                    // Backchannel with custom handler (IPv4-only, TLS 1.2/1.3)
+                    // Backchannel an toàn (IPv4 + TLS 1.2/1.3)
                     var handler = new SocketsHttpHandler
                     {
                         UseProxy = false,
@@ -197,6 +192,7 @@ namespace FZ.Auth.ApplicationService.StartUp
 #endif
                     };
                 });
+            }
 
             // === Authorization (permissions) ===
             builder.Services.AddAuthorization(options =>
@@ -207,7 +203,7 @@ namespace FZ.Auth.ApplicationService.StartUp
                 }
             });
 
-            // === CORS for FE domains ===
+            // === CORS ===
             var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
             builder.Services.AddCors(opt =>
             {
@@ -216,7 +212,7 @@ namespace FZ.Auth.ApplicationService.StartUp
                     if (allowedOrigins.Length > 0)
                         p.WithOrigins(allowedOrigins);
                     else
-                        p.WithOrigins("http://localhost:3000"); // dev fallback
+                        p.WithOrigins("http://localhost:3000");
 
                     p.AllowAnyHeader()
                      .AllowAnyMethod()
@@ -224,26 +220,11 @@ namespace FZ.Auth.ApplicationService.StartUp
                 });
             });
 
-            // === Forwarded headers (behind proxy/load balancer) ===
+            // === Forwarded headers (behind proxy) ===
             builder.Services.Configure<ForwardedHeadersOptions>(opts =>
             {
                 opts.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-                // Optionally trust specific proxies:
-                // opts.KnownProxies.Add(IPAddress.Parse("10.0.0.100"));
             });
         }
-
-        /// <summary>
-        /// Configure middleware pipeline. Call AFTER Build().
-        /// </summary>
-      
     }
 }
-
-// ================= Program.cs sample =================
-// using FZ.Auth.ApplicationService.StartUp;
-// var builder = WebApplication.CreateBuilder(args);
-// builder.ConfigureAuth(assemblyName: typeof(Program).Assembly.FullName);
-// var app = builder.Build();
-// app.ConfigureAuthPipeline();
-// app.Run();

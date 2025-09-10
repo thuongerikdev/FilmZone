@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FZ.WebAPI.Migrations
 {
     [DbContext(typeof(AuthDbContext))]
-    [Migration("20250907060919_AuthV2")]
-    partial class AuthV2
+    [Migration("20250910062608_AuthV1")]
+    partial class AuthV1
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -74,20 +74,42 @@ namespace FZ.WebAPI.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("mfaID"));
 
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime?>("enabledAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("enrollmentStartedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<bool>("isEnabled")
                         .HasColumnType("bit");
 
+                    b.Property<string>("label")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTime?>("lastVerifiedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("recoveryCodes")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("secret")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
 
                     b.Property<string>("type")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
 
                     b.Property<DateTime>("updatedAt")
                         .HasColumnType("datetime2");
@@ -98,6 +120,9 @@ namespace FZ.WebAPI.Migrations
                     b.HasKey("mfaID");
 
                     b.HasIndex("userID")
+                        .IsUnique();
+
+                    b.HasIndex("userID", "type")
                         .IsUnique();
 
                     b.ToTable("AuthMfaSecret", "auth");
@@ -285,6 +310,10 @@ namespace FZ.WebAPI.Migrations
                     b.Property<DateTime>("expiresAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("purpose")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("userID")
                         .HasColumnType("int");
 
@@ -349,7 +378,6 @@ namespace FZ.WebAPI.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("profileID"));
 
                     b.Property<string>("avatar")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("dateOfBirth")
@@ -361,7 +389,6 @@ namespace FZ.WebAPI.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("gender")
-                        .IsRequired()
                         .HasMaxLength(16)
                         .HasColumnType("nvarchar(16)");
 
@@ -398,7 +425,6 @@ namespace FZ.WebAPI.Migrations
                         .HasColumnType("nvarchar(255)");
 
                     b.Property<string>("googleSub")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("isEmailVerified")
@@ -409,7 +435,6 @@ namespace FZ.WebAPI.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("phoneNumber")
-                        .IsRequired()
                         .HasMaxLength(32)
                         .HasColumnType("nvarchar(32)");
 
