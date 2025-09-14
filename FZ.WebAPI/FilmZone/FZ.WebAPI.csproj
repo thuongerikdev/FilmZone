@@ -39,6 +39,7 @@
 		<ProjectReference Include="..\Services\Auth\FZ.Auth.Domain\FZ.Auth.Domain.csproj" />
 		<ProjectReference Include="..\Services\Auth\FZ.Auth.Dtos\FZ.Auth.Dtos.csproj" />
 		<ProjectReference Include="..\Services\Auth\FZ.Auth.Infrastructure\FZ.Auth.Infrastructure.csproj" />
+		<ProjectReference Include="..\Services\Movie\FZ.Movie.ApplicationService\FZ.Movie.ApplicationService.csproj" />
 		<ProjectReference Include="..\Services\Shared\FZ.Constant\FZ.Constant.csproj" />
 	</ItemGroup>
 

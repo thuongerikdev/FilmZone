@@ -1,7 +1,7 @@
 ﻿using FZ.Auth.ApplicationService.MFAService.Abtracts;
 using Microsoft.AspNetCore.Mvc;
 
-namespace FZ.WebAPI.Controllers
+namespace FZ.WebAPI.Controllers.Auth
 {
     [Route("user")]
     [ApiController]

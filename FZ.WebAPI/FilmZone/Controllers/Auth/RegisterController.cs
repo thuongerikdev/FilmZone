@@ -2,7 +2,7 @@
 using FZ.Auth.Dtos.User;
 using Microsoft.AspNetCore.Mvc;
 
-namespace FZ.WebAPI.Controllers
+namespace FZ.WebAPI.Controllers.Auth
 {
     [Route("register")]
     [ApiController]

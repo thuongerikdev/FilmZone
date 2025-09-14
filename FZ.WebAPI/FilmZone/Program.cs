@@ -1,5 +1,7 @@
 ﻿using FilmZone.Middlewares;
 using FZ.Auth.ApplicationService.StartUp;
+using FZ.Movie.ApplicationService.StartUp;
+using FZ.WebAPI.SignalR;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.OpenApi.Models;
 using System.Text.RegularExpressions;
@@ -62,6 +64,7 @@ namespace FZ.WebAPI
 
             // === 3) Modules (đăng ký DbContext sẽ đọc từ Configuration ở trên) ===
             builder.ConfigureAuth(typeof(Program).Namespace);
+            builder.ConfigureMovie(typeof(Program).Namespace);
 
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
@@ -98,6 +101,8 @@ namespace FZ.WebAPI
                 });
             });
 
+
+
             var app = builder.Build();
 
            
@@ -122,6 +127,8 @@ namespace FZ.WebAPI
             app.UseAuthorization();
 
             app.MapControllers();
+
+            app.MapHub<UploadHub>("/hubs/upload");
 
             app.Run();
         }

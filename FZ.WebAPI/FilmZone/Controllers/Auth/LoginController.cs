@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
-namespace FZ.WebAPI.Controllers
+namespace FZ.WebAPI.Controllers.Auth
 {
     [Route("login")]
     [ApiController]
@@ -133,7 +133,7 @@ namespace FZ.WebAPI.Controllers
             if (result.ErrorCode != 200 || result.Data is null)
             {
                 var loginUrl = _cfg["Frontend:LoginUrl"] ??
-                               $"{(_cfg["Frontend:AppUrl"] ?? "http://localhost:3000")}/login";
+                               $"{_cfg["Frontend:AppUrl"] ?? "http://localhost:3000"}/login";
                 return Redirect(AppendQuery(loginUrl, "error", "google_login_failed"));
             }
 

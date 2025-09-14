@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
-namespace FilmZone.Controllers
+namespace FZ.WebAPI.Controllers.Auth
 {
     [ApiController]
     [Route("account")]
@@ -52,7 +52,7 @@ namespace FilmZone.Controllers
             // Account label: ưu tiên email -> userName -> user:{id}
             var account = !string.IsNullOrWhiteSpace(email)
                 ? email!.Trim()
-                : (!string.IsNullOrWhiteSpace(userName) ? userName!.Trim() : $"user:{uid}");
+                : !string.IsNullOrWhiteSpace(userName) ? userName!.Trim() : $"user:{uid}";
 
             // Truyền 'account' vào service; Issuer sẽ set = "FilmZone" ở service
             var res = await _mfa.StartTotpEnrollmentAsync(uid, account, ct);

@@ -2,7 +2,7 @@
 using FZ.Auth.Dtos.Role;
 using Microsoft.AspNetCore.Mvc;
 
-namespace FZ.WebAPI.Controllers
+namespace FZ.WebAPI.Controllers.Auth
 {
     [Route("roles")]
     [ApiController]
@@ -41,7 +41,7 @@ namespace FZ.WebAPI.Controllers
             }
             catch (InvalidOperationException ex)
             {
-                return BadRequest(new { ErrorCode = 400, Message = ex.Message });
+                return BadRequest(new { ErrorCode = 400, ex.Message });
             }
         }
         [HttpPut("updateRole")]
@@ -62,7 +62,7 @@ namespace FZ.WebAPI.Controllers
             }
             catch (InvalidOperationException ex)
             {
-                return BadRequest(new { ErrorCode = 400, Message = ex.Message });
+                return BadRequest(new { ErrorCode = 400, ex.Message });
             }
         }
         [HttpDelete("deleteRole/{roleID}")]
@@ -79,7 +79,7 @@ namespace FZ.WebAPI.Controllers
             }
             catch (InvalidOperationException ex)
             {
-                return BadRequest(new { ErrorCode = 400, Message = ex.Message });
+                return BadRequest(new { ErrorCode = 400, ex.Message });
             }
         }
         [HttpGet("getRoleByUserID/{userID}")]
@@ -96,7 +96,7 @@ namespace FZ.WebAPI.Controllers
             }
             catch (InvalidOperationException ex)
             {
-                return BadRequest(new { ErrorCode = 400, Message = ex.Message });
+                return BadRequest(new { ErrorCode = 400, ex.Message });
             }
         }
 
