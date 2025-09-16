@@ -266,6 +266,7 @@ namespace FZ.Auth.ApplicationService.StartUp
                     opt.Cookie.SecurePolicy = CookieSecurePolicy.Always;
                 });
 
+
             // Only add Google if client id/secret present
             if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(googleClientSecret))
             {
