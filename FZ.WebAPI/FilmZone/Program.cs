@@ -122,7 +122,13 @@ namespace FZ.WebAPI
 
             // Map cookie -> Authorization header Bearer (phải trước Authenticate)
             app.UseMiddleware<CookieJwtMiddleware>();
+            app.UseForwardedHeaders(new ForwardedHeadersOptions
 
+            {
+                ForwardedHeaders = ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost,
+                KnownNetworks = { },   // rất quan trọng cho Fly
+                KnownProxies = { }
+            });
             app.UseAuthentication();
             app.UseAuthorization();
 

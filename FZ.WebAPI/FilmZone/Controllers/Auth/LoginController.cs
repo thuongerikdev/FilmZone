@@ -94,7 +94,7 @@ namespace FZ.WebAPI.Controllers.Auth
         {
             var safeReturnUrl = GetSafeReturnUrl(returnUrl);
 
-            var authResult = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            var authResult = await HttpContext.AuthenticateAsync("External");
             if (authResult?.Succeeded != true || authResult.Principal is null)
             {
                 return Redirect(AppendQuery(safeReturnUrl, "error", "google_auth_failed"));
