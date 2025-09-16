@@ -220,7 +220,7 @@ namespace FZ.WebAPI.Controllers.Auth
                 HttpOnly = true,
                 Secure = true,
                 SameSite = SameSiteMode.None,
-                Path = "/login/auth/refresh",
+                Path = "/",
                 Expires = newRt.Expires
             });
 

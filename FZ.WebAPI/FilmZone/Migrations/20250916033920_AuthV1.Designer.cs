@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FZ.WebAPI.Migrations
 {
     [DbContext(typeof(AuthDbContext))]
-    [Migration("20250910062608_AuthV1")]
+    [Migration("20250916033920_AuthV1")]
     partial class AuthV1
     {
         /// <inheritdoc />
@@ -24,6 +24,340 @@ namespace FZ.WebAPI.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("FZ.Auth.Domain.Billing.Invoice", b =>
+                {
+                    b.Property<int>("invoiceID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("invoiceID"));
+
+                    b.Property<decimal>("discount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("dueAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("issuedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("orderID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("pdfUrl")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<int?>("subscriptionID")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("subtotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("tax")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("total")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("userID")
+                        .HasColumnType("int");
+
+                    b.HasKey("invoiceID");
+
+                    b.HasIndex("orderID");
+
+                    b.HasIndex("subscriptionID");
+
+                    b.HasIndex("userID", "issuedAt");
+
+                    b.ToTable("Invoice", "auth");
+                });
+
+            modelBuilder.Entity("FZ.Auth.Domain.Billing.Order", b =>
+                {
+                    b.Property<int>("orderID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("orderID"));
+
+                    b.Property<decimal>("amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("createdAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("currency")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("nvarchar(8)");
+
+                    b.Property<DateTime?>("expiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("planID")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("planID1")
+                        .HasColumnType("int");
+
+                    b.Property<int>("priceID")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("priceID1")
+                        .HasColumnType("int");
+
+                    b.Property<string>("provider")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("providerSessionId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("status")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("nvarchar(24)");
+
+                    b.Property<int>("userID")
+                        .HasColumnType("int");
+
+                    b.HasKey("orderID");
+
+                    b.HasIndex("planID");
+
+                    b.HasIndex("planID1");
+
+                    b.HasIndex("priceID");
+
+                    b.HasIndex("priceID1");
+
+                    b.HasIndex("userID");
+
+                    b.HasIndex("provider", "providerSessionId")
+                        .IsUnique();
+
+                    b.ToTable("Order", "auth");
+                });
+
+            modelBuilder.Entity("FZ.Auth.Domain.Billing.Payment", b =>
+                {
+                    b.Property<int>("paymentID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("paymentID"));
+
+                    b.Property<DateTime>("createdAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("failureReason")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("invoiceID")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("paidAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("provider")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("providerPaymentId")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("status")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("nvarchar(24)");
+
+                    b.HasKey("paymentID");
+
+                    b.HasIndex("invoiceID");
+
+                    b.ToTable("Payment", "auth");
+                });
+
+            modelBuilder.Entity("FZ.Auth.Domain.Billing.Plan", b =>
+                {
+                    b.Property<int>("planID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("planID"));
+
+                    b.Property<string>("code")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("description")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<bool>("isActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.HasKey("planID");
+
+                    b.HasIndex("code")
+                        .IsUnique();
+
+                    b.ToTable("Plan", "auth");
+
+                    b.HasData(
+                        new
+                        {
+                            planID = 1,
+                            code = "VIP",
+                            description = "Quyền lợi VIP (không quảng cáo, chất lượng cao...)",
+                            isActive = true,
+                            name = "Gói VIP"
+                        });
+                });
+
+            modelBuilder.Entity("FZ.Auth.Domain.Billing.Price", b =>
+                {
+                    b.Property<int>("priceID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("priceID"));
+
+                    b.Property<decimal>("amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("currency")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("nvarchar(8)");
+
+                    b.Property<int>("intervalCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("intervalUnit")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<bool>("isActive")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("planID")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("trialDays")
+                        .HasColumnType("int");
+
+                    b.HasKey("priceID");
+
+                    b.HasIndex("planID", "currency", "intervalUnit", "intervalCount")
+                        .IsUnique();
+
+                    b.ToTable("Price", "auth");
+
+                    b.HasData(
+                        new
+                        {
+                            priceID = 101,
+                            amount = 99000m,
+                            currency = "VND",
+                            intervalCount = 1,
+                            intervalUnit = "month",
+                            isActive = true,
+                            planID = 1
+                        },
+                        new
+                        {
+                            priceID = 102,
+                            amount = 249000m,
+                            currency = "VND",
+                            intervalCount = 3,
+                            intervalUnit = "month",
+                            isActive = true,
+                            planID = 1
+                        },
+                        new
+                        {
+                            priceID = 103,
+                            amount = 459000m,
+                            currency = "VND",
+                            intervalCount = 6,
+                            intervalUnit = "month",
+                            isActive = true,
+                            planID = 1
+                        });
+                });
+
+            modelBuilder.Entity("FZ.Auth.Domain.Billing.UserSubscription", b =>
+                {
+                    b.Property<int>("subscriptionID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("subscriptionID"));
+
+                    b.Property<bool>("autoRenew")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("cancelAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("cancelAtPeriodEnd")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("currentPeriodEnd")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("currentPeriodStart")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("planID")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("priceID")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("startAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("status")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("nvarchar(24)");
+
+                    b.Property<DateTime?>("trialEndAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("userID")
+                        .HasColumnType("int");
+
+                    b.HasKey("subscriptionID");
+
+                    b.HasIndex("currentPeriodEnd");
+
+                    b.HasIndex("planID");
+
+                    b.HasIndex("priceID");
+
+                    b.HasIndex("userID", "planID", "status");
+
+                    b.ToTable("UserSubscription", "auth");
+                });
 
             modelBuilder.Entity("FZ.Auth.Domain.MFA.AuthAuditLog", b =>
                 {
@@ -459,6 +793,114 @@ namespace FZ.WebAPI.Migrations
                     b.ToTable("AuthUser", "auth");
                 });
 
+            modelBuilder.Entity("FZ.Auth.Domain.Billing.Invoice", b =>
+                {
+                    b.HasOne("FZ.Auth.Domain.Billing.Order", "order")
+                        .WithMany("invoices")
+                        .HasForeignKey("orderID")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("FZ.Auth.Domain.Billing.UserSubscription", "subscription")
+                        .WithMany("invoices")
+                        .HasForeignKey("subscriptionID")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("FZ.Auth.Domain.User.AuthUser", "user")
+                        .WithMany("invoices")
+                        .HasForeignKey("userID")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("order");
+
+                    b.Navigation("subscription");
+
+                    b.Navigation("user");
+                });
+
+            modelBuilder.Entity("FZ.Auth.Domain.Billing.Order", b =>
+                {
+                    b.HasOne("FZ.Auth.Domain.Billing.Plan", "plan")
+                        .WithMany()
+                        .HasForeignKey("planID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FZ.Auth.Domain.Billing.Plan", null)
+                        .WithMany("orders")
+                        .HasForeignKey("planID1");
+
+                    b.HasOne("FZ.Auth.Domain.Billing.Price", "price")
+                        .WithMany()
+                        .HasForeignKey("priceID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FZ.Auth.Domain.Billing.Price", null)
+                        .WithMany("orders")
+                        .HasForeignKey("priceID1");
+
+                    b.HasOne("FZ.Auth.Domain.User.AuthUser", "user")
+                        .WithMany("orders")
+                        .HasForeignKey("userID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("plan");
+
+                    b.Navigation("price");
+
+                    b.Navigation("user");
+                });
+
+            modelBuilder.Entity("FZ.Auth.Domain.Billing.Payment", b =>
+                {
+                    b.HasOne("FZ.Auth.Domain.Billing.Invoice", "invoice")
+                        .WithMany("payments")
+                        .HasForeignKey("invoiceID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("invoice");
+                });
+
+            modelBuilder.Entity("FZ.Auth.Domain.Billing.Price", b =>
+                {
+                    b.HasOne("FZ.Auth.Domain.Billing.Plan", "plan")
+                        .WithMany("prices")
+                        .HasForeignKey("planID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("plan");
+                });
+
+            modelBuilder.Entity("FZ.Auth.Domain.Billing.UserSubscription", b =>
+                {
+                    b.HasOne("FZ.Auth.Domain.Billing.Plan", "plan")
+                        .WithMany()
+                        .HasForeignKey("planID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FZ.Auth.Domain.Billing.Price", "price")
+                        .WithMany()
+                        .HasForeignKey("priceID")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("FZ.Auth.Domain.User.AuthUser", "user")
+                        .WithMany("subscriptions")
+                        .HasForeignKey("userID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("plan");
+
+                    b.Navigation("price");
+
+                    b.Navigation("user");
+                });
+
             modelBuilder.Entity("FZ.Auth.Domain.MFA.AuthAuditLog", b =>
                 {
                     b.HasOne("FZ.Auth.Domain.User.AuthUser", "user")
@@ -580,6 +1022,33 @@ namespace FZ.WebAPI.Migrations
                     b.Navigation("user");
                 });
 
+            modelBuilder.Entity("FZ.Auth.Domain.Billing.Invoice", b =>
+                {
+                    b.Navigation("payments");
+                });
+
+            modelBuilder.Entity("FZ.Auth.Domain.Billing.Order", b =>
+                {
+                    b.Navigation("invoices");
+                });
+
+            modelBuilder.Entity("FZ.Auth.Domain.Billing.Plan", b =>
+                {
+                    b.Navigation("orders");
+
+                    b.Navigation("prices");
+                });
+
+            modelBuilder.Entity("FZ.Auth.Domain.Billing.Price", b =>
+                {
+                    b.Navigation("orders");
+                });
+
+            modelBuilder.Entity("FZ.Auth.Domain.Billing.UserSubscription", b =>
+                {
+                    b.Navigation("invoices");
+                });
+
             modelBuilder.Entity("FZ.Auth.Domain.MFA.AuthUserSession", b =>
                 {
                     b.Navigation("refreshTokens");
@@ -603,8 +1072,12 @@ namespace FZ.WebAPI.Migrations
 
                     b.Navigation("emailVerifications");
 
+                    b.Navigation("invoices");
+
                     b.Navigation("mfaSecret")
                         .IsRequired();
+
+                    b.Navigation("orders");
 
                     b.Navigation("passwordResets");
 
@@ -614,6 +1087,8 @@ namespace FZ.WebAPI.Migrations
                     b.Navigation("refreshTokens");
 
                     b.Navigation("sessions");
+
+                    b.Navigation("subscriptions");
 
                     b.Navigation("userRoles");
                 });

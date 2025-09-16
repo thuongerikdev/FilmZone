@@ -23,8 +23,10 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 using System;
+using System.Net;
 using System.Threading.Channels;
 
 namespace FZ.Movie.ApplicationService.StartUp
@@ -36,12 +38,115 @@ namespace FZ.Movie.ApplicationService.StartUp
             var services = builder.Services;
             var config = builder.Configuration;
 
-            // Redis
-            services.AddSingleton<IConnectionMultiplexer>(sp =>
+            // === Redis ===
+            // === Redis ===
+            builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
             {
-                var cs = config["Redis:ConnectionString"] ?? "localhost:6379";
-                return ConnectionMultiplexer.Connect(cs);
+                var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger("Redis");
+                var config = builder.Configuration["Redis:ConnectionString"] ?? "localhost:6379";
+
+                // Try parse as URI first (handle rediss://...)
+                string host = null!;
+                int port = 6379;
+                string? user = null;
+                string? password = null;
+                var isTls = false;
+
+                if (Uri.TryCreate(config, UriKind.Absolute, out var uri) &&
+                    (uri.Scheme == "redis" || uri.Scheme == "rediss"))
+                {
+                    isTls = uri.Scheme.Equals("rediss", StringComparison.OrdinalIgnoreCase);
+                    host = uri.Host;
+                    port = uri.Port > 0 ? uri.Port : (isTls ? 6379 : 6379);
+                    if (!string.IsNullOrEmpty(uri.UserInfo))
+                    {
+                        var parts = uri.UserInfo.Split(':', 2);
+                        if (parts.Length >= 1) user = parts[0];
+                        if (parts.Length == 2) password = parts[1];
+                    }
+                }
+                else
+                {
+                    // fallback: try parse simple "host:port,option=..."
+                    // Use ConfigurationOptions.Parse to pick up options in that case
+                    var tmp = ConfigurationOptions.Parse(config);
+                    // If Parse gave us a DnsEndPoint, use it; otherwise we will let Parse handle it
+                    if (tmp.EndPoints.Count == 1 && tmp.EndPoints[0] is DnsEndPoint dns)
+                    {
+                        host = dns.Host;
+                        port = dns.Port;
+                    }
+                    // Also copy password/user if present
+                    if (!string.IsNullOrEmpty(tmp.Password)) password = tmp.Password;
+                    if (!string.IsNullOrEmpty(tmp.User)) user = tmp.User;
+                    isTls = tmp.Ssl;
+                }
+
+                // Build clean ConfigurationOptions to avoid accidental "full-URI as endpoint" bugs
+                var options = new ConfigurationOptions
+                {
+                    AbortOnConnectFail = false,
+                    ResolveDns = true,
+                    ConnectRetry = 5,
+                    ConnectTimeout = 30000,
+                    SyncTimeout = 30000,
+                    KeepAlive = 10,
+                    ClientName = "auth-service",
+                };
+
+                // correctly add endpoint
+                if (!string.IsNullOrEmpty(host))
+                {
+                    options.EndPoints.Add(host, port);
+                }
+                else
+                {
+                    // fallback to parsing whole config if host parsing failed
+                    options = ConfigurationOptions.Parse(config);
+                }
+
+                // TLS / SNI
+                if (isTls)
+                {
+                    options.Ssl = true;
+                    options.SslProtocols = System.Security.Authentication.SslProtocols.Tls12;
+                    // Ensure SslHost is only the host (no scheme/userinfo)
+                    if (!string.IsNullOrEmpty(host)) options.SslHost = host;
+                }
+
+                // set auth if available
+                if (!string.IsNullOrEmpty(user)) options.User = user;
+                if (!string.IsNullOrEmpty(password)) options.Password = password;
+
+                logger.LogInformation("Redis config: host={host} port={port} ssl={ssl} user={userPresent}", host, port, options.Ssl, string.IsNullOrEmpty(options.User) ? "(none)" : "(present)");
+
+                try
+                {
+                    // connect (use async connect but wait — longer timeouts above help)
+                    var mux = ConnectionMultiplexer.ConnectAsync(options).GetAwaiter().GetResult();
+
+                    // optional: do not always PING in prod; but in dev it's helpful
+                    try
+                    {
+                        var ping = mux.GetDatabase().Ping();
+                        logger.LogInformation("Redis PING = {ms} ms", ping.TotalMilliseconds);
+                    }
+                    catch (Exception pingEx)
+                    {
+                        logger.LogWarning(pingEx, "Redis PING failed (multiplexer exists and will retry in background)");
+                    }
+
+                    return mux;
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Redis Connect failed (config prefix: {prefix})", (config ?? "").Split('@').FirstOrDefault());
+                    throw;
+                }
             });
+
+
+
 
             // DbContext (Scoped)
             services.AddDbContext<MovieDbContext>(options =>

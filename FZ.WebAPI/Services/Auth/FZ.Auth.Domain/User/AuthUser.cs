@@ -1,4 +1,5 @@
-﻿using FZ.Auth.Domain.MFA;
+﻿using FZ.Auth.Domain.Billing;
+using FZ.Auth.Domain.MFA;
 using FZ.Auth.Domain.Role;
 using FZ.Auth.Domain.Token;
 using System;
@@ -45,6 +46,9 @@ namespace FZ.Auth.Domain.User
         public virtual ICollection<AuthUserSession> sessions { get; set; }
         public virtual ICollection<AuthEmailVerification> emailVerifications { get; set; }
         public virtual ICollection<AuthPasswordReset> passwordResets { get; set; }
+        public virtual ICollection<FZ.Auth.Domain.Billing.UserSubscription> subscriptions { get; set; }
+        public virtual ICollection<Order> orders { get; set; }
+        public virtual ICollection<Invoice> invoices { get; set; }
 
     }
 

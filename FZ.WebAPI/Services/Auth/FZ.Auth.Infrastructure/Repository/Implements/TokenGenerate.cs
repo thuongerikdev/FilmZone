@@ -306,15 +306,23 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
             // roles
             var roleIds = await _db.authUserRoles
                 .Where(x => x.userID == user.userID)
-                .Select(x => x.roleID)
+                .Select(x =>
+                new
+                {
+                    x.roleID,
+                    x.role.roleName
+                })
                 .ToListAsync();
 
             // permissions aggregated from roles
             var permissions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var role = new HashSet<string>(roleIds.Select(r => r.roleName));
+
             foreach (var r in roleIds)
             {
+
                 var perms = await _db.authRolePermissions
-                    .Where(x => x.roleID == r)
+                    .Where(x => x.roleID == r.roleID)
                     .Include(x => x.permission)
                     .Select(x => x.permission)
                     .ToListAsync();
@@ -332,10 +340,19 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
                 new Claim("name", profile?.lastName ?? string.Empty),
                 new Claim("email", user.email),
                 new Claim("userName", user.userName),
-                new Claim("userId", user.userID.ToString())
+                new Claim("userId", user.userID.ToString()),
+                new Claim(ClaimTypes.NameIdentifier, user.userID.ToString()),
+                new Claim(JwtRegisteredClaimNames.Sub, user.userID.ToString()),
             };
+
+
             if (sessionId.HasValue)
                 claims.Add(new Claim(JwtRegisteredClaimNames.Sid, sessionId.Value.ToString()));
+
+            foreach (var r in role)
+            {
+                claims.Add(new Claim("role", r));
+            }
 
             foreach (var p in permissions)
                 claims.Add(new Claim("permission", p));
@@ -344,7 +361,7 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
                 issuer: null,
                 audience: null,
                 claims: claims,
-                expires: DateTime.UtcNow.Add(ttl ?? TimeSpan.FromMinutes(30)),
+                expires: DateTime.UtcNow.Add(ttl ?? TimeSpan.FromMinutes(15)),
                 signingCredentials: creds
             );
             return new JwtSecurityTokenHandler().WriteToken(token);

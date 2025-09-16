@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FZ.WebAPI.Migrations.MovieDb
 {
     [DbContext(typeof(MovieDbContext))]
-    [Migration("20250914113740_MovieV1")]
+    [Migration("20250916033948_MovieV1")]
     partial class MovieV1
     {
         /// <inheritdoc />

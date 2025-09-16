@@ -1,5 +1,6 @@
 ﻿using FZ.Movie.ApplicationService.Service.Abtracts;
 using FZ.Movie.Dtos.Request;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FZ.WebAPI.Controllers.Movie
@@ -72,7 +73,9 @@ namespace FZ.WebAPI.Controllers.Movie
                 return StatusCode(500, new { message = "An error occurred while processing your request.", details = ex.Message });
             }
         }
-        [HttpGet("{movieId}")]
+        [Authorize(Policy = "ActiveVIP")]
+        [HttpGet("/api/movies/{movieId:int}/vip-source")]
+        //[HttpGet("{movieId}")]
         public async Task<IActionResult> GetMovieSourcesByMovieId(int movieId, CancellationToken ct)
         {
             try

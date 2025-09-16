@@ -11,7 +11,6 @@ namespace FZ.Movie.Dtos.Request
 
     public class CreateMovieImage
     {
-        public int movieID { get; set; }
         public IFormFile image { get; set; }
     }
     public class UpdateMovieImage
