@@ -438,7 +438,10 @@ namespace FZ.WebAPI.Migrations.MovieDb
             modelBuilder.Entity("FZ.Movie.Domain.Media.MovieImage", b =>
                 {
                     b.Property<int>("movieImageID")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("movieImageID"));
 
                     b.Property<string>("ImageUrl")
                         .IsRequired()
@@ -803,13 +806,13 @@ namespace FZ.WebAPI.Migrations.MovieDb
 
             modelBuilder.Entity("FZ.Movie.Domain.Media.MovieImage", b =>
                 {
-                    b.HasOne("FZ.Movie.Domain.Catalog.Movies", "Movies")
+                    b.HasOne("FZ.Movie.Domain.Catalog.Movies", "Movie")
                         .WithMany("movieImages")
                         .HasForeignKey("movieID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Movies");
+                    b.Navigation("Movie");
                 });
 
             modelBuilder.Entity("FZ.Movie.Domain.Media.MovieSource", b =>

@@ -20,6 +20,7 @@ using FZ.Movie.Infrastructure.Repository.People;
 using FZ.Movie.Infrastructure.Repository.Taxonomy;
 using FZ.Shared.ApplicationService;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -146,6 +147,9 @@ namespace FZ.Movie.ApplicationService.StartUp
             });
 
 
+            builder.Services.Configure<FormOptions>(o => {
+                o.MultipartBodyLengthLimit = 256L * 1024L * 1024L; // 256MB
+            });
 
 
             // DbContext (Scoped)
@@ -173,6 +177,9 @@ namespace FZ.Movie.ApplicationService.StartUp
                     .SetIsOriginAllowed(_ => true)
                 );
             });
+
+
+
 
             // HttpClient
             services.AddHttpClient("vimeo-api", c =>

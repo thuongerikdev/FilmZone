@@ -48,99 +48,152 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Catalog
             _moviePersonRepository = movieperson;
             _movieImageRepository = movieImageRepository;
         }
-        public async Task<ResponseDto<Movies>> CreateMovie(CreateMoviesRequest request, CancellationToken ct)
+        public async Task<ResponseDto<MovieCreatedDto>> CreateMovie(CreateMoviesRequest request, CancellationToken ct)
         {
             _logger.LogInformation("Creating a new movie with slug: {Slug}", request.slug);
+
             try
             {
+                // 1) Kiểm tra trùng slug
                 var existingMovie = await _movieRepository.GetBySlugAsync(request.slug, ct);
                 if (existingMovie != null)
                 {
                     _logger.LogWarning("Movie with slug: {Slug} already exists", request.slug);
-                    return ResponseConst.Error<Movies>(400, "Movie with the same slug already exists");
+                    return ResponseConst.Error<MovieCreatedDto>(400, "Movie with the same slug already exists");
                 }
-                var image = await _cloudinaryService.UploadImageAsync(request.image);
 
-                Movies newMovie = new Movies
-                {
-                    title = request.title,
-                    slug = request.slug,
-                    description = request.description,
-                    regionID = request.regionID,
-                    releaseDate = request.releaseDate,
-                    originalTitle = request.originalTitle,
-                    movieType = request.movieType,
-                    status = request.status,
-                    durationSeconds = request.durationSeconds,
-                    totalSeasons = request.totalSeasons,
-                    totalEpisodes = request.totalEpisodes,
-                    year = request.year,
-                    rated = request.rated,
-                    popularity = request.popularity,
-                    image = image,
-                    createdAt = DateTime.UtcNow,
-                    updatedAt = DateTime.UtcNow,
+                // 2) Upload poster (bắt buộc theo BE hiện tại)
+                var posterUrl = await _cloudinaryService.UploadImageAsync(request.image);
 
-                };
+                // 3) Chuẩn bị list input an toàn null
+                var tagIdsInput = (request.tagIDs ?? new List<int>()).Distinct().ToList();
+                var peopleInput = (request.person ?? new List<CreateMoviePerson>()).ToList();
+                var imagesInput = (request.movieImages ?? new List<CreateMovieImage>()).ToList();
+
+                // 4) Thực thi trong transaction
                 await _unitOfWork.ExecuteInTransactionAsync(async (cancellationToken) =>
                 {
-                    await _movieRepository.AddAsync(newMovie, cancellationToken);
-                    await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-
-
-                    foreach (var tagID in request.tagIDs.Distinct())
+                    // 4.1) Tạo movie
+                    var newMovie = new Movies
                     {
-                        var movieTag = new MovieTag
+                        title = request.title,
+                        slug = request.slug,
+                        description = request.description,
+                        regionID = request.regionID,
+                        releaseDate = request.releaseDate,
+                        originalTitle = request.originalTitle,
+                        movieType = request.movieType,
+                        status = request.status,
+                        durationSeconds = request.durationSeconds,
+                        totalSeasons = request.totalSeasons,
+                        totalEpisodes = request.totalEpisodes,
+                        year = request.year,
+                        rated = request.rated,
+                        popularity = request.popularity,
+                        image = posterUrl,
+                        createdAt = DateTime.UtcNow,
+                        updatedAt = DateTime.UtcNow,
+                    };
+
+                    await _movieRepository.AddAsync(newMovie, cancellationToken);
+                    await _unitOfWork.SaveChangesAsync(cancellationToken); // cần để có movieID
+
+                    // 4.2) Thêm tags
+                    foreach (var tagID in tagIdsInput)
+                    {
+                        await _movieTagRepository.AddAsync(new MovieTag
                         {
                             movieID = newMovie.movieID,
                             tagID = tagID
-                        };
-                        await _movieTagRepository.AddAsync(movieTag, cancellationToken);
+                        }, cancellationToken);
                     }
-                    await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                    foreach (var person in request.person)
+                    // 4.3) Thêm people
+                    foreach (var p in peopleInput)
                     {
-                        var moviePerson = new MoviePerson
+                        await _moviePersonRepository.AddAsync(new MoviePerson
                         {
                             movieID = newMovie.movieID,
-                            personID = person.personID,
-                            role = person.role,
-                            characterName = person.characterName,
-                            creditOrder = person.creditOrder
-
-                        };
-                        await _moviePersonRepository.AddAsync(moviePerson, cancellationToken);
-                        await _unitOfWork.SaveChangesAsync(cancellationToken);
+                            personID = p.personID,
+                            role = p.role,
+                            characterName = p.characterName,
+                            creditOrder = p.creditOrder
+                        }, cancellationToken);
                     }
-                    foreach(var image in request.movieImages)
+
+                    // 4.4) Upload & thêm images
+                    var createdImageDtos = new List<MovieImageDto>(imagesInput.Count);
+                    foreach (var img in imagesInput)
                     {
+                        // Bỏ qua phần tử null hoặc không có file
+                        if (img?.image == null) continue;
+
+                        var url = await _cloudinaryService.UploadImageAsync(img.image);
                         var movieImage = new MovieImage
                         {
                             movieID = newMovie.movieID,
-                            ImageUrl = await _cloudinaryService.UploadImageAsync(image.image)
+                            ImageUrl = url,
+                            createdAt = DateTime.UtcNow
                         };
                         await _movieImageRepository.AddMovieImageAsync(movieImage, cancellationToken);
-                        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                        // Lưu ý: movieImageID sẽ có sau SaveChanges
                     }
 
+                    // 4.5) Lưu 1 lần cho batch (tags, people, images)
+                    await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+                    // 4.6) Load lại IDs ảnh vừa tạo (nếu cần ID), hoặc tạo DTO từ request/URL đã upload
+                    // Nếu repo có method lấy images theo movieID:
+                    var savedImages = await _movieImageRepository.GetByMovieID(newMovie.movieID, cancellationToken);
+                    createdImageDtos = savedImages
+                        .Select(mi => new MovieImageDto(mi.movieImageID, mi.ImageUrl))
+                        .ToList();
+
+                    // 4.7) Tạo DTO kết quả, KHÔNG trả entity để tránh cycle
+                    var resultDto = new MovieCreatedDto(
+                        movieID: newMovie.movieID,
+                        slug: newMovie.slug,
+                        title: newMovie.title,
+                        description: newMovie.description,
+                        image: newMovie.image,
+                        movieType: newMovie.movieType,
+                        status: newMovie.status,
+                        releaseDate: newMovie.releaseDate,
+                        durationSeconds: newMovie.durationSeconds,
+                        totalSeasons: newMovie.totalSeasons,
+                        totalEpisodes: newMovie.totalEpisodes,
+                        year: newMovie.year,
+                        rated: newMovie.rated,
+                        popularity: newMovie.popularity ?? 0,
+                        regionID: newMovie.regionID,
+                        tagIDs: tagIdsInput,
+                        people: peopleInput.Select(p => new MoviePersonDto(p.personID, p.role, p.characterName, p.creditOrder)).ToList(),
+                        images: createdImageDtos
+                    );
+
+                    // Trả ra trong transaction scope
+                    // (tùy UoW ExecuteInTransactionAsync cho phép return object nào)
+                    // Ở đây trả bool rồi tạo Response ở ngoài
+                    // => Ta gán vào 1 biến bên ngoài qua closure:
+                    created = resultDto;
 
                     return true;
                 }, ct: ct);
-                _logger.LogInformation("Successfully created a new movie with slug: {Slug}", request.slug);
-                return ResponseConst.Success("Successfully created a new movie with slug", newMovie);
 
+                _logger.LogInformation("Successfully created a new movie with slug: {Slug}", request.slug);
+                return ResponseConst.Success("Successfully created a new movie", created);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred while creating a new movie with slug: {Slug}", request.slug);
-
-                return ResponseConst.Error<Movies>(500, "Error occurred while creating a new movie");
+                return ResponseConst.Error<MovieCreatedDto>(500, "Error occurred while creating a new movie");
             }
-
         }
+
+        // biến tạm để lấy dto ra khỏi closure (đặt trong class hoặc method scope)
+        private MovieCreatedDto? created;
+
         public async Task<ResponseDto<Movies>> UpdateMovie(UpdateMoviesRequest request, CancellationToken ct)
         {
             _logger.LogInformation("Updating movie with ID: {MovieID}", request.movieID);

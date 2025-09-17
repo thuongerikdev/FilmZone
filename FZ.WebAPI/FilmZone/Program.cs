@@ -12,7 +12,12 @@ namespace FZ.WebAPI
     {
         public static void Main(string[] args)
         {
+            ThreadPool.GetMinThreads(out var worker, out var iocp);
+            var target = Math.Max(worker, Environment.ProcessorCount * 16);
+            ThreadPool.SetMinThreads(target, iocp);
+
             var builder = WebApplication.CreateBuilder(args);
+
 
             // === 1) LOAD .env (DEV) TRƯỚC: thử nhiều vị trí ===
             try

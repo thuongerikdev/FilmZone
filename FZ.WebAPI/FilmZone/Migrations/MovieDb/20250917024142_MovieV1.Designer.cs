@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FZ.WebAPI.Migrations.MovieDb
 {
     [DbContext(typeof(MovieDbContext))]
-    [Migration("20250916033948_MovieV1")]
+    [Migration("20250917024142_MovieV1")]
     partial class MovieV1
     {
         /// <inheritdoc />
@@ -441,7 +441,10 @@ namespace FZ.WebAPI.Migrations.MovieDb
             modelBuilder.Entity("FZ.Movie.Domain.Media.MovieImage", b =>
                 {
                     b.Property<int>("movieImageID")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("movieImageID"));
 
                     b.Property<string>("ImageUrl")
                         .IsRequired()
@@ -806,13 +809,13 @@ namespace FZ.WebAPI.Migrations.MovieDb
 
             modelBuilder.Entity("FZ.Movie.Domain.Media.MovieImage", b =>
                 {
-                    b.HasOne("FZ.Movie.Domain.Catalog.Movies", "Movies")
+                    b.HasOne("FZ.Movie.Domain.Catalog.Movies", "Movie")
                         .WithMany("movieImages")
                         .HasForeignKey("movieID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Movies");
+                    b.Navigation("Movie");
                 });
 
             modelBuilder.Entity("FZ.Movie.Domain.Media.MovieSource", b =>

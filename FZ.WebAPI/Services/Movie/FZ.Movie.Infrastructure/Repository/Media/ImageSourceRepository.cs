@@ -1,4 +1,5 @@
-﻿using FZ.Movie.Domain.Media;
+﻿using FZ.Movie.Domain.Catalog;
+using FZ.Movie.Domain.Media;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -10,9 +11,9 @@ namespace FZ.Movie.Infrastructure.Repository.Media
 {
     public interface IImageSourceRepository
     {
-        Task AddImageSourceAsync(Domain.Media.ImageSource imageSource, CancellationToken ct);
-        Task UpdateAsync(Domain.Media.ImageSource imageSource, CancellationToken ct);
-        Task RemoveAsync(int imageSourceID);
+        Task<ImageSource> AddImageSourceAsync(Domain.Media.ImageSource imageSource, CancellationToken ct);
+        Task<ImageSource> UpdateAsync(Domain.Media.ImageSource imageSource, CancellationToken ct);
+        Task<ImageSource> RemoveAsync(ImageSource imageSource);
         Task<List<Domain.Media.ImageSource>> GetAllImageSourcesAsync(CancellationToken ct);
         Task<List<ImageSource>> GetImageSourceByType(string type, CancellationToken ct);
         Task<ImageSource?> GetByIdAsync(int imageSourceID, CancellationToken ct);
@@ -21,22 +22,29 @@ namespace FZ.Movie.Infrastructure.Repository.Media
     {
         private readonly MovieDbContext _context;
         public ImageSourceRepository(MovieDbContext context) => _context = context;
-        public Task AddImageSourceAsync(Domain.Media.ImageSource imageSource, CancellationToken ct)
+
+        public async Task<ImageSource> AddImageSourceAsync(Domain.Media.ImageSource imageSource, CancellationToken ct)
         {
-            ArgumentNullException.ThrowIfNull(imageSource);
-            return _context.ImageSources.AddAsync(imageSource, ct).AsTask();
+            var result = await _context.ImageSources.AddAsync(imageSource, ct);
+            return result.Entity;
         }
-        public Task UpdateAsync(Domain.Media.ImageSource imageSource, CancellationToken ct)
+
+        public async Task<ImageSource> UpdateAsync(Domain.Media.ImageSource imageSource, CancellationToken ct)
         {
-            ArgumentNullException.ThrowIfNull(imageSource);
-            _context.ImageSources.Update(imageSource);
-            return Task.CompletedTask;
+            var existingOrder = await _context.ImageSources.FindAsync(new object[] { imageSource.imageSourceID }, ct);
+            if (existingOrder == null)
+            {
+                throw new KeyNotFoundException($"Order with ID {imageSource.imageSourceID} not found.");
+            }
+            _context.Entry(existingOrder).CurrentValues.SetValues(imageSource);
+            return existingOrder;
         }
-        public Task RemoveAsync(int imageSourceID)
+        public Task<ImageSource>RemoveAsync(ImageSource imageSource)
         {
-            var stub = new Domain.Media.ImageSource { imageSourceID = imageSourceID };
-            _context.Entry(stub).State = Microsoft.EntityFrameworkCore.EntityState.Deleted;
-            return Task.CompletedTask;
+            _context.Attach(imageSource);
+            var result = _context.ImageSources.Remove(imageSource);
+            return Task.FromResult(result.Entity);
+
         }
         public Task<List<Domain.Media.ImageSource>> GetAllImageSourcesAsync(CancellationToken ct)
             => _context.ImageSources.AsNoTracking().ToListAsync(ct);

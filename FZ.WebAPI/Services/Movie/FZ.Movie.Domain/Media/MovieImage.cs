@@ -13,13 +13,16 @@ namespace FZ.Movie.Domain.Media
 
     public class MovieImage
     {
-        [DatabaseGenerated(DatabaseGeneratedOption.None)]
         [Key]
-        public int movieImageID { get; set; }    // PK, same as movieID
-        public int movieID { get; set; }          // FK to Movies.movieID
-        public string ImageUrl { get; set; }
-        public DateTime createdAt { get; set; }
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]  // ✅ tự tăng
+        public int movieImageID { get; set; }
 
-        public virtual Movies Movies { get; set; }
-        }
+        public int movieID { get; set; }                       // FK -> Movies.movieID
+
+        public string ImageUrl { get; set; } = default!;
+
+        public DateTime createdAt { get; set; } = DateTime.UtcNow;
+        [ForeignKey(nameof(movieID))]
+        public virtual Movies Movie { get; set; } = default!;  // (nên để số ít cho rõ nghĩa)
+    }
 }

@@ -127,7 +127,7 @@ namespace FZ.Movie.Infrastructure
 
             // ========= Images =========
             mb.Entity<MovieImage>()
-              .HasOne(mi => mi.Movies)
+              .HasOne(mi => mi.Movie)
               .WithMany(m => m.movieImages)
               .HasForeignKey(mi => mi.movieID)
               .OnDelete(DeleteBehavior.Cascade);     // Movie xóa -> xóa MovieImage

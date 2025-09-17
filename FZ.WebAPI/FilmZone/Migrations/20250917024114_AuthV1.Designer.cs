@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FZ.WebAPI.Migrations
 {
     [DbContext(typeof(AuthDbContext))]
-    [Migration("20250916033920_AuthV1")]
+    [Migration("20250917024114_AuthV1")]
     partial class AuthV1
     {
         /// <inheritdoc />
@@ -100,13 +100,7 @@ namespace FZ.WebAPI.Migrations
                     b.Property<int>("planID")
                         .HasColumnType("int");
 
-                    b.Property<int?>("planID1")
-                        .HasColumnType("int");
-
                     b.Property<int>("priceID")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("priceID1")
                         .HasColumnType("int");
 
                     b.Property<string>("provider")
@@ -131,11 +125,7 @@ namespace FZ.WebAPI.Migrations
 
                     b.HasIndex("planID");
 
-                    b.HasIndex("planID1");
-
                     b.HasIndex("priceID");
-
-                    b.HasIndex("priceID1");
 
                     b.HasIndex("userID");
 
@@ -183,6 +173,8 @@ namespace FZ.WebAPI.Migrations
                     b.HasKey("paymentID");
 
                     b.HasIndex("invoiceID");
+
+                    b.HasIndex("provider", "providerPaymentId");
 
                     b.ToTable("Payment", "auth");
                 });
@@ -821,24 +813,16 @@ namespace FZ.WebAPI.Migrations
             modelBuilder.Entity("FZ.Auth.Domain.Billing.Order", b =>
                 {
                     b.HasOne("FZ.Auth.Domain.Billing.Plan", "plan")
-                        .WithMany()
+                        .WithMany("orders")
                         .HasForeignKey("planID")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("FZ.Auth.Domain.Billing.Plan", null)
-                        .WithMany("orders")
-                        .HasForeignKey("planID1");
-
                     b.HasOne("FZ.Auth.Domain.Billing.Price", "price")
-                        .WithMany()
+                        .WithMany("orders")
                         .HasForeignKey("priceID")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.HasOne("FZ.Auth.Domain.Billing.Price", null)
-                        .WithMany("orders")
-                        .HasForeignKey("priceID1");
 
                     b.HasOne("FZ.Auth.Domain.User.AuthUser", "user")
                         .WithMany("orders")

@@ -385,9 +385,7 @@ namespace FZ.WebAPI.Migrations
                     provider = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false),
                     providerSessionId = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
                     createdAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    expiresAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    planID1 = table.Column<int>(type: "int", nullable: true),
-                    priceID1 = table.Column<int>(type: "int", nullable: true)
+                    expiresAt = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -407,24 +405,12 @@ namespace FZ.WebAPI.Migrations
                         principalColumn: "planID",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_Order_Plan_planID1",
-                        column: x => x.planID1,
-                        principalSchema: "auth",
-                        principalTable: "Plan",
-                        principalColumn: "planID");
-                    table.ForeignKey(
                         name: "FK_Order_Price_priceID",
                         column: x => x.priceID,
                         principalSchema: "auth",
                         principalTable: "Price",
                         principalColumn: "priceID",
                         onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_Order_Price_priceID1",
-                        column: x => x.priceID1,
-                        principalSchema: "auth",
-                        principalTable: "Price",
-                        principalColumn: "priceID");
                 });
 
             migrationBuilder.CreateTable(
@@ -659,22 +645,10 @@ namespace FZ.WebAPI.Migrations
                 column: "planID");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Order_planID1",
-                schema: "auth",
-                table: "Order",
-                column: "planID1");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Order_priceID",
                 schema: "auth",
                 table: "Order",
                 column: "priceID");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Order_priceID1",
-                schema: "auth",
-                table: "Order",
-                column: "priceID1");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Order_provider_providerSessionId",
@@ -694,6 +668,12 @@ namespace FZ.WebAPI.Migrations
                 schema: "auth",
                 table: "Payment",
                 column: "invoiceID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Payment_provider_providerPaymentId",
+                schema: "auth",
+                table: "Payment",
+                columns: new[] { "provider", "providerPaymentId" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Plan_code",

@@ -147,7 +147,7 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media
                 var sourceToDelete = existingImageSource.source;
                 await _unitOfWork.ExecuteInTransactionAsync(async (cancellationToken) =>
                 {
-                    await _imageSourceRepository.RemoveAsync(existingImageSource.imageSourceID);
+                    await _imageSourceRepository.RemoveAsync(existingImageSource);
                     return true;
                 }, ct: ct);
                 // Xóa ảnh khỏi Cloudinary (best-effort)

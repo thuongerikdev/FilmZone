@@ -201,7 +201,8 @@ namespace FZ.WebAPI.Migrations.MovieDb
                 schema: "movie",
                 columns: table => new
                 {
-                    movieImageID = table.Column<int>(type: "int", nullable: false),
+                    movieImageID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
                     movieID = table.Column<int>(type: "int", nullable: false),
                     ImageUrl = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     createdAt = table.Column<DateTime>(type: "datetime2", nullable: false)

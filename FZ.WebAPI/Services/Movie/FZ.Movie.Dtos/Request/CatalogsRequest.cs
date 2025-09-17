@@ -52,6 +52,29 @@ namespace FZ.Movie.Dtos.Request
         public List<CreateMovieImage> movieImages { get; set; }
 
     }
+    public record MoviePersonDto(int personID, string role, string? characterName, int? creditOrder);
+    public record MovieImageDto(int movieImageID, string imageUrl);
+    public record MovieCreatedDto(
+        int movieID,
+        string slug,
+        string title,
+        string? description,
+        string image,
+        string movieType,
+        string status,
+        DateTime? releaseDate,
+        int? durationSeconds,
+        int? totalSeasons,
+        int? totalEpisodes,
+        int? year,
+        string? rated,
+        double? popularity,
+        int regionID,
+        IReadOnlyList<int> tagIDs,
+        IReadOnlyList<MoviePersonDto> people,
+        IReadOnlyList<MovieImageDto> images
+    );
+
 
 
 

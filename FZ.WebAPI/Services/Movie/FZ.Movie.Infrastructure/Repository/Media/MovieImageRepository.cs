@@ -1,4 +1,5 @@
-﻿using FZ.Movie.Domain.Media;
+﻿using FZ.Movie.Domain.Catalog;
+using FZ.Movie.Domain.Media;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -21,10 +22,7 @@ namespace FZ.Movie.Infrastructure.Repository.Media
         private readonly MovieDbContext _context;
         public MovieImageRepository(MovieDbContext context) => _context = context;
         public Task AddMovieImageAsync(Domain.Media.MovieImage movieImage, CancellationToken ct)
-        {
-            ArgumentNullException.ThrowIfNull(movieImage);
-            return _context.MovieImages.AddAsync(movieImage, ct).AsTask();
-        }
+        => _context.MovieImages.AddAsync(movieImage, ct).AsTask();
         public  Task RemoveAsync(int movieImageID)
         {
            var stub = new Domain.Media.MovieImage { movieImageID = movieImageID };

@@ -39,6 +39,7 @@ namespace FZ.Movie.ApplicationService.Service.Implements.People
                 {
                     name = request.name,
                     code = request.code,
+                    description = request.description,
                     createdAt = DateTime.UtcNow,
                     updatedAt = DateTime.UtcNow,
                 };

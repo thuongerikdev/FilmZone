@@ -11,7 +11,7 @@ namespace FZ.Movie.ApplicationService.Service.Abtracts
 {
      public interface IMoviesService
      {
-            Task<ResponseDto<Movies>> CreateMovie (CreateMoviesRequest request , CancellationToken ct);
+        Task<ResponseDto<MovieCreatedDto>> CreateMovie(CreateMoviesRequest request, CancellationToken ct);
             Task<ResponseDto<Movies>> UpdateMovie (UpdateMoviesRequest request , CancellationToken ct);
             Task<ResponseDto<bool>> DeleteMovie(int movieID, CancellationToken ct);
             Task<ResponseDto<Movies>> GetMovieByID (int movieID, CancellationToken ct);

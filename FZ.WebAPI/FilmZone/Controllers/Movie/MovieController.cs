@@ -16,6 +16,7 @@ namespace FZ.WebAPI.Controllers.Movie
         }
         // Define your endpoints here, for example:
         [HttpPost]
+        [RequestFormLimits(MultipartBodyLengthLimit = 268_435_456)] // 256MB
         public async Task<IActionResult> CreateMovie([FromForm] CreateMoviesRequest request, CancellationToken ct)
         {
             if (!ModelState.IsValid)
