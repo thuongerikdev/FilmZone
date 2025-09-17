@@ -39,6 +39,16 @@ namespace FZ.Movie.ApplicationService.StartUp
             var services = builder.Services;
             var config = builder.Configuration;
 
+
+            // Program.cs
+            builder.Services.AddHttpClient("archive", c =>
+            {
+                c.BaseAddress = new Uri("https://s3.us.archive.org");
+                c.DefaultRequestHeaders.UserAgent.ParseAdd("FilmZoneUploader/1.0");
+                c.Timeout = Timeout.InfiniteTimeSpan; // 👈 tránh timeout mặc định 100s
+            });
+
+
             // === Redis ===
             // === Redis ===
             builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>

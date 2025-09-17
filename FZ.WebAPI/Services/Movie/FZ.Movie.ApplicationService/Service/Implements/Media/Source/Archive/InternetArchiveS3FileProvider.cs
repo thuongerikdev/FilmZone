@@ -2,14 +2,9 @@
 using FZ.WebAPI.SignalR;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Http.Headers;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace FZ.Movie.ApplicationService.Service.Implements.Media.Source.Archive
 {
@@ -22,64 +17,119 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media.Source.Archive
         public string SourceType => "archive-file";
 
         public InternetArchiveS3FileProvider(IHttpClientFactory httpFactory, IHubContext<UploadHub> hub, IConfiguration cfg)
-        { _httpFactory = httpFactory; _hub = hub; _cfg = cfg; }
+        {
+            _httpFactory = httpFactory;
+            _hub = hub;
+            _cfg = cfg;
+        }
 
         public async Task<ProviderResult> UploadAsync(UploadContext ctx, IProgress<int> progress)
         {
-            if (ctx.FileStream == null || ctx.FileSize <= 0) return new(false, null, null, null, "No file");
+            if (ctx.FileStream == null || ctx.FileSize <= 0)
+                return new(false, null, null, null, "No file");
 
-            // 1) Build identifier + target URL
-            var prefix = _cfg["Archive:BucketPrefix"] ?? "fz-";
-            var identifier = MakeIdentifier(prefix, ctx.FileName ?? "movie", DateTime.UtcNow);
-            var safeFileName = WebUtility.UrlEncode(ctx.FileName ?? "movie.mp4");
-            var targetUrl = $"https://s3.us.archive.org/{identifier}/{safeFileName}";
-
-            // 2) Compose headers: LOW auth + auto make bucket + metadata
-            var ak = _cfg["Archive:AccessKey"];
-            var sk = _cfg["Archive:Secret"];
-            if (string.IsNullOrWhiteSpace(ak) || string.IsNullOrWhiteSpace(sk))
-                return new(false, null, null, null, "Archive credentials missing");
-
-            var collection = _cfg["Archive:Collection"] ?? "opensource_movies"; // hoặc "community"
-            var title = Path.GetFileNameWithoutExtension(ctx.FileName) ?? "Untitled";
-
-            var req = new HttpRequestMessage(HttpMethod.Put, targetUrl);
-            req.Headers.TryAddWithoutValidation("authorization", $"LOW {ak}:{sk}");            // :contentReference[oaicite:2]{index=2}
-            req.Headers.TryAddWithoutValidation("x-amz-auto-make-bucket", "1");               // :contentReference[oaicite:3]{index=3}
-            req.Headers.TryAddWithoutValidation("x-archive-meta01-collection", collection);   // :contentReference[oaicite:4]{index=4}
-            req.Headers.TryAddWithoutValidation("x-archive-meta-mediatype", "movies");        // video player on details page :contentReference[oaicite:5]{index=5}
-            req.Headers.TryAddWithoutValidation("x-archive-meta-title", title);               // :contentReference[oaicite:6]{index=6}
-            req.Headers.TryAddWithoutValidation("x-archive-meta-language", ctx.Language ?? "vi");
-            req.Headers.TryAddWithoutValidation("x-archive-size-hint", ctx.FileSize.ToString()); // :contentReference[oaicite:7]{index=7}
-
-            // 3) Send streaming body with progress
-            long uploaded = 0;
-            var ps = new ProgressStream(ctx.FileStream, adv =>
+            try
             {
-                uploaded = adv;
-                var pct = (int)Math.Floor(uploaded * 100.0 / ctx.FileSize);
-                progress.Report(pct);
-                _ = _hub.Clients.Group(ctx.JobId).SendAsync("upload.progress",
-                    new { jobId = ctx.JobId, status = "Uploading", percent = pct, text = $"Uploaded {uploaded}/{ctx.FileSize}" }, ctx.Ct);
-            });
-            var content = new StreamContent(ps);
-            content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
-            req.Content = content;
+                // 1) Build identifier + target URL
+                var prefix = _cfg["Archive:BucketPrefix"] ?? "fz-";
+                // Bắt buộc giữ đuôi hợp lệ để IA nhận diện
+                var fileName = string.IsNullOrWhiteSpace(ctx.FileName) ? "movie.mp4" : ctx.FileName;
+                var identifier = MakeIdentifier(prefix, fileName, DateTime.UtcNow);
+                var safeFileName = WebUtility.UrlEncode(fileName);
+                var targetUrl = $"https://s3.us.archive.org/{identifier}/{safeFileName}";
 
-            var http = _httpFactory.CreateClient();
-            var resp = await http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ctx.Ct);
-            if (!resp.IsSuccessStatusCode)
-            {
-                var body = await resp.Content.ReadAsStringAsync(ctx.Ct);
-                return new(false, null, null, null, $"Archive PUT failed: {(int)resp.StatusCode} {body}");
+                // 2) Headers (ASCII-only)
+                var ak = _cfg["Archive:AccessKey"];
+                var sk = _cfg["Archive:Secret"];
+                if (string.IsNullOrWhiteSpace(ak) || string.IsNullOrWhiteSpace(sk))
+                    return new(false, null, null, null, "Archive credentials missing");
+
+                // ⚠️ Chọn collection mà key có quyền: "community" hoặc "opensource_movies" hay collection của bạn
+                var collection = _cfg["Archive:Collection"] ?? "community";
+
+                var titleOriginal = Path.GetFileNameWithoutExtension(fileName);
+                var titleAscii = HeaderEncoding.ToAsciiHeader(titleOriginal);
+                var languageAscii = HeaderEncoding.ToAsciiHeader(ctx.Language ?? "vi");
+                var collectionAscii = HeaderEncoding.ToAsciiHeader(collection);
+
+                var req = new HttpRequestMessage(HttpMethod.Put, targetUrl)
+                {
+                    // tránh 100-continue roundtrip
+                    Headers = { ExpectContinue = false }
+                };
+
+                // Header chuẩn của IA
+                req.Headers.TryAddWithoutValidation("authorization", $"LOW {ak}:{sk}");
+                req.Headers.TryAddWithoutValidation("x-archive-auto-make-bucket", "1");
+                req.Headers.TryAddWithoutValidation("x-archive-meta-collection", collectionAscii);
+                req.Headers.TryAddWithoutValidation("x-archive-meta-mediatype", "movies");
+                req.Headers.TryAddWithoutValidation("x-archive-meta-title", titleAscii);
+                req.Headers.TryAddWithoutValidation("x-archive-meta-language", languageAscii);
+                req.Headers.TryAddWithoutValidation("x-archive-queue-derive", "1"); // 👈 bắt derive để có preview
+
+                // 3) Body + progress + Content-Length + MIME
+                if (ctx.FileStream.CanSeek) ctx.FileStream.Seek(0, SeekOrigin.Begin);
+
+                long uploaded = 0;
+                var ps = new ProgressStream(ctx.FileStream, adv =>
+                {
+                    uploaded = adv;
+                    var pct = (int)Math.Floor(uploaded * 100.0 / ctx.FileSize);
+                    progress.Report(pct);
+                    _ = _hub.Clients.Group(ctx.JobId).SendAsync(
+                        "upload.progress",
+                        new { jobId = ctx.JobId, status = "Uploading", percent = pct, text = $"Uploaded {uploaded:N0}/{ctx.FileSize:N0}" },
+                        ctx.Ct
+                    );
+                });
+
+                // đoán MIME theo đuôi
+                string mime = GuessVideoMime(fileName);
+
+                var content = new StreamContent(ps);
+                content.Headers.ContentType = new MediaTypeHeaderValue(mime);
+                content.Headers.ContentLength = ctx.FileSize; // ✅ tránh TE: chunked
+                req.Content = content;
+
+                var http = _httpFactory.CreateClient("archive"); // bạn đã cấu hình UA, v.v.
+                using var resp = await http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ctx.Ct);
+                if (!resp.IsSuccessStatusCode)
+                {
+                    var body = await resp.Content.ReadAsStringAsync(ctx.Ct);
+                    if ((int)resp.StatusCode == 403 && body.Contains("AccessDenied", StringComparison.OrdinalIgnoreCase))
+                        return new(false, null, null, null, "Internet Archive: AccessDenied – key không có quyền với collection. Dùng 'community' hoặc xin quyền.");
+                    return new(false, null, null, null, $"Archive PUT failed: {(int)resp.StatusCode} {body}");
+                }
+
+                // 4) Derive async — trả về details/player url
+                var details = $"https://archive.org/details/{identifier}";
+                await _hub.Clients.Group(ctx.JobId).SendAsync(
+                    "upload.progress",
+                    new { jobId = ctx.JobId, status = "Processing", percent = 100, text = "Deriving on Archive.org..." },
+                    ctx.Ct
+                );
+
+                return new(true, identifier, $"/details/{identifier}", details, null);
             }
+            catch (OperationCanceledException)
+            {
+                return new(false, null, null, null, "Canceled");
+            }
+            catch (Exception ex)
+            {
+                return new(false, null, null, null, ex.Message);
+            }
+        }
 
-            // 4) Derive sẽ chạy async — return details/player url
-            var details = $"https://archive.org/details/{identifier}";
-            await _hub.Clients.Group(ctx.JobId).SendAsync("upload.progress",
-                new { jobId = ctx.JobId, status = "Processing", percent = 100, text = "Deriving on Archive.org..." }, ctx.Ct);
-
-            return new(true, identifier, $"/details/{identifier}", details, null);
+        private static string GuessVideoMime(string fileName)
+        {
+            var lower = fileName.ToLowerInvariant();
+            if (lower.EndsWith(".mp4")) return "video/mp4";
+            if (lower.EndsWith(".webm")) return "video/webm";
+            if (lower.EndsWith(".ogv") || lower.EndsWith(".ogg")) return "video/ogg";
+            if (lower.EndsWith(".mov")) return "video/quicktime";
+            if (lower.EndsWith(".mkv")) return "video/x-matroska";
+            return "application/octet-stream";
         }
 
         private static string MakeIdentifier(string prefix, string name, DateTime now)

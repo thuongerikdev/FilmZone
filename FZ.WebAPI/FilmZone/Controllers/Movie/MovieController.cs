@@ -115,5 +115,59 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
 
+        [HttpGet("mainScreen")]
+        public async Task<IActionResult> GetAllMoviesMainScreen(CancellationToken ct)
+        {
+            try
+            {
+                var result = await _movieService.GetAllMoviesMainScreen(ct);
+                if (result.ErrorCode != 200)
+                {
+                    return BadRequest(ResponseConst.Error<string>(500, result.ErrorMessage));
+                }
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception (not shown here for brevity)
+                return StatusCode(500, "An error occurred while processing your request.");
+            }
+        }
+        [HttpGet("newReleaseMainScreen")]
+        public async Task<IActionResult> GetAllMoviesNewReleaseMainScreen(CancellationToken ct)
+        {
+            try
+            {
+                var result = await _movieService.GetAllMoviesNewReleaseMainScreen(ct);
+                if (result.ErrorCode != 200)
+                {
+                    return BadRequest(ResponseConst.Error<string>(500, result.ErrorMessage));
+                }
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception (not shown here for brevity)
+                return StatusCode(500, "An error occurred while processing your request.");
+            }
+        }
+        [HttpGet("watchNow/{id}")]
+        public async Task<IActionResult> GetWatchNowMovieByID(int id, CancellationToken ct)
+        {
+            try
+            {
+                var result = await _movieService.GetWatchNowMovieByID(id, ct);
+                if (result.ErrorCode != 200)
+                {
+                    BadRequest(ResponseConst.Error<string>(500, result.ErrorMessage));
+                }
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception (not shown here for brevity)
+                return StatusCode(500, "An error occurred while processing your request.");
+            }
+        }
     }
 }

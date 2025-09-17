@@ -6,6 +6,7 @@ using FZ.Movie.Domain.Media;
 using FZ.Movie.Domain.People;
 using FZ.Movie.Domain.Taxonomy;
 using FZ.Movie.Dtos.Request;
+using FZ.Movie.Dtos.Respone;
 using FZ.Movie.Infrastructure;
 using FZ.Movie.Infrastructure.Repository;
 using FZ.Movie.Infrastructure.Repository.Catalog;
@@ -418,6 +419,57 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Catalog
             {
                 _logger.LogError(ex, "Error occurred while retrieving all movies");
                 return ResponseConst.Error<List<Movies>>(500, "Error occurred while retrieving all movies");
+            }
+        }
+
+        public async Task<ResponseDto<List<GetAllMovieMainScreenResponse>>> GetAllMoviesMainScreen(CancellationToken ct)
+        {
+            _logger.LogInformation("Retrieving all movies for main screen");
+            try
+            {
+                var movies = await _movieRepository.GetAllMovieMainScreenAsync(ct);
+                _logger.LogInformation("Successfully retrieved all movies for main screen");
+                return ResponseConst.Success("Successfully retrieved all movies for main screen", movies);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while retrieving all movies for main screen");
+                return ResponseConst.Error<List<GetAllMovieMainScreenResponse>>(500, "Error occurred while retrieving all movies for main screen");
+            }
+        }
+        public async Task<ResponseDto<List<GetAllMovieMainScreenResponse>>> GetAllMoviesNewReleaseMainScreen(CancellationToken ct)
+        {
+            _logger.LogInformation("Retrieving all new release movies for main screen");
+            try
+            {
+                var movies = await _movieRepository.GetAllMovieNewReleaseMainScreenAsync(ct);
+                _logger.LogInformation("Successfully retrieved all new release movies for main screen");
+                return ResponseConst.Success("Successfully retrieved all new release movies for main screen", movies);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while retrieving all new release movies for main screen");
+                return ResponseConst.Error<List<GetAllMovieMainScreenResponse>>(500, "Error occurred while retrieving all new release movies for main screen");
+            }
+        }
+        public async Task<ResponseDto<WatchNowMovieResponse>> GetWatchNowMovieByID(int movieID, CancellationToken ct)
+        {
+            _logger.LogInformation("Retrieving watch now movie with ID: {MovieID}", movieID);
+            try
+            {
+                var movie = await _movieRepository.WatchNowMovieResponse(movieID, ct);
+                if (movie == null)
+                {
+                    _logger.LogWarning("Watch now movie with ID: {MovieID} not found", movieID);
+                    return ResponseConst.Error<WatchNowMovieResponse>(404, "Movie not found");
+                }
+                _logger.LogInformation("Successfully retrieved watch now movie with ID: {MovieID}", movieID);
+                return ResponseConst.Success("Successfully retrieved the watch now movie", movie);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while retrieving watch now movie with ID: {MovieID}", movieID);
+                return ResponseConst.Error<WatchNowMovieResponse>(500, "Error occurred while retrieving the watch now movie");
             }
         }
     }

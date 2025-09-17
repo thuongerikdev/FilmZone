@@ -1,6 +1,7 @@
 ﻿using FZ.Constant;
 using FZ.Movie.Domain.Catalog;
 using FZ.Movie.Dtos.Request;
+using FZ.Movie.Dtos.Respone;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,8 +17,11 @@ namespace FZ.Movie.ApplicationService.Service.Abtracts
             Task<ResponseDto<bool>> DeleteMovie(int movieID, CancellationToken ct);
             Task<ResponseDto<Movies>> GetMovieByID (int movieID, CancellationToken ct);
             Task<ResponseDto<List<Movies>>> GetAllMovies (CancellationToken ct);
+            Task<ResponseDto<List<GetAllMovieMainScreenResponse>>> GetAllMoviesMainScreen (CancellationToken ct);
+            Task<ResponseDto<List<GetAllMovieMainScreenResponse>>> GetAllMoviesNewReleaseMainScreen (CancellationToken ct);
+        Task<ResponseDto<WatchNowMovieResponse>> GetWatchNowMovieByID(int movieID , CancellationToken ct);
 
-     }
+    }
     public interface IEpisodeService
     {
         Task<ResponseDto<Episode>> CreateEpisode (CreateEpisodeRequest request , CancellationToken ct);

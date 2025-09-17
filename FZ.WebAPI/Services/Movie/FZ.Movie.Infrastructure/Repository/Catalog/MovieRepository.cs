@@ -1,4 +1,5 @@
 ﻿using FZ.Movie.Domain.Catalog;
+using FZ.Movie.Dtos.Respone;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -33,6 +34,10 @@ namespace FZ.Movie.Infrastructure.Repository.Catalog
         Task RemoveAsync(int movieID);                                 // mark Deleted -> UoW sẽ commit
         Task<int> HardDeleteAsync(int movieID, CancellationToken ct);  // bulk delete ngay trên DB (EF Core 7+)
         Task<List<Movies>> GetAllMovieAsync(CancellationToken ct);
+        Task<List<GetAllMovieMainScreenResponse>> GetAllMovieMainScreenAsync(CancellationToken ct);
+        Task<List<GetAllMovieMainScreenResponse>> GetAllMovieNewReleaseMainScreenAsync (CancellationToken ct);
+
+        Task<WatchNowMovieResponse> WatchNowMovieResponse(int movieID, CancellationToken ct);
     }
     public sealed class MovieRepository : IMovieRepository
     {
@@ -154,5 +159,125 @@ namespace FZ.Movie.Infrastructure.Repository.Catalog
                        .ExecuteDeleteAsync(ct);
         public Task<List<Movies>> GetAllMovieAsync(CancellationToken ct)
             => _context.Movies.AsNoTracking().ToListAsync(ct);
+
+        public Task<List<GetAllMovieMainScreenResponse>> GetAllMovieMainScreenAsync(CancellationToken ct)
+            => _context.Movies.AsNoTracking()
+                .Select(m => new GetAllMovieMainScreenResponse
+                {
+                    movieID = m.movieID,
+                    title = m.title,
+                    slug = m.slug,
+                    image = m.image,
+                    description = m.description,
+                    movieType = m.movieType,
+                    originalTitle = m.originalTitle
+                })
+                .ToListAsync(ct);
+        public Task<List<GetAllMovieMainScreenResponse>> GetAllMovieNewReleaseMainScreenAsync(CancellationToken ct)
+            => _context.Movies.AsNoTracking()
+                .Where(m => m.status == "completed")
+                .OrderByDescending(m => m.releaseDate)
+                .Select(m => new GetAllMovieMainScreenResponse
+                {
+                    movieID = m.movieID,
+                    title = m.title,
+                    slug = m.slug,
+                    image = m.image,
+                    description = m.description,
+                    movieType = m.movieType,
+                    originalTitle = m.originalTitle
+                })
+                .ToListAsync(ct);
+
+        public async Task<WatchNowMovieResponse> WatchNowMovieResponse(int movieID, CancellationToken ct)
+        {
+            var movie = await _context.Movies
+                .AsNoTracking()
+                .Where(m => m.movieID == movieID)
+                .Select(m => new WatchNowMovieResponse
+                {
+                    movieID = m.movieID,
+                    slug = m.slug,
+                    title = m.title,
+                    image = m.image,
+                    description = m.description,
+                    movieType = m.movieType,
+                    originalTitle = m.originalTitle,
+                    year = m.year,
+                    status = m.status,
+                    releaseDate = m.releaseDate,
+                    durationSeconds = m.durationSeconds,
+                    totalSeasons = m.totalSeasons,
+                    totalEpisodes = m.totalEpisodes,
+                    rated = m.rated,
+                    popularity = m.popularity,
+
+                    // Region (nếu có)
+                    region = m.regions == null
+                        ? null
+                        : new RegionNowPlayingMovieResponse
+                        {
+                            regionID = m.regionID,
+                            regionName = m.regions.name
+                        },
+
+                    // Tags (điều chỉnh tên navigation theo domain của bạn)
+                    // ví dụ: m.movieTags (join table) -> t.tag (taxonomy)
+                    tags = m.movieTags != null
+                        ? m.movieTags.Select(t => new ListTagNowPlayingMovieResponse
+                        {
+                            tagID = t.tagID,
+                            tagName = t.tag.tagName,
+                            tagDescription = t.tag.tagDescription
+                        }).ToList()
+                        : new List<ListTagNowPlayingMovieResponse>(),
+
+                    // Sources (nguồn phát)
+                    // ví dụ: m.movieSources (collection)
+                    sources = m.sources != null
+                        ? m.sources.Select(s => new ListMovieSourceNowPlayingResponse
+                        {
+                            movieSourceID = s.movieSourceID,
+                            movieID = s.movieID,
+                            sourceName = s.sourceName
+                        }).ToList()
+                        : new List<ListMovieSourceNowPlayingResponse>(),
+
+                    // Diễn viên / credit
+                    // ví dụ: m.credits (join to Person)
+                    actors = m.credits != null
+                        ? m.credits.Select(c => new ListActorsNowPlayingMovieResponse
+                        {
+                            fullName = c.person.fullName,
+                            avatar = c.person.avatar,
+                            personID = c.personID,
+                            role = c.role,                      // cast | director | writer ...
+                            characterName = c.characterName,
+                            creditOrder = c.creditOrder
+                        }).ToList()
+                        : new List<ListActorsNowPlayingMovieResponse>(),
+
+                    // Hình ảnh
+                    // ví dụ: m.movieImages
+                    images = m.movieImages != null
+                        ? m.movieImages.Select(i => new ListImagesNowPlayingMovieResponse
+                        {
+                            movieImageID = i.movieImageID,
+                            imageUrl = i.ImageUrl,
+                        }).ToList()
+                        : new List<ListImagesNowPlayingMovieResponse>()
+                })
+                .FirstOrDefaultAsync(ct);
+
+            if (movie == null)
+            {
+                throw new KeyNotFoundException($"Movie with ID {movieID} not found.");
+            }
+
+            return movie;
+        }
+
+
+
     }
 }

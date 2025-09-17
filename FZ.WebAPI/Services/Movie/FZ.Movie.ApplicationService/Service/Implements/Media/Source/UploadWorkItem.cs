@@ -137,8 +137,15 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media.Source
                 {
                     _logger.LogError(ex, "Upload job failed {JobId}", ctx.JobId);
                     await _hub.Clients.Group(ctx.JobId).SendAsync(
-                        "upload.error",
-                        new { jobId = ctx.JobId, error = ex.Message }, ctx.Ct);
+                        "upload.error", new { jobId = ctx.JobId, error = ex.Message }, ctx.Ct);
+                }
+                finally
+                {
+                    try { ctx.FileStream?.Dispose(); } catch { /* ignore */ }
+                    if (!string.IsNullOrWhiteSpace(ctx.TempFilePath))
+                    {
+                        try { System.IO.File.Delete(ctx.TempFilePath); } catch { /* ignore */ }
+                    }
                 }
             }
         }

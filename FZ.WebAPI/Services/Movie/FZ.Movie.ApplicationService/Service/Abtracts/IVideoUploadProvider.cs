@@ -7,20 +7,22 @@ using System.Threading.Tasks;
 namespace FZ.Movie.ApplicationService.Service.Abtracts
 {
     public record UploadContext(
-      string JobId,
-      string SourceType,  // "vimeo-file" | "vimeo-link"
-      string Scope,       // "movie" | "episode"
-      int TargetId,
-      string Quality,
-      string Language,
-      bool IsVipOnly,
-      bool IsActive,
-      Stream? FileStream, // dùng cho file
-      long FileSize,      // dùng cho file
-      string? LinkUrl,    // dùng cho link
-      string? FileName,
-      CancellationToken Ct
-  );
+        string JobId,
+        string SourceType,
+        string Scope,
+        int TargetId,
+        string Quality,
+        string Language,
+        bool IsVipOnly,
+        bool IsActive,
+        Stream? FileStream,
+        long FileSize,
+        string? LinkUrl,
+        string? FileName,
+        string? TempFilePath,        // 👈 NEW: để dọn file sau khi xong
+        CancellationToken Ct
+    );
+
 
     public interface IVideoUploadProvider
     {
