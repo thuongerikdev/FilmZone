@@ -20,12 +20,9 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media.Source.Youtube
         public string SourceType => "youtube-file";
 
         public YouTubeResumableProvider(IConfiguration cfg, IHubContext<UploadHub> hub)
-        {
-            _cfg = cfg;
-            _hub = hub;
-        }
+        { _cfg = cfg; _hub = hub; }
 
-        private YouTubeService CreateService()
+        private async Task<YouTubeService> CreateServiceAsync()
         {
             var clientId = _cfg["YouTube:ClientId"];
             var clientSecret = _cfg["YouTube:ClientSecret"];
@@ -41,11 +38,21 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media.Source.Youtube
             var flow = new GoogleAuthorizationCodeFlow(new GoogleAuthorizationCodeFlow.Initializer
             {
                 ClientSecrets = new ClientSecrets { ClientId = clientId, ClientSecret = clientSecret },
-                Scopes = new[] { YouTubeService.Scope.YoutubeUpload },
+                Scopes = new[]
+                 {
+                    YouTubeService.Scope.YoutubeUpload,
+                    YouTubeService.Scope.YoutubeReadonly // hoặc YouTubeService.Scope.Youtube
+                },
             });
 
             var credential = new UserCredential(flow, "FilmZoneUser",
                 new TokenResponse { RefreshToken = refreshToken });
+            var scopes = credential.Token.Scope;
+
+            Console.WriteLine("Scopes: " + scopes);
+
+            // Refresh ngay để chắc chắn có AccessToken
+            await credential.RefreshTokenAsync(CancellationToken.None);
 
             return new YouTubeService(new BaseClientService.Initializer
             {
@@ -61,11 +68,8 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media.Source.Youtube
 
             try
             {
-                // đảm bảo stream bắt đầu từ 0 (nếu có thể seek)
-                if (ctx.FileStream.CanSeek)
-                    ctx.FileStream.Seek(0, SeekOrigin.Begin);
-
-                using var yt = CreateService();
+                if (ctx.FileStream.CanSeek) ctx.FileStream.Seek(0, SeekOrigin.Begin);
+                using var yt = await CreateServiceAsync();
 
                 var defaultTitle = string.IsNullOrWhiteSpace(ctx.FileName)
                     ? $"Upload {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}"
@@ -76,17 +80,20 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media.Source.Youtube
                     Snippet = new VideoSnippet
                     {
                         Title = defaultTitle,
-                        Description = "Uploaded via SDK",
+                        Description = "Uploaded via API",
                         Tags = new[] { "api", "upload" },
-                        CategoryId = "22" // People & Blogs (tùy bạn)
+                        CategoryId = "22"
                     },
                     Status = new VideoStatus { PrivacyStatus = "unlisted" } // public|unlisted|private
                 };
 
-                var insert = yt.Videos.Insert(video, "snippet,status", ctx.FileStream, "video/*");
-                insert.ChunkSize = 8 * 1024 * 1024; // 8MB
+                var mime = GuessVideoMime(ctx.FileName ?? "video.mp4");
 
-                insert.ProgressChanged += async (IUploadProgress p) =>
+                // OPTION A: dùng ProgressChanged của SDK (khuyên dùng)
+                var insert = yt.Videos.Insert(video, "snippet,status", ctx.FileStream, mime);
+                insert.ChunkSize = 2 * 1024 * 1024; // 2MB để progress mượt
+
+                insert.ProgressChanged += p =>
                 {
                     switch (p.Status)
                     {
@@ -94,15 +101,15 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media.Source.Youtube
                             var sent = p.BytesSent;
                             var pct = ctx.FileSize > 0 ? (int)Math.Floor(sent * 100.0 / ctx.FileSize) : 0;
                             progress.Report(pct);
-                            await _hub.Clients.Group(ctx.JobId).SendAsync(
+                            _ = _hub.Clients.Group(ctx.JobId).SendAsync(
                                 "upload.progress",
-                                new { jobId = ctx.JobId, status = "Uploading", percent = pct, text = $"Uploaded {sent}/{ctx.FileSize}" },
+                                new { jobId = ctx.JobId, status = "Uploading", percent = pct, text = $"Uploaded {sent:N0}/{ctx.FileSize:N0}" },
                                 ctx.Ct
                             );
                             break;
 
                         case UploadStatus.Completed:
-                            await _hub.Clients.Group(ctx.JobId).SendAsync(
+                            _ = _hub.Clients.Group(ctx.JobId).SendAsync(
                                 "upload.progress",
                                 new { jobId = ctx.JobId, status = "Processing", percent = 100, text = "YouTube processing..." },
                                 ctx.Ct
@@ -110,7 +117,7 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media.Source.Youtube
                             break;
 
                         case UploadStatus.Failed:
-                            await _hub.Clients.Group(ctx.JobId).SendAsync(
+                            _ = _hub.Clients.Group(ctx.JobId).SendAsync(
                                 "upload.error",
                                 new { jobId = ctx.JobId, error = p.Exception?.Message ?? "Upload failed" },
                                 ctx.Ct
@@ -120,7 +127,6 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media.Source.Youtube
                 };
 
                 var result = await insert.UploadAsync(ctx.Ct);
-
                 if (result.Status != UploadStatus.Completed)
                     return new(false, null, null, null, $"Upload failed: {result.Exception?.Message}");
 
@@ -128,12 +134,11 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media.Source.Youtube
                 if (string.IsNullOrEmpty(videoId))
                     return new(false, null, null, null, "Upload finished but no video id");
 
-                // (tuỳ chọn) Poll đến khi xong processing
+                // Poll đợi processed
                 var processed = await WaitUntilProcessedAsync(yt, videoId!, ctx);
                 if (!processed.ok)
                     return new(false, videoId, null, null, $"Processing status: {processed.status}");
 
-                // phát sự kiện done về FE (nếu bạn đang lắng nghe)
                 await _hub.Clients.Group(ctx.JobId).SendAsync(
                     "upload.done",
                     new { jobId = ctx.JobId, vendorId = videoId, playerUrl = $"https://www.youtube.com/watch?v={videoId}" },
@@ -164,28 +169,43 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media.Source.Youtube
 
         private async Task<(bool ok, string status)> WaitUntilProcessedAsync(YouTubeService yt, string videoId, UploadContext ctx)
         {
-            // ~20 phút (mỗi 5 giây)
-            for (int i = 0; i < 240; i++)
+            for (int i = 0; i < 240; i++) // ~20 phút
             {
                 var list = yt.Videos.List("processingDetails,status");
                 list.Id = videoId;
                 var resp = await list.ExecuteAsync(ctx.Ct);
-
                 var item = resp.Items.FirstOrDefault();
                 if (item == null) return (false, "not_found");
 
-                var processing = item.ProcessingDetails?.ProcessingStatus ?? "processing";
-                var uploadStatus = item.Status?.UploadStatus ?? "uploaded";
+                var processing = item.ProcessingDetails?.ProcessingStatus ?? "processing"; // processing|succeeded|failed|terminated
+                var uploadStatus = item.Status?.UploadStatus ?? "uploaded";               // uploaded|processed|failed
 
-                if (!processing.Equals("processing", StringComparison.OrdinalIgnoreCase) &&
+                if (processing.Equals("succeeded", StringComparison.OrdinalIgnoreCase) &&
                     uploadStatus.Equals("processed", StringComparison.OrdinalIgnoreCase))
                 {
                     return (true, "processed");
+                }
+                if (processing.Equals("failed", StringComparison.OrdinalIgnoreCase) ||
+                    processing.Equals("terminated", StringComparison.OrdinalIgnoreCase) ||
+                    uploadStatus.Equals("failed", StringComparison.OrdinalIgnoreCase))
+                {
+                    return (false, $"{processing}/{uploadStatus}");
                 }
 
                 await Task.Delay(TimeSpan.FromSeconds(5), ctx.Ct);
             }
             return (false, "timeout");
+        }
+
+        private static string GuessVideoMime(string fileName)
+        {
+            var lower = fileName.ToLowerInvariant();
+            if (lower.EndsWith(".mp4")) return "video/mp4";
+            if (lower.EndsWith(".webm")) return "video/webm";
+            if (lower.EndsWith(".mov")) return "video/quicktime";
+            if (lower.EndsWith(".mkv")) return "video/x-matroska";
+            if (lower.EndsWith(".ogv") || lower.EndsWith(".ogg")) return "video/ogg";
+            return "video/*";
         }
     }
 }

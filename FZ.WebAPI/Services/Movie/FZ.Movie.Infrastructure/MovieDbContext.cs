@@ -1,9 +1,12 @@
-﻿using FZ.Movie.Domain.Catalog;
+﻿using System;
+using System.Linq;
+using FZ.Movie.Domain.Catalog;
 using FZ.Movie.Domain.Interactions;
 using FZ.Movie.Domain.Media;
 using FZ.Movie.Domain.People;
 using FZ.Movie.Domain.Taxonomy;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace FZ.Movie.Infrastructure
 {
@@ -39,7 +42,9 @@ namespace FZ.Movie.Infrastructure
               .HasIndex(x => new { x.movieID, x.sourceType, x.sourceID, x.language, x.quality })
               .IsUnique();
 
-            mb.Entity<Movies>().HasIndex(x => x.slug).IsUnique();
+            mb.Entity<Movies>()
+              .HasIndex(x => x.slug)
+              .IsUnique();
 
             mb.Entity<Episode>()
               .HasIndex(x => new { x.movieID, x.seasonNumber, x.episodeNumber })
@@ -73,20 +78,20 @@ namespace FZ.Movie.Infrastructure
               .HasForeignKey(x => x.parentID)
               .OnDelete(DeleteBehavior.Restrict);
 
-            // ========= Region (cắt cả 2 nhánh để triệt tiêu multiple paths) =========
+            // ========= Region (break cascades) =========
             mb.Entity<Movies>()
               .HasOne(m => m.regions)
               .WithMany(r => r.Movies)
               .HasForeignKey(m => m.regionID)
-              .OnDelete(DeleteBehavior.NoAction);  // KHÔNG cascade
+              .OnDelete(DeleteBehavior.NoAction);
 
             mb.Entity<Person>()
               .HasOne(p => p.region)
               .WithMany(r => r.People)
               .HasForeignKey(p => p.regionID)
-              .OnDelete(DeleteBehavior.NoAction);  // KHÔNG cascade
+              .OnDelete(DeleteBehavior.NoAction);
 
-            // ========= MoviePerson (bảng trung gian) — CASCADE 2 phía =========
+            // ========= MoviePerson (bridge) =========
             mb.Entity<MoviePerson>()
               .HasOne(mp => mp.movie)
               .WithMany(m => m.credits)
@@ -99,7 +104,7 @@ namespace FZ.Movie.Infrastructure
               .HasForeignKey(mp => mp.personID)
               .OnDelete(DeleteBehavior.Cascade);
 
-            // ========= MovieTag (bảng trung gian) — CASCADE 2 phía =========
+            // ========= MovieTag (bridge) =========
             mb.Entity<MovieTag>()
               .HasOne(mt => mt.movie)
               .WithMany(m => m.movieTags)
@@ -117,22 +122,22 @@ namespace FZ.Movie.Infrastructure
               .HasOne(s => s.movie)
               .WithMany(m => m.sources)
               .HasForeignKey(s => s.movieID)
-              .OnDelete(DeleteBehavior.Cascade);     // Movie xóa -> xóa MovieSource
+              .OnDelete(DeleteBehavior.Cascade);
 
             mb.Entity<EpisodeSource>()
               .HasOne(s => s.episode)
               .WithMany(e => e.sources)
               .HasForeignKey(s => s.episodeID)
-              .OnDelete(DeleteBehavior.Cascade);     // Episode xóa -> xóa EpisodeSource
+              .OnDelete(DeleteBehavior.Cascade);
 
             // ========= Images =========
             mb.Entity<MovieImage>()
               .HasOne(mi => mi.Movie)
               .WithMany(m => m.movieImages)
               .HasForeignKey(mi => mi.movieID)
-              .OnDelete(DeleteBehavior.Cascade);     // Movie xóa -> xóa MovieImage
+              .OnDelete(DeleteBehavior.Cascade);
 
-            // ========= Saved / Ratings / Comments (phụ thuộc Movie) =========
+            // ========= Saved / Ratings / Comments =========
             mb.Entity<SavedMovie>()
               .HasOne(sm => sm.movie)
               .WithMany(m => m.savedBy)
@@ -152,9 +157,6 @@ namespace FZ.Movie.Infrastructure
               .OnDelete(DeleteBehavior.Cascade);
 
             // ========= WatchProgress / EpisodeWatchProgress =========
-            // Tránh 2 đường cascade tới WatchProgress:
-            // Movie -> MovieSource (Cascade) -> WatchProgress (Cascade)
-            // => KHÔNG cascade trực tiếp Movie -> WatchProgress
             mb.Entity<WatchProgress>()
               .HasOne(wp => wp.movie)
               .WithMany()
@@ -165,11 +167,8 @@ namespace FZ.Movie.Infrastructure
               .HasOne(wp => wp.source)
               .WithMany()
               .HasForeignKey(wp => wp.sourceID)
-              .OnDelete(DeleteBehavior.Cascade);     // MovieSource xóa -> xóa WatchProgress
+              .OnDelete(DeleteBehavior.Cascade);
 
-            // Tương tự cho EpisodeWatchProgress:
-            // Episode -> EpisodeSource (Cascade) -> EpisodeWatchProgress (Cascade)
-            // => KHÔNG cascade trực tiếp Episode -> EpisodeWatchProgress
             mb.Entity<EpisodeWatchProgress>()
               .HasOne(wp => wp.episode)
               .WithMany()
@@ -181,6 +180,34 @@ namespace FZ.Movie.Infrastructure
               .WithMany()
               .HasForeignKey(wp => wp.episodeSourceID)
               .OnDelete(DeleteBehavior.Cascade);
+
+            // ========= UTC converters (global, expression-tree safe) =========
+            // Non-nullable DateTime
+            var utcDateTimeConverter = new ValueConverter<DateTime, DateTime>(
+                v => v.Kind == DateTimeKind.Utc ? v : v.ToUniversalTime(), // -> DB
+                v => DateTime.SpecifyKind(v, DateTimeKind.Utc)             // <- DB
+            );
+
+            // Nullable DateTime?
+            var utcNullableDateTimeConverter = new ValueConverter<DateTime?, DateTime?>(
+                v => v == null
+                        ? (DateTime?)null
+                        : (v.Value.Kind == DateTimeKind.Utc ? v.Value : v.Value.ToUniversalTime()),
+                v => v == null ? null : DateTime.SpecifyKind(v.Value, DateTimeKind.Utc)
+            );
+
+            foreach (var entity in mb.Model.GetEntityTypes())
+            {
+                foreach (var prop in entity.GetProperties())
+                {
+                    if (prop.ClrType == typeof(DateTime))
+                        prop.SetValueConverter(utcDateTimeConverter);
+
+                    if (prop.ClrType == typeof(DateTime?))
+                        prop.SetValueConverter(utcNullableDateTimeConverter);
+                }
+            }
+            // ======== end UTC converters =========
         }
     }
 }

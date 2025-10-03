@@ -4,6 +4,7 @@ using FZ.Auth.Domain.Role;
 using FZ.Auth.Domain.Token;
 using FZ.Auth.Domain.User;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace FZ.Auth.Infrastructure
 {
@@ -212,6 +213,34 @@ namespace FZ.Auth.Infrastructure
 
                 e.HasIndex(x => new { x.provider, x.providerPaymentId }).IsUnique(false);
             });
+
+
+            var utcDateTimeConverter = new ValueConverter<DateTime, DateTime>(
+              v => v.Kind == DateTimeKind.Utc ? v : v.ToUniversalTime(), // -> DB
+              v => DateTime.SpecifyKind(v, DateTimeKind.Utc)             // <- DB
+          );
+
+            // Nullable DateTime?
+            var utcNullableDateTimeConverter = new ValueConverter<DateTime?, DateTime?>(
+                v => v == null
+                        ? (DateTime?)null
+                        : (v.Value.Kind == DateTimeKind.Utc ? v.Value : v.Value.ToUniversalTime()),
+                v => v == null ? null : DateTime.SpecifyKind(v.Value, DateTimeKind.Utc)
+            );
+
+            foreach (var entity in modelBuilder.Model.GetEntityTypes())
+            {
+                foreach (var prop in entity.GetProperties())
+                {
+                    if (prop.ClrType == typeof(DateTime))
+                        prop.SetValueConverter(utcDateTimeConverter);
+
+                    if (prop.ClrType == typeof(DateTime?))
+                        prop.SetValueConverter(utcNullableDateTimeConverter);
+                }
+            }
+            // ======== end UTC converters =========
+
 
             // ====== Seed ======
             modelBuilder.Entity<Plan>().HasData(new Plan
