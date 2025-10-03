@@ -12,7 +12,10 @@ using FZ.Auth.Infrastructure.Repository.Billing;
 using FZ.Auth.Infrastructure.Repository.Implements;
 using FZ.Constant;
 using FZ.Constant.Database;
+
+using Microsoft.AspNetCore.Authentication;               // AddAuthentication extensions
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.Google;       // AddGoogle
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -20,12 +23,14 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;          // AddAuthentication(), AddCors(), ...
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
+
 using StackExchange.Redis;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -37,19 +42,93 @@ namespace FZ.Auth.ApplicationService.StartUp
 {
     public static class AuthStartUp
     {
+        // Helper: nhận URL (postgres:// / postgresql://) và trả về KV-form Npgsql hiểu được.
+        // Nếu đã là KV-form thì chỉ đảm bảo có SSL Mode/Trust Server Certificate.
+        private static string NormalizePg(string raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) return raw;
+            raw = raw.Trim();
+
+            bool IsUrl(string s) =>
+                s.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) ||
+                s.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase);
+
+            if (IsUrl(raw))
+            {
+                var uri = new Uri(raw);
+
+                // user:pass
+                string? user = null, pass = null;
+                if (!string.IsNullOrEmpty(uri.UserInfo))
+                {
+                    var parts = uri.UserInfo.Split(':', 2);
+                    user = Uri.UnescapeDataString(parts[0]);
+                    if (parts.Length == 2) pass = Uri.UnescapeDataString(parts[1]);
+                }
+
+                // db name
+                var db = Uri.UnescapeDataString(uri.AbsolutePath.Trim('/'));
+                var port = uri.IsDefaultPort || uri.Port <= 0 ? 5432 : uri.Port;
+
+                // parse query (?a=b&c=d)
+                var qs = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var pair in uri.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+                {
+                    var kv = pair.Split('=', 2);
+                    var k = Uri.UnescapeDataString(kv[0]);
+                    var v = kv.Length == 2 ? Uri.UnescapeDataString(kv[1]) : "";
+                    qs[k] = v;
+                }
+
+                var sslMode = qs.TryGetValue("sslmode", out var s) ? s : "require";
+                var channel = qs.TryGetValue("channel_binding", out var cb) ? cb : null;
+
+                var sb = new StringBuilder();
+                sb.Append($"Host={uri.Host};Port={port};Database={db};Username={user};");
+                if (!string.IsNullOrEmpty(pass)) sb.Append($"Password={pass};");
+                sb.Append($"SSL Mode={sslMode};Trust Server Certificate=true;");
+                if (!string.IsNullOrEmpty(channel)) sb.Append($"Channel Binding={channel};");
+
+                return sb.ToString();
+            }
+
+            // KV-form: đảm bảo có SSL Mode/TrustServerCertificate
+            if (!raw.Contains("SSL Mode", StringComparison.OrdinalIgnoreCase))
+                raw += (raw.EndsWith(";") ? "" : ";") + "SSL Mode=Require";
+            if (!raw.Contains("Trust Server Certificate", StringComparison.OrdinalIgnoreCase))
+                raw += (raw.EndsWith(";") ? "" : ";") + "Trust Server Certificate=true";
+
+            return raw;
+        }
+
         public static void ConfigureAuth(this WebApplicationBuilder builder, string? assemblyName)
         {
-            // === DB & other services ===
+            // === DB (PostgreSQL / Neon) ===
             builder.Services.AddDbContext<AuthDbContext>(
                 options =>
                 {
-                    options.UseSqlServer(
-                        builder.Configuration.GetConnectionString("Default"),
-                        sqlOptions =>
+                    // Ưu tiên ConnectionStrings:Default; fallback DATABASE_URL
+                    var raw =
+                        builder.Configuration.GetConnectionString("Default")
+                        ?? Environment.GetEnvironmentVariable("DATABASE_URL")
+                        ?? throw new InvalidOperationException("Missing Postgres connection string");
+
+                    // Chuẩn hóa: nếu là URL → chuyển sang KV; nếu KV → đảm bảo SSL Mode/TrustServerCertificate
+                    var conn = NormalizePg(raw);
+
+                    options.UseNpgsql(
+                        conn,
+                        npg =>
                         {
-                            sqlOptions.MigrationsAssembly(assemblyName);
-                            sqlOptions.MigrationsHistoryTable(DbSchema.TableMigrationsHistory, DbSchema.Auth);
+                            if (!string.IsNullOrWhiteSpace(assemblyName))
+                                npg.MigrationsAssembly(assemblyName);
+
+                            npg.MigrationsHistoryTable(DbSchema.TableMigrationsHistory, DbSchema.Auth);
+                            npg.EnableRetryOnFailure();
                         });
+
+                    // (tuỳ chọn) snake_case
+                    // options.UseSnakeCaseNamingConvention();
                 },
                 ServiceLifetime.Scoped
             );
@@ -57,13 +136,12 @@ namespace FZ.Auth.ApplicationService.StartUp
             builder.Services.AddHostedService<SubscriptionExpiryWorker>();
             builder.Services.AddScoped<IAuthorizationHandler, ActiveVipHandler>();
 
-            // === Redis (unchanged from your working version) ===
+            // === Redis ===
             builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
             {
                 var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger("Redis");
                 var config = builder.Configuration["Redis:ConnectionString"] ?? "localhost:6379";
 
-                // Parse rediss://... or host:port,...
                 string host = null!;
                 int port = 6379;
                 string? user = null;
@@ -75,7 +153,7 @@ namespace FZ.Auth.ApplicationService.StartUp
                 {
                     isTls = uri.Scheme.Equals("rediss", StringComparison.OrdinalIgnoreCase);
                     host = uri.Host;
-                    port = uri.Port > 0 ? uri.Port : (isTls ? 6379 : 6379);
+                    port = uri.Port > 0 ? uri.Port : 6379;
                     if (!string.IsNullOrEmpty(uri.UserInfo))
                     {
                         var parts = uri.UserInfo.Split(':', 2);
@@ -88,8 +166,7 @@ namespace FZ.Auth.ApplicationService.StartUp
                     var tmp = ConfigurationOptions.Parse(config);
                     if (tmp.EndPoints.Count == 1 && tmp.EndPoints[0] is DnsEndPoint dns)
                     {
-                        host = dns.Host;
-                        port = dns.Port;
+                        host = dns.Host; port = dns.Port;
                     }
                     if (!string.IsNullOrEmpty(tmp.Password)) password = tmp.Password;
                     if (!string.IsNullOrEmpty(tmp.User)) user = tmp.User;
@@ -107,19 +184,13 @@ namespace FZ.Auth.ApplicationService.StartUp
                     ClientName = "auth-service",
                 };
 
-                if (!string.IsNullOrEmpty(host))
-                {
-                    options.EndPoints.Add(host, port);
-                }
-                else
-                {
-                    options = ConfigurationOptions.Parse(config);
-                }
+                if (!string.IsNullOrEmpty(host)) options.EndPoints.Add(host, port);
+                else options = ConfigurationOptions.Parse(config);
 
                 if (isTls)
                 {
                     options.Ssl = true;
-                    options.SslProtocols = System.Security.Authentication.SslProtocols.Tls12;
+                    options.SslProtocols = SslProtocols.Tls12;
                     if (!string.IsNullOrEmpty(host)) options.SslHost = host;
                 }
 
@@ -140,7 +211,7 @@ namespace FZ.Auth.ApplicationService.StartUp
                     }
                     catch (Exception pingEx)
                     {
-                        logger.LogWarning(pingEx, "Redis PING failed (multiplexer exists and will retry in background)");
+                        logger.LogWarning(pingEx, "Redis PING failed (background will retry)");
                     }
 
                     return mux;
@@ -154,7 +225,7 @@ namespace FZ.Auth.ApplicationService.StartUp
 
             builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("MailSettings"));
 
-            // === Common infra & repositories (unchanged) ===
+            // === Common infra & repositories ===
             builder.Services.AddHttpContextAccessor();
             builder.Services.AddScoped<IDeviceIdProvider, DeviceIdProvider>();
 
@@ -190,7 +261,7 @@ namespace FZ.Auth.ApplicationService.StartUp
             builder.Services.AddScoped<IOrderService, OrderService>();
             builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 
-            // === Authentication (JWT + Cookies + External + Google) ===
+            // === Authentication (JWT + Cookies + Google) ===
             var secretKey = builder.Configuration["Jwt:SecretKey"] ?? "A_very_long_and_secure_secret_key_1234567890";
             var key = Encoding.UTF8.GetBytes(secretKey);
             var isDev = builder.Environment.IsDevelopment();
@@ -202,11 +273,8 @@ namespace FZ.Auth.ApplicationService.StartUp
             builder.Services
                 .AddAuthentication(options =>
                 {
-                    // keep JWT as default authenticate/challenge (API semantic)
                     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-
-                    // use cookie as default sign-in scheme (so SignInAsync uses cookie by default)
                     options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
                 })
                 .AddJwtBearer(options =>
@@ -246,19 +314,17 @@ namespace FZ.Auth.ApplicationService.StartUp
                         }
                     };
                 })
-                // Register the app session cookie ("Cookies")
+                // App session cookie
                 .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
                 {
                     options.Cookie.Name = "fz.auth";
                     options.Cookie.SameSite = SameSiteMode.None;
                     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-                    // optional: paths
                     options.LoginPath = "/login";
                     options.AccessDeniedPath = "/access-denied";
-                    // sliding expiration, expiry, etc. adjust if needed
                     options.ExpireTimeSpan = TimeSpan.FromDays(7);
                 })
-                // External cookie for OAuth handshake (temporary)
+                // External cookie cho OAuth handshake
                 .AddCookie("External", opt =>
                 {
                     opt.Cookie.Name = "external.auth";
@@ -266,16 +332,13 @@ namespace FZ.Auth.ApplicationService.StartUp
                     opt.Cookie.SecurePolicy = CookieSecurePolicy.Always;
                 });
 
-
-            // Only add Google if client id/secret present
             if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(googleClientSecret))
             {
-                builder.Services.AddAuthentication() // continue adding handlers to the same auth builder
+                builder.Services.AddAuthentication()
                     .AddGoogle("Google", options =>
                     {
                         options.ClientId = googleClientId!;
                         options.ClientSecret = googleClientSecret!;
-                        // SignInScheme should be the temporary external cookie
                         options.SignInScheme = "External";
                         options.CallbackPath = googleCallbackPath;
                         options.SaveTokens = true;
@@ -283,7 +346,6 @@ namespace FZ.Auth.ApplicationService.StartUp
                         options.CorrelationCookie.SameSite = SameSiteMode.None;
                         options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
 
-                        // Backchannel settings (as you had)
                         var handler = new SocketsHttpHandler
                         {
                             UseProxy = false,
@@ -300,8 +362,7 @@ namespace FZ.Auth.ApplicationService.StartUp
                                 if (ipv4 == null) throw new SocketException((int)SocketError.AddressNotAvailable);
 
                                 var ep = new IPEndPoint(ipv4, ctx.DnsEndPoint.Port);
-                                var s = new Socket(ipv4.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-                                s.NoDelay = true;
+                                var s = new Socket(ipv4.AddressFamily, SocketType.Stream, ProtocolType.Tcp) { NoDelay = true };
                                 using var reg = ct.Register(() => { try { s.Dispose(); } catch { } });
                                 await s.ConnectAsync(ep, ct);
                                 return new NetworkStream(s, ownsSocket: true);
@@ -319,13 +380,12 @@ namespace FZ.Auth.ApplicationService.StartUp
                     });
             }
 
-            // === Authorization & other policies ===
+            // === Authorization ===
             builder.Services.AddAuthorization(options =>
             {
                 foreach (var permission in PermissionConstants.Permissions)
-                {
                     options.AddPolicy(permission.Key, policy => policy.RequireClaim("permission", permission.Value));
-                }
+
                 options.AddPolicy("ActiveVIP", p => p.Requirements.Add(new ActiveVipRequirement()));
             });
 
@@ -335,10 +395,8 @@ namespace FZ.Auth.ApplicationService.StartUp
             {
                 opt.AddPolicy("FE", p =>
                 {
-                    if (allowedOrigins.Length > 0)
-                        p.WithOrigins(allowedOrigins);
-                    else
-                        p.WithOrigins("http://localhost:3000");
+                    if (allowedOrigins.Length > 0) p.WithOrigins(allowedOrigins);
+                    else p.WithOrigins("http://localhost:3000");
 
                     p.AllowAnyHeader()
                      .AllowAnyMethod()
@@ -352,6 +410,5 @@ namespace FZ.Auth.ApplicationService.StartUp
                 opts.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
             });
         }
-
     }
 }

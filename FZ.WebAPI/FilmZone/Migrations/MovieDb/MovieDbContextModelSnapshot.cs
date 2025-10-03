@@ -3,8 +3,8 @@ using System;
 using FZ.Movie.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
@@ -17,51 +17,51 @@ namespace FZ.WebAPI.Migrations.MovieDb
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.10")
-                .HasAnnotation("Relational:MaxIdentifierLength", 128);
+                .HasAnnotation("ProductVersion", "8.0.11")
+                .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
-            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("FZ.Movie.Domain.Catalog.Episode", b =>
                 {
                     b.Property<int>("episodeID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("episodeID"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("episodeID"));
 
                     b.Property<DateTime>("createdAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("description")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<int?>("durationSeconds")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int>("episodeNumber")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int>("movieID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<DateTime?>("releaseDate")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("seasonNumber")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<string>("synopsis")
                         .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
+                        .HasColumnType("character varying(512)");
 
                     b.Property<string>("title")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("character varying(255)");
 
                     b.Property<DateTime>("updatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("episodeID");
 
@@ -75,71 +75,71 @@ namespace FZ.WebAPI.Migrations.MovieDb
                 {
                     b.Property<int>("movieID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("movieID"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("movieID"));
 
                     b.Property<DateTime>("createdAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("description")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<int?>("durationSeconds")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<string>("image")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("movieType")
                         .IsRequired()
                         .HasMaxLength(16)
-                        .HasColumnType("nvarchar(16)");
+                        .HasColumnType("character varying(16)");
 
                     b.Property<string>("originalTitle")
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("character varying(255)");
 
                     b.Property<double?>("popularity")
-                        .HasColumnType("float");
+                        .HasColumnType("double precision");
 
                     b.Property<string>("rated")
                         .HasMaxLength(16)
-                        .HasColumnType("nvarchar(16)");
+                        .HasColumnType("character varying(16)");
 
                     b.Property<int>("regionID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<DateTime?>("releaseDate")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("slug")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("character varying(255)");
 
                     b.Property<string>("status")
                         .IsRequired()
                         .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
+                        .HasColumnType("character varying(32)");
 
                     b.Property<string>("title")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("character varying(255)");
 
                     b.Property<int?>("totalEpisodes")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int?>("totalSeasons")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("updatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int?>("year")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.HasKey("movieID");
 
@@ -155,34 +155,34 @@ namespace FZ.WebAPI.Migrations.MovieDb
                 {
                     b.Property<int>("commentID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("commentID"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("commentID"));
 
                     b.Property<string>("content")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("createdAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("isEdited")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<int>("likeCount")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int>("movieID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int?>("parentID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("updatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("userID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.HasKey("commentID");
 
@@ -197,33 +197,33 @@ namespace FZ.WebAPI.Migrations.MovieDb
                 {
                     b.Property<int>("episodeWatchProgressID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("episodeWatchProgressID"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("episodeWatchProgressID"));
 
                     b.Property<DateTime>("createdAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int?>("durationSeconds")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int>("episodeID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int?>("episodeSourceID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<DateTime?>("lastWatchedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("positionSeconds")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("updatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("userID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.HasKey("episodeWatchProgressID");
 
@@ -232,8 +232,7 @@ namespace FZ.WebAPI.Migrations.MovieDb
                     b.HasIndex("episodeSourceID");
 
                     b.HasIndex("userID", "episodeID", "episodeSourceID")
-                        .IsUnique()
-                        .HasFilter("[episodeSourceID] IS NOT NULL");
+                        .IsUnique();
 
                     b.ToTable("EpisodeWatchProgress", "movie");
                 });
@@ -242,18 +241,18 @@ namespace FZ.WebAPI.Migrations.MovieDb
                 {
                     b.Property<int>("savedMovieID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("savedMovieID"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("savedMovieID"));
 
                     b.Property<DateTime>("createdAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("movieID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int>("userID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.HasKey("savedMovieID");
 
@@ -265,25 +264,25 @@ namespace FZ.WebAPI.Migrations.MovieDb
             modelBuilder.Entity("FZ.Movie.Domain.Interactions.UserRating", b =>
                 {
                     b.Property<int>("userID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int>("movieID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("createdAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("stars")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("updatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("userRatingID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("userRatingID"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("userRatingID"));
 
                     b.HasKey("userID", "movieID");
 
@@ -296,36 +295,36 @@ namespace FZ.WebAPI.Migrations.MovieDb
                 {
                     b.Property<int>("watchProgressID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("watchProgressID"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("watchProgressID"));
 
                     b.Property<int?>("MoviesmovieID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("createdAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int?>("durationSeconds")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<DateTime?>("lastWatchedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("movieID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int>("positionSeconds")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int?>("sourceID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("updatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("userID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.HasKey("watchProgressID");
 
@@ -336,8 +335,7 @@ namespace FZ.WebAPI.Migrations.MovieDb
                     b.HasIndex("sourceID");
 
                     b.HasIndex("userID", "movieID", "sourceID")
-                        .IsUnique()
-                        .HasFilter("[sourceID] IS NOT NULL");
+                        .IsUnique();
 
                     b.ToTable("WatchProgress", "movie");
                 });
@@ -346,56 +344,55 @@ namespace FZ.WebAPI.Migrations.MovieDb
                 {
                     b.Property<int>("episodeSourceID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("episodeSourceID"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("episodeSourceID"));
 
                     b.Property<DateTime>("createdAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("episodeID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<bool>("isActive")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("isVipOnly")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<string>("language")
                         .HasMaxLength(8)
-                        .HasColumnType("nvarchar(8)");
+                        .HasColumnType("character varying(8)");
 
                     b.Property<string>("quality")
                         .HasMaxLength(16)
-                        .HasColumnType("nvarchar(16)");
+                        .HasColumnType("character varying(16)");
 
                     b.Property<string>("sourceID")
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("character varying(256)");
 
                     b.Property<string>("sourceName")
                         .IsRequired()
                         .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
+                        .HasColumnType("character varying(32)");
 
                     b.Property<string>("sourceType")
                         .IsRequired()
                         .HasMaxLength(16)
-                        .HasColumnType("nvarchar(16)");
+                        .HasColumnType("character varying(16)");
 
                     b.Property<string>("sourceUrl")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("updatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("episodeSourceID");
 
                     b.HasIndex("episodeID", "sourceType", "sourceID", "language", "quality")
-                        .IsUnique()
-                        .HasFilter("[sourceID] IS NOT NULL AND [language] IS NOT NULL AND [quality] IS NOT NULL");
+                        .IsUnique();
 
                     b.ToTable("EpisodeSource", "movie");
                 });
@@ -404,31 +401,31 @@ namespace FZ.WebAPI.Migrations.MovieDb
                 {
                     b.Property<int>("imageSourceID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("imageSourceID"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("imageSourceID"));
 
                     b.Property<DateTime>("createdAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("imageSourceName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("imageSourcetype")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("source")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("status")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("updatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("imageSourceID");
 
@@ -439,19 +436,19 @@ namespace FZ.WebAPI.Migrations.MovieDb
                 {
                     b.Property<int>("movieImageID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("movieImageID"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("movieImageID"));
 
                     b.Property<string>("ImageUrl")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("createdAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("movieID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.HasKey("movieImageID");
 
@@ -464,56 +461,55 @@ namespace FZ.WebAPI.Migrations.MovieDb
                 {
                     b.Property<int>("movieSourceID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("movieSourceID"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("movieSourceID"));
 
                     b.Property<DateTime>("createdAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("isActive")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("isVipOnly")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<string>("language")
                         .HasMaxLength(8)
-                        .HasColumnType("nvarchar(8)");
+                        .HasColumnType("character varying(8)");
 
                     b.Property<int>("movieID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<string>("quality")
                         .HasMaxLength(16)
-                        .HasColumnType("nvarchar(16)");
+                        .HasColumnType("character varying(16)");
 
                     b.Property<string>("sourceID")
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("character varying(256)");
 
                     b.Property<string>("sourceName")
                         .IsRequired()
                         .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
+                        .HasColumnType("character varying(32)");
 
                     b.Property<string>("sourceType")
                         .IsRequired()
                         .HasMaxLength(16)
-                        .HasColumnType("nvarchar(16)");
+                        .HasColumnType("character varying(16)");
 
                     b.Property<string>("sourceUrl")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("updatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("movieSourceID");
 
                     b.HasIndex("movieID", "sourceType", "sourceID", "language", "quality")
-                        .IsUnique()
-                        .HasFilter("[sourceID] IS NOT NULL AND [language] IS NOT NULL AND [quality] IS NOT NULL");
+                        .IsUnique();
 
                     b.ToTable("MovieSource", "movie");
                 });
@@ -521,33 +517,33 @@ namespace FZ.WebAPI.Migrations.MovieDb
             modelBuilder.Entity("FZ.Movie.Domain.People.MoviePerson", b =>
                 {
                     b.Property<int>("movieID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int>("personID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<string>("role")
                         .HasMaxLength(24)
-                        .HasColumnType("nvarchar(24)");
+                        .HasColumnType("character varying(24)");
 
                     b.Property<string>("characterName")
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("character varying(255)");
 
                     b.Property<DateTime>("createdAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int?>("creditOrder")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int>("moviePersonID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("moviePersonID"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("moviePersonID"));
 
                     b.Property<DateTime>("updatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("movieID", "personID", "role");
 
@@ -560,37 +556,37 @@ namespace FZ.WebAPI.Migrations.MovieDb
                 {
                     b.Property<int>("personID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("personID"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("personID"));
 
                     b.Property<string>("avatar")
                         .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
+                        .HasColumnType("character varying(512)");
 
                     b.Property<string>("biography")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime?>("birthDate")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("createdAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("fullName")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("character varying(200)");
 
                     b.Property<string>("knownFor")
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("character varying(255)");
 
                     b.Property<int>("regionID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("updatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("personID");
 
@@ -603,27 +599,27 @@ namespace FZ.WebAPI.Migrations.MovieDb
                 {
                     b.Property<int>("regionID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("regionID"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("regionID"));
 
                     b.Property<string>("code")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("createdAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("description")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("name")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("updatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("regionID");
 
@@ -634,24 +630,24 @@ namespace FZ.WebAPI.Migrations.MovieDb
                 {
                     b.Property<int>("movieTagID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("movieTagID"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("movieTagID"));
 
                     b.Property<DateTime>("createAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime?>("createdAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("movieID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int>("tagID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<DateTime?>("updatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("movieTagID");
 
@@ -667,24 +663,24 @@ namespace FZ.WebAPI.Migrations.MovieDb
                 {
                     b.Property<int>("tagID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("tagID"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("tagID"));
 
                     b.Property<DateTime>("createAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("tagDescription")
                         .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
+                        .HasColumnType("character varying(512)");
 
                     b.Property<string>("tagName")
                         .IsRequired()
                         .HasMaxLength(120)
-                        .HasColumnType("nvarchar(120)");
+                        .HasColumnType("character varying(120)");
 
                     b.Property<DateTime>("updateAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("tagID");
 

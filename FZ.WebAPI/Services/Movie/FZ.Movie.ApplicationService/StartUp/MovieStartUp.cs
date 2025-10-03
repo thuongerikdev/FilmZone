@@ -19,56 +19,110 @@ using FZ.Movie.Infrastructure.Repository.Media;
 using FZ.Movie.Infrastructure.Repository.People;
 using FZ.Movie.Infrastructure.Repository.Taxonomy;
 using FZ.Shared.ApplicationService;
+
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+
 using StackExchange.Redis;
 using System;
+using System.Collections.Generic;
 using System.Net;
+using System.Security.Authentication;
+using System.Text;
 using System.Threading.Channels;
 
 namespace FZ.Movie.ApplicationService.StartUp
 {
     public static class MovieStartUp
     {
+        // Convert URL (postgresql://…) -> KV-form cho Npgsql; KV-form thì chỉ đảm bảo SSL Mode/Trust.
+        private static string NormalizePg(string raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) return raw;
+            raw = raw.Trim();
+
+            bool IsUrl(string s) =>
+                s.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) ||
+                s.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase);
+
+            if (IsUrl(raw))
+            {
+                var uri = new Uri(raw);
+
+                string? user = null, pass = null;
+                if (!string.IsNullOrEmpty(uri.UserInfo))
+                {
+                    var parts = uri.UserInfo.Split(':', 2);
+                    user = Uri.UnescapeDataString(parts[0]);
+                    if (parts.Length == 2) pass = Uri.UnescapeDataString(parts[1]);
+                }
+
+                var db = Uri.UnescapeDataString(uri.AbsolutePath.Trim('/'));
+                var port = uri.IsDefaultPort || uri.Port <= 0 ? 5432 : uri.Port;
+
+                var qs = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var pair in uri.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+                {
+                    var kv = pair.Split('=', 2);
+                    var k = Uri.UnescapeDataString(kv[0]);
+                    var v = kv.Length == 2 ? Uri.UnescapeDataString(kv[1]) : "";
+                    qs[k] = v;
+                }
+
+                var sslMode = qs.TryGetValue("sslmode", out var s) ? s : "require";
+                var channel = qs.TryGetValue("channel_binding", out var cb) ? cb : null;
+
+                var sb = new StringBuilder();
+                sb.Append($"Host={uri.Host};Port={port};Database={db};Username={user};");
+                if (!string.IsNullOrEmpty(pass)) sb.Append($"Password={pass};");
+                sb.Append($"SSL Mode={sslMode};Trust Server Certificate=true;");
+                if (!string.IsNullOrEmpty(channel)) sb.Append($"Channel Binding={channel};");
+                return sb.ToString();
+            }
+
+            if (!raw.Contains("SSL Mode", StringComparison.OrdinalIgnoreCase))
+                raw += (raw.EndsWith(";") ? "" : ";") + "SSL Mode=Require";
+            if (!raw.Contains("Trust Server Certificate", StringComparison.OrdinalIgnoreCase))
+                raw += (raw.EndsWith(";") ? "" : ";") + "Trust Server Certificate=true";
+
+            return raw;
+        }
+
         public static void ConfigureMovie(this WebApplicationBuilder builder, string? assemblyName)
         {
             var services = builder.Services;
             var config = builder.Configuration;
 
-
-            // Program.cs
+            // HttpClient Archive (không timeout)
             builder.Services.AddHttpClient("archive", c =>
             {
                 c.BaseAddress = new Uri("https://s3.us.archive.org");
                 c.DefaultRequestHeaders.UserAgent.ParseAdd("FilmZoneUploader/1.0");
-                c.Timeout = Timeout.InfiniteTimeSpan; // 👈 tránh timeout mặc định 100s
+                c.Timeout = System.Threading.Timeout.InfiniteTimeSpan;
             });
 
-
-            // === Redis ===
             // === Redis ===
             builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
             {
                 var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger("Redis");
-                var config = builder.Configuration["Redis:ConnectionString"] ?? "localhost:6379";
+                var redisConnStr = builder.Configuration["Redis:ConnectionString"] ?? "localhost:6379";
 
-                // Try parse as URI first (handle rediss://...)
                 string host = null!;
                 int port = 6379;
                 string? user = null;
                 string? password = null;
                 var isTls = false;
 
-                if (Uri.TryCreate(config, UriKind.Absolute, out var uri) &&
+                if (Uri.TryCreate(redisConnStr, UriKind.Absolute, out var uri) &&
                     (uri.Scheme == "redis" || uri.Scheme == "rediss"))
                 {
                     isTls = uri.Scheme.Equals("rediss", StringComparison.OrdinalIgnoreCase);
                     host = uri.Host;
-                    port = uri.Port > 0 ? uri.Port : (isTls ? 6379 : 6379);
+                    port = uri.Port > 0 ? uri.Port : 6379;
                     if (!string.IsNullOrEmpty(uri.UserInfo))
                     {
                         var parts = uri.UserInfo.Split(':', 2);
@@ -78,22 +132,16 @@ namespace FZ.Movie.ApplicationService.StartUp
                 }
                 else
                 {
-                    // fallback: try parse simple "host:port,option=..."
-                    // Use ConfigurationOptions.Parse to pick up options in that case
-                    var tmp = ConfigurationOptions.Parse(config);
-                    // If Parse gave us a DnsEndPoint, use it; otherwise we will let Parse handle it
+                    var tmp = ConfigurationOptions.Parse(redisConnStr);
                     if (tmp.EndPoints.Count == 1 && tmp.EndPoints[0] is DnsEndPoint dns)
                     {
-                        host = dns.Host;
-                        port = dns.Port;
+                        host = dns.Host; port = dns.Port;
                     }
-                    // Also copy password/user if present
                     if (!string.IsNullOrEmpty(tmp.Password)) password = tmp.Password;
                     if (!string.IsNullOrEmpty(tmp.User)) user = tmp.User;
                     isTls = tmp.Ssl;
                 }
 
-                // Build clean ConfigurationOptions to avoid accidental "full-URI as endpoint" bugs
                 var options = new ConfigurationOptions
                 {
                     AbortOnConnectFail = false,
@@ -102,41 +150,29 @@ namespace FZ.Movie.ApplicationService.StartUp
                     ConnectTimeout = 30000,
                     SyncTimeout = 30000,
                     KeepAlive = 10,
-                    ClientName = "auth-service",
+                    ClientName = "movie-service",
                 };
 
-                // correctly add endpoint
-                if (!string.IsNullOrEmpty(host))
-                {
-                    options.EndPoints.Add(host, port);
-                }
-                else
-                {
-                    // fallback to parsing whole config if host parsing failed
-                    options = ConfigurationOptions.Parse(config);
-                }
+                if (!string.IsNullOrEmpty(host)) options.EndPoints.Add(host, port);
+                else options = ConfigurationOptions.Parse(redisConnStr);
 
-                // TLS / SNI
                 if (isTls)
                 {
                     options.Ssl = true;
-                    options.SslProtocols = System.Security.Authentication.SslProtocols.Tls12;
-                    // Ensure SslHost is only the host (no scheme/userinfo)
+                    options.SslProtocols = SslProtocols.Tls12;
                     if (!string.IsNullOrEmpty(host)) options.SslHost = host;
                 }
 
-                // set auth if available
                 if (!string.IsNullOrEmpty(user)) options.User = user;
                 if (!string.IsNullOrEmpty(password)) options.Password = password;
 
-                logger.LogInformation("Redis config: host={host} port={port} ssl={ssl} user={userPresent}", host, port, options.Ssl, string.IsNullOrEmpty(options.User) ? "(none)" : "(present)");
+                logger.LogInformation("Redis config: host={host} port={port} ssl={ssl} user={userPresent}",
+                    host, port, options.Ssl, string.IsNullOrEmpty(options.User) ? "(none)" : "(present)");
 
                 try
                 {
-                    // connect (use async connect but wait — longer timeouts above help)
                     var mux = ConnectionMultiplexer.ConnectAsync(options).GetAwaiter().GetResult();
 
-                    // optional: do not always PING in prod; but in dev it's helpful
                     try
                     {
                         var ping = mux.GetDatabase().Ping();
@@ -151,32 +187,39 @@ namespace FZ.Movie.ApplicationService.StartUp
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex, "Redis Connect failed (config prefix: {prefix})", (config ?? "").Split('@').FirstOrDefault());
+                    logger.LogError(ex, "Redis Connect failed (config prefix: {prefix})", (redisConnStr ?? "").Split('@').FirstOrDefault());
                     throw;
                 }
             });
 
-
-            builder.Services.Configure<FormOptions>(o => {
+            builder.Services.Configure<FormOptions>(o =>
+            {
                 o.MultipartBodyLengthLimit = 256L * 1024L * 1024L; // 256MB
             });
 
-
-            // DbContext (Scoped)
+            // === DbContext (PostgreSQL/Neon) ===
             services.AddDbContext<MovieDbContext>(options =>
             {
-                options.UseSqlServer(
-                    config.GetConnectionString("Default"),
-                    sql =>
-                    {
-                        if (!string.IsNullOrWhiteSpace(assemblyName))
-                            sql.MigrationsAssembly(assemblyName);
+                var raw =
+                    config.GetConnectionString("Default") ??
+                    Environment.GetEnvironmentVariable("DATABASE_URL") ??
+                    throw new InvalidOperationException("Missing Postgres connection string");
 
-                        sql.MigrationsHistoryTable(DbSchema.TableMigrationsHistory, DbSchema.Movie);
-                    });
+                var conn = NormalizePg(raw);
+
+                options.UseNpgsql(conn, npg =>
+                {
+                    if (!string.IsNullOrWhiteSpace(assemblyName))
+                        npg.MigrationsAssembly(assemblyName);
+
+                    npg.MigrationsHistoryTable(DbSchema.TableMigrationsHistory, DbSchema.Movie);
+                    npg.EnableRetryOnFailure();
+                });
+
+                // options.UseSnakeCaseNamingConvention(); // nếu muốn
             });
 
-            // SignalR + CORS (default policy allow any origin/method/header + credentials)
+            // SignalR + CORS
             services.AddSignalR();
             services.AddCors(opt =>
             {
@@ -184,19 +227,12 @@ namespace FZ.Movie.ApplicationService.StartUp
                     .AllowAnyHeader()
                     .AllowAnyMethod()
                     .AllowCredentials()
-                    .SetIsOriginAllowed(_ => true)
-                );
+                    .SetIsOriginAllowed(_ => true));
             });
 
-
-
-
-            // HttpClient
-            services.AddHttpClient("vimeo-api", c =>
-            {
-                c.BaseAddress = new Uri("https://api.vimeo.com/");
-            });
-            services.AddHttpClient(); // generic client (VD: TUS PATCH…)
+            // HttpClients khác
+            services.AddHttpClient("vimeo-api", c => { c.BaseAddress = new Uri("https://api.vimeo.com/"); });
+            services.AddHttpClient();
 
             // Cloudinary (Singleton)
             var cloudSection = config.GetSection("Cloudinary");
@@ -221,14 +257,13 @@ namespace FZ.Movie.ApplicationService.StartUp
             services.AddSingleton<ChannelReader<UploadWorkItem>>(channel);
             services.AddSingleton<ChannelWriter<UploadWorkItem>>(channel);
 
-            // Các Provider upload KHÔNG dùng DbContext trực tiếp => Singleton OK
+            // Các Provider upload
             services.AddSingleton<IVideoUploadProvider, VimeoTusUploadProvider>();
             services.AddSingleton<IVideoUploadProvider, VimeoPullUploadProvider>();
             services.AddSingleton<IVideoUploadProvider, YouTubeResumableProvider>();
             services.AddSingleton<IVideoUploadProvider, InternetArchiveS3FileProvider>();
             services.AddSingleton<IVideoUploadProvider, InternetArchiveS3LinkProvider>();
 
-            // Resolver provider (Singleton)
             services.AddSingleton<ProviderResolver>();
 
             // Repositories (Scoped)
@@ -260,7 +295,6 @@ namespace FZ.Movie.ApplicationService.StartUp
             services.AddScoped<ISavedMovieService, SavedMovieService>();
             services.AddScoped<IEpisodeSourceService, EpisodeSourceService>();
             services.AddScoped<IImageSourceService, ImageSourceService>();
-            // services.AddScoped<IMovieImageService, MovieImageService>();
             services.AddScoped<IMovieSourceService, MovieSourceService>();
             services.AddScoped<IPersonService, PersonService>();
             services.AddScoped<IMoviePersonService, MoviePersonService>();
@@ -268,10 +302,9 @@ namespace FZ.Movie.ApplicationService.StartUp
             services.AddScoped<ITagService, TagService>();
             services.AddScoped<IRegionService, RegionService>();
 
-            // Cloudinary wrapper (Scoped) nếu bạn có service riêng
             services.AddScoped<ICloudinaryService, CloudinaryService>();
 
-            // Background worker — CHỈ đăng ký 1 lần
+            // Background worker
             services.AddHostedService<UploadCoordinator>();
         }
     }

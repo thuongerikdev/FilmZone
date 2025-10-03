@@ -1,5 +1,6 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
@@ -19,14 +20,14 @@ namespace FZ.WebAPI.Migrations.MovieDb
                 schema: "movie",
                 columns: table => new
                 {
-                    imageSourceID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    imageSourceName = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    imageSourcetype = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    source = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    status = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    createdAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    updatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    imageSourceID = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    imageSourceName = table.Column<string>(type: "text", nullable: false),
+                    imageSourcetype = table.Column<string>(type: "text", nullable: false),
+                    source = table.Column<string>(type: "text", nullable: false),
+                    status = table.Column<string>(type: "text", nullable: false),
+                    createdAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -38,13 +39,13 @@ namespace FZ.WebAPI.Migrations.MovieDb
                 schema: "movie",
                 columns: table => new
                 {
-                    regionID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    name = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    code = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    description = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    createdAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    updatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    regionID = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    name = table.Column<string>(type: "text", nullable: false),
+                    code = table.Column<string>(type: "text", nullable: false),
+                    description = table.Column<string>(type: "text", nullable: false),
+                    createdAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -56,12 +57,12 @@ namespace FZ.WebAPI.Migrations.MovieDb
                 schema: "movie",
                 columns: table => new
                 {
-                    tagID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    tagName = table.Column<string>(type: "nvarchar(120)", maxLength: 120, nullable: false),
-                    tagDescription = table.Column<string>(type: "nvarchar(512)", maxLength: 512, nullable: true),
-                    createAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    updateAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    tagID = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    tagName = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: false),
+                    tagDescription = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
+                    createAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updateAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -73,25 +74,25 @@ namespace FZ.WebAPI.Migrations.MovieDb
                 schema: "movie",
                 columns: table => new
                 {
-                    movieID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    slug = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
-                    title = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
-                    originalTitle = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
-                    description = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    movieType = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false),
-                    image = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    status = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false),
-                    releaseDate = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    durationSeconds = table.Column<int>(type: "int", nullable: true),
-                    totalSeasons = table.Column<int>(type: "int", nullable: true),
-                    totalEpisodes = table.Column<int>(type: "int", nullable: true),
-                    regionID = table.Column<int>(type: "int", nullable: false),
-                    year = table.Column<int>(type: "int", nullable: true),
-                    rated = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: true),
-                    popularity = table.Column<double>(type: "float", nullable: true),
-                    createdAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    updatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    movieID = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    slug = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
+                    title = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
+                    originalTitle = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
+                    description = table.Column<string>(type: "text", nullable: true),
+                    movieType = table.Column<string>(type: "character varying(16)", maxLength: 16, nullable: false),
+                    image = table.Column<string>(type: "text", nullable: false),
+                    status = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
+                    releaseDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    durationSeconds = table.Column<int>(type: "integer", nullable: true),
+                    totalSeasons = table.Column<int>(type: "integer", nullable: true),
+                    totalEpisodes = table.Column<int>(type: "integer", nullable: true),
+                    regionID = table.Column<int>(type: "integer", nullable: false),
+                    year = table.Column<int>(type: "integer", nullable: true),
+                    rated = table.Column<string>(type: "character varying(16)", maxLength: 16, nullable: true),
+                    popularity = table.Column<double>(type: "double precision", nullable: true),
+                    createdAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -109,16 +110,16 @@ namespace FZ.WebAPI.Migrations.MovieDb
                 schema: "movie",
                 columns: table => new
                 {
-                    personID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    fullName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    knownFor = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
-                    regionID = table.Column<int>(type: "int", nullable: false),
-                    biography = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    avatar = table.Column<string>(type: "nvarchar(512)", maxLength: 512, nullable: true),
-                    birthDate = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    createdAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    updatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    personID = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    fullName = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    knownFor = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
+                    regionID = table.Column<int>(type: "integer", nullable: false),
+                    biography = table.Column<string>(type: "text", nullable: true),
+                    avatar = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
+                    birthDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    createdAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -136,16 +137,16 @@ namespace FZ.WebAPI.Migrations.MovieDb
                 schema: "movie",
                 columns: table => new
                 {
-                    commentID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    movieID = table.Column<int>(type: "int", nullable: false),
-                    userID = table.Column<int>(type: "int", nullable: false),
-                    parentID = table.Column<int>(type: "int", nullable: true),
-                    content = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    isEdited = table.Column<bool>(type: "bit", nullable: false),
-                    likeCount = table.Column<int>(type: "int", nullable: false),
-                    createdAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    updatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    commentID = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    movieID = table.Column<int>(type: "integer", nullable: false),
+                    userID = table.Column<int>(type: "integer", nullable: false),
+                    parentID = table.Column<int>(type: "integer", nullable: true),
+                    content = table.Column<string>(type: "text", nullable: false),
+                    isEdited = table.Column<bool>(type: "boolean", nullable: false),
+                    likeCount = table.Column<int>(type: "integer", nullable: false),
+                    createdAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -171,18 +172,18 @@ namespace FZ.WebAPI.Migrations.MovieDb
                 schema: "movie",
                 columns: table => new
                 {
-                    episodeID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    movieID = table.Column<int>(type: "int", nullable: false),
-                    seasonNumber = table.Column<int>(type: "int", nullable: false),
-                    episodeNumber = table.Column<int>(type: "int", nullable: false),
-                    title = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
-                    synopsis = table.Column<string>(type: "nvarchar(512)", maxLength: 512, nullable: true),
-                    description = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    durationSeconds = table.Column<int>(type: "int", nullable: true),
-                    releaseDate = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    createdAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    updatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    episodeID = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    movieID = table.Column<int>(type: "integer", nullable: false),
+                    seasonNumber = table.Column<int>(type: "integer", nullable: false),
+                    episodeNumber = table.Column<int>(type: "integer", nullable: false),
+                    title = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
+                    synopsis = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
+                    description = table.Column<string>(type: "text", nullable: true),
+                    durationSeconds = table.Column<int>(type: "integer", nullable: true),
+                    releaseDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    createdAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -201,11 +202,11 @@ namespace FZ.WebAPI.Migrations.MovieDb
                 schema: "movie",
                 columns: table => new
                 {
-                    movieImageID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    movieID = table.Column<int>(type: "int", nullable: false),
-                    ImageUrl = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    createdAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    movieImageID = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    movieID = table.Column<int>(type: "integer", nullable: false),
+                    ImageUrl = table.Column<string>(type: "text", nullable: false),
+                    createdAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -224,19 +225,19 @@ namespace FZ.WebAPI.Migrations.MovieDb
                 schema: "movie",
                 columns: table => new
                 {
-                    movieSourceID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    movieID = table.Column<int>(type: "int", nullable: false),
-                    sourceName = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false),
-                    sourceType = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false),
-                    sourceUrl = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    sourceID = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    quality = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: true),
-                    language = table.Column<string>(type: "nvarchar(8)", maxLength: 8, nullable: true),
-                    isVipOnly = table.Column<bool>(type: "bit", nullable: false),
-                    isActive = table.Column<bool>(type: "bit", nullable: false),
-                    createdAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    updatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    movieSourceID = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    movieID = table.Column<int>(type: "integer", nullable: false),
+                    sourceName = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
+                    sourceType = table.Column<string>(type: "character varying(16)", maxLength: 16, nullable: false),
+                    sourceUrl = table.Column<string>(type: "text", nullable: false),
+                    sourceID = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    quality = table.Column<string>(type: "character varying(16)", maxLength: 16, nullable: true),
+                    language = table.Column<string>(type: "character varying(8)", maxLength: 8, nullable: true),
+                    isVipOnly = table.Column<bool>(type: "boolean", nullable: false),
+                    isActive = table.Column<bool>(type: "boolean", nullable: false),
+                    createdAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -255,13 +256,13 @@ namespace FZ.WebAPI.Migrations.MovieDb
                 schema: "movie",
                 columns: table => new
                 {
-                    movieTagID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    movieID = table.Column<int>(type: "int", nullable: false),
-                    tagID = table.Column<int>(type: "int", nullable: false),
-                    createAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    updatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    createdAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    movieTagID = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    movieID = table.Column<int>(type: "integer", nullable: false),
+                    tagID = table.Column<int>(type: "integer", nullable: false),
+                    createAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    createdAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -287,11 +288,11 @@ namespace FZ.WebAPI.Migrations.MovieDb
                 schema: "movie",
                 columns: table => new
                 {
-                    savedMovieID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    movieID = table.Column<int>(type: "int", nullable: false),
-                    userID = table.Column<int>(type: "int", nullable: false),
-                    createdAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    savedMovieID = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    movieID = table.Column<int>(type: "integer", nullable: false),
+                    userID = table.Column<int>(type: "integer", nullable: false),
+                    createdAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -310,13 +311,13 @@ namespace FZ.WebAPI.Migrations.MovieDb
                 schema: "movie",
                 columns: table => new
                 {
-                    userID = table.Column<int>(type: "int", nullable: false),
-                    movieID = table.Column<int>(type: "int", nullable: false),
-                    userRatingID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    stars = table.Column<int>(type: "int", nullable: false),
-                    createdAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    updatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    userID = table.Column<int>(type: "integer", nullable: false),
+                    movieID = table.Column<int>(type: "integer", nullable: false),
+                    userRatingID = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    stars = table.Column<int>(type: "integer", nullable: false),
+                    createdAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -335,15 +336,15 @@ namespace FZ.WebAPI.Migrations.MovieDb
                 schema: "movie",
                 columns: table => new
                 {
-                    movieID = table.Column<int>(type: "int", nullable: false),
-                    personID = table.Column<int>(type: "int", nullable: false),
-                    role = table.Column<string>(type: "nvarchar(24)", maxLength: 24, nullable: false),
-                    moviePersonID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    characterName = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
-                    creditOrder = table.Column<int>(type: "int", nullable: true),
-                    createdAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    updatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    movieID = table.Column<int>(type: "integer", nullable: false),
+                    personID = table.Column<int>(type: "integer", nullable: false),
+                    role = table.Column<string>(type: "character varying(24)", maxLength: 24, nullable: false),
+                    moviePersonID = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    characterName = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
+                    creditOrder = table.Column<int>(type: "integer", nullable: true),
+                    createdAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -369,19 +370,19 @@ namespace FZ.WebAPI.Migrations.MovieDb
                 schema: "movie",
                 columns: table => new
                 {
-                    episodeSourceID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    episodeID = table.Column<int>(type: "int", nullable: false),
-                    sourceName = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false),
-                    sourceType = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false),
-                    sourceUrl = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    sourceID = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    quality = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: true),
-                    language = table.Column<string>(type: "nvarchar(8)", maxLength: 8, nullable: true),
-                    isVipOnly = table.Column<bool>(type: "bit", nullable: false),
-                    isActive = table.Column<bool>(type: "bit", nullable: false),
-                    createdAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    updatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    episodeSourceID = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    episodeID = table.Column<int>(type: "integer", nullable: false),
+                    sourceName = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
+                    sourceType = table.Column<string>(type: "character varying(16)", maxLength: 16, nullable: false),
+                    sourceUrl = table.Column<string>(type: "text", nullable: false),
+                    sourceID = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    quality = table.Column<string>(type: "character varying(16)", maxLength: 16, nullable: true),
+                    language = table.Column<string>(type: "character varying(8)", maxLength: 8, nullable: true),
+                    isVipOnly = table.Column<bool>(type: "boolean", nullable: false),
+                    isActive = table.Column<bool>(type: "boolean", nullable: false),
+                    createdAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -400,17 +401,17 @@ namespace FZ.WebAPI.Migrations.MovieDb
                 schema: "movie",
                 columns: table => new
                 {
-                    watchProgressID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    userID = table.Column<int>(type: "int", nullable: false),
-                    movieID = table.Column<int>(type: "int", nullable: false),
-                    sourceID = table.Column<int>(type: "int", nullable: true),
-                    positionSeconds = table.Column<int>(type: "int", nullable: false),
-                    durationSeconds = table.Column<int>(type: "int", nullable: true),
-                    lastWatchedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    createdAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    updatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    MoviesmovieID = table.Column<int>(type: "int", nullable: true)
+                    watchProgressID = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    userID = table.Column<int>(type: "integer", nullable: false),
+                    movieID = table.Column<int>(type: "integer", nullable: false),
+                    sourceID = table.Column<int>(type: "integer", nullable: true),
+                    positionSeconds = table.Column<int>(type: "integer", nullable: false),
+                    durationSeconds = table.Column<int>(type: "integer", nullable: true),
+                    lastWatchedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    createdAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    MoviesmovieID = table.Column<int>(type: "integer", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -441,16 +442,16 @@ namespace FZ.WebAPI.Migrations.MovieDb
                 schema: "movie",
                 columns: table => new
                 {
-                    episodeWatchProgressID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    userID = table.Column<int>(type: "int", nullable: false),
-                    episodeID = table.Column<int>(type: "int", nullable: false),
-                    episodeSourceID = table.Column<int>(type: "int", nullable: true),
-                    positionSeconds = table.Column<int>(type: "int", nullable: false),
-                    durationSeconds = table.Column<int>(type: "int", nullable: true),
-                    lastWatchedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    createdAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    updatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    episodeWatchProgressID = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    userID = table.Column<int>(type: "integer", nullable: false),
+                    episodeID = table.Column<int>(type: "integer", nullable: false),
+                    episodeSourceID = table.Column<int>(type: "integer", nullable: true),
+                    positionSeconds = table.Column<int>(type: "integer", nullable: false),
+                    durationSeconds = table.Column<int>(type: "integer", nullable: true),
+                    lastWatchedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    createdAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -494,8 +495,7 @@ namespace FZ.WebAPI.Migrations.MovieDb
                 schema: "movie",
                 table: "EpisodeSource",
                 columns: new[] { "episodeID", "sourceType", "sourceID", "language", "quality" },
-                unique: true,
-                filter: "[sourceID] IS NOT NULL AND [language] IS NOT NULL AND [quality] IS NOT NULL");
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_EpisodeWatchProgress_episodeID",
@@ -514,8 +514,7 @@ namespace FZ.WebAPI.Migrations.MovieDb
                 schema: "movie",
                 table: "EpisodeWatchProgress",
                 columns: new[] { "userID", "episodeID", "episodeSourceID" },
-                unique: true,
-                filter: "[episodeSourceID] IS NOT NULL");
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_MovieImage_movieID",
@@ -547,8 +546,7 @@ namespace FZ.WebAPI.Migrations.MovieDb
                 schema: "movie",
                 table: "MovieSource",
                 columns: new[] { "movieID", "sourceType", "sourceID", "language", "quality" },
-                unique: true,
-                filter: "[sourceID] IS NOT NULL AND [language] IS NOT NULL AND [quality] IS NOT NULL");
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_MovieTag_movieID_tagID",
@@ -604,8 +602,7 @@ namespace FZ.WebAPI.Migrations.MovieDb
                 schema: "movie",
                 table: "WatchProgress",
                 columns: new[] { "userID", "movieID", "sourceID" },
-                unique: true,
-                filter: "[sourceID] IS NOT NULL");
+                unique: true);
         }
 
         /// <inheritdoc />

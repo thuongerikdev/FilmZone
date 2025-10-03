@@ -1,5 +1,6 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
@@ -21,10 +22,10 @@ namespace FZ.WebAPI.Migrations
                 schema: "auth",
                 columns: table => new
                 {
-                    permissionID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    permissionName = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
-                    permissionDescription = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false)
+                    permissionID = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    permissionName = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: false),
+                    permissionDescription = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -36,11 +37,11 @@ namespace FZ.WebAPI.Migrations
                 schema: "auth",
                 columns: table => new
                 {
-                    roleID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    roleName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    roleDescription = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
-                    isDefault = table.Column<bool>(type: "bit", nullable: false)
+                    roleID = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    roleName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    roleDescription = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
+                    isDefault = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -52,18 +53,18 @@ namespace FZ.WebAPI.Migrations
                 schema: "auth",
                 columns: table => new
                 {
-                    userID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    userName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    email = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
-                    phoneNumber = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: true),
-                    passwordHash = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    googleSub = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    isEmailVerified = table.Column<bool>(type: "bit", nullable: false),
-                    status = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false),
-                    tokenVersion = table.Column<int>(type: "int", nullable: false),
-                    createdAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    updatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    userID = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    userName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    email = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
+                    phoneNumber = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: true),
+                    passwordHash = table.Column<string>(type: "text", nullable: false),
+                    googleSub = table.Column<string>(type: "text", nullable: true),
+                    isEmailVerified = table.Column<bool>(type: "boolean", nullable: false),
+                    status = table.Column<string>(type: "character varying(16)", maxLength: 16, nullable: false),
+                    tokenVersion = table.Column<int>(type: "integer", nullable: false),
+                    createdAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -75,12 +76,12 @@ namespace FZ.WebAPI.Migrations
                 schema: "auth",
                 columns: table => new
                 {
-                    planID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    code = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
-                    name = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
-                    description = table.Column<string>(type: "nvarchar(512)", maxLength: 512, nullable: true),
-                    isActive = table.Column<bool>(type: "bit", nullable: false)
+                    planID = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    code = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    name = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
+                    description = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
+                    isActive = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -92,10 +93,10 @@ namespace FZ.WebAPI.Migrations
                 schema: "auth",
                 columns: table => new
                 {
-                    rolePermissionID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    roleID = table.Column<int>(type: "int", nullable: false),
-                    permissionID = table.Column<int>(type: "int", nullable: false)
+                    rolePermissionID = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    roleID = table.Column<int>(type: "integer", nullable: false),
+                    permissionID = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -121,15 +122,15 @@ namespace FZ.WebAPI.Migrations
                 schema: "auth",
                 columns: table => new
                 {
-                    auditID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    userID = table.Column<int>(type: "int", nullable: true),
-                    action = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    result = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    detail = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    ip = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    userAgent = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    createdAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    auditID = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    userID = table.Column<int>(type: "integer", nullable: true),
+                    action = table.Column<string>(type: "text", nullable: false),
+                    result = table.Column<string>(type: "text", nullable: false),
+                    detail = table.Column<string>(type: "text", nullable: false),
+                    ip = table.Column<string>(type: "text", nullable: false),
+                    userAgent = table.Column<string>(type: "text", nullable: false),
+                    createdAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -147,13 +148,13 @@ namespace FZ.WebAPI.Migrations
                 schema: "auth",
                 columns: table => new
                 {
-                    emailVerificationID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    userID = table.Column<int>(type: "int", nullable: false),
-                    codeHash = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    createdAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    expiresAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    consumedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    emailVerificationID = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    userID = table.Column<int>(type: "integer", nullable: false),
+                    codeHash = table.Column<string>(type: "text", nullable: false),
+                    createdAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    expiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    consumedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -172,20 +173,20 @@ namespace FZ.WebAPI.Migrations
                 schema: "auth",
                 columns: table => new
                 {
-                    mfaID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    userID = table.Column<int>(type: "int", nullable: false),
-                    type = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false),
-                    status = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false),
-                    secret = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    isEnabled = table.Column<bool>(type: "bit", nullable: false),
-                    label = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: true),
-                    recoveryCodes = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    enrollmentStartedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    enabledAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    lastVerifiedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    updatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: true)
+                    mfaID = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    userID = table.Column<int>(type: "integer", nullable: false),
+                    type = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
+                    status = table.Column<string>(type: "character varying(16)", maxLength: 16, nullable: false),
+                    secret = table.Column<string>(type: "text", nullable: true),
+                    isEnabled = table.Column<bool>(type: "boolean", nullable: false),
+                    label = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
+                    recoveryCodes = table.Column<string>(type: "text", nullable: true),
+                    enrollmentStartedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    enabledAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    lastVerifiedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    updatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    RowVersion = table.Column<byte[]>(type: "bytea", rowVersion: true, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -204,14 +205,14 @@ namespace FZ.WebAPI.Migrations
                 schema: "auth",
                 columns: table => new
                 {
-                    passwordResetID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    userID = table.Column<int>(type: "int", nullable: false),
-                    codeHash = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    createdAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    expiresAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    consumedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    purpose = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                    passwordResetID = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    userID = table.Column<int>(type: "integer", nullable: false),
+                    codeHash = table.Column<string>(type: "text", nullable: false),
+                    createdAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    expiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    consumedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    purpose = table.Column<string>(type: "text", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -230,14 +231,14 @@ namespace FZ.WebAPI.Migrations
                 schema: "auth",
                 columns: table => new
                 {
-                    profileID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    userID = table.Column<int>(type: "int", nullable: false),
-                    firstName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    lastName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    avatar = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    gender = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: true),
-                    dateOfBirth = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    profileID = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    userID = table.Column<int>(type: "integer", nullable: false),
+                    firstName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    lastName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    avatar = table.Column<string>(type: "text", nullable: true),
+                    gender = table.Column<string>(type: "character varying(16)", maxLength: 16, nullable: true),
+                    dateOfBirth = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -256,9 +257,9 @@ namespace FZ.WebAPI.Migrations
                 schema: "auth",
                 columns: table => new
                 {
-                    userID = table.Column<int>(type: "int", nullable: false),
-                    roleID = table.Column<int>(type: "int", nullable: false),
-                    assignedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    userID = table.Column<int>(type: "integer", nullable: false),
+                    roleID = table.Column<int>(type: "integer", nullable: false),
+                    assignedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -284,15 +285,15 @@ namespace FZ.WebAPI.Migrations
                 schema: "auth",
                 columns: table => new
                 {
-                    sessionID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    userID = table.Column<int>(type: "int", nullable: false),
-                    deviceId = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    ip = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    userAgent = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    createdAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    lastSeenAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    isRevoked = table.Column<bool>(type: "bit", nullable: false)
+                    sessionID = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    userID = table.Column<int>(type: "integer", nullable: false),
+                    deviceId = table.Column<string>(type: "text", nullable: false),
+                    ip = table.Column<string>(type: "text", nullable: false),
+                    userAgent = table.Column<string>(type: "text", nullable: false),
+                    createdAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    lastSeenAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    isRevoked = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -311,15 +312,15 @@ namespace FZ.WebAPI.Migrations
                 schema: "auth",
                 columns: table => new
                 {
-                    priceID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    planID = table.Column<int>(type: "int", nullable: false),
-                    currency = table.Column<string>(type: "nvarchar(8)", maxLength: 8, nullable: false),
-                    amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    intervalUnit = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false),
-                    intervalCount = table.Column<int>(type: "int", nullable: false),
-                    trialDays = table.Column<int>(type: "int", nullable: true),
-                    isActive = table.Column<bool>(type: "bit", nullable: false)
+                    priceID = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    planID = table.Column<int>(type: "integer", nullable: false),
+                    currency = table.Column<string>(type: "character varying(8)", maxLength: 8, nullable: false),
+                    amount = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
+                    intervalUnit = table.Column<string>(type: "character varying(16)", maxLength: 16, nullable: false),
+                    intervalCount = table.Column<int>(type: "integer", nullable: false),
+                    trialDays = table.Column<int>(type: "integer", nullable: true),
+                    isActive = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -338,17 +339,17 @@ namespace FZ.WebAPI.Migrations
                 schema: "auth",
                 columns: table => new
                 {
-                    refreshTokenID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    userID = table.Column<int>(type: "int", nullable: false),
-                    sessionID = table.Column<int>(type: "int", nullable: false),
-                    Token = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Expires = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Created = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    CreatedByIp = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Revoked = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    RevokedByIp = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ReplacedByToken = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    refreshTokenID = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    userID = table.Column<int>(type: "integer", nullable: false),
+                    sessionID = table.Column<int>(type: "integer", nullable: false),
+                    Token = table.Column<string>(type: "text", nullable: false),
+                    Expires = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    Created = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    CreatedByIp = table.Column<string>(type: "text", nullable: true),
+                    Revoked = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    RevokedByIp = table.Column<string>(type: "text", nullable: true),
+                    ReplacedByToken = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -374,18 +375,18 @@ namespace FZ.WebAPI.Migrations
                 schema: "auth",
                 columns: table => new
                 {
-                    orderID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    userID = table.Column<int>(type: "int", nullable: false),
-                    planID = table.Column<int>(type: "int", nullable: false),
-                    priceID = table.Column<int>(type: "int", nullable: false),
-                    amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    currency = table.Column<string>(type: "nvarchar(8)", maxLength: 8, nullable: false),
-                    status = table.Column<string>(type: "nvarchar(24)", maxLength: 24, nullable: false),
-                    provider = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false),
-                    providerSessionId = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
-                    createdAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    expiresAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    orderID = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    userID = table.Column<int>(type: "integer", nullable: false),
+                    planID = table.Column<int>(type: "integer", nullable: false),
+                    priceID = table.Column<int>(type: "integer", nullable: false),
+                    amount = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
+                    currency = table.Column<string>(type: "character varying(8)", maxLength: 8, nullable: false),
+                    status = table.Column<string>(type: "character varying(24)", maxLength: 24, nullable: false),
+                    provider = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
+                    providerSessionId = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
+                    createdAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    expiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -418,19 +419,19 @@ namespace FZ.WebAPI.Migrations
                 schema: "auth",
                 columns: table => new
                 {
-                    subscriptionID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    userID = table.Column<int>(type: "int", nullable: false),
-                    planID = table.Column<int>(type: "int", nullable: false),
-                    priceID = table.Column<int>(type: "int", nullable: true),
-                    status = table.Column<string>(type: "nvarchar(24)", maxLength: 24, nullable: false),
-                    autoRenew = table.Column<bool>(type: "bit", nullable: false),
-                    startAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    trialEndAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    currentPeriodStart = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    currentPeriodEnd = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    cancelAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    cancelAtPeriodEnd = table.Column<bool>(type: "bit", nullable: false)
+                    subscriptionID = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    userID = table.Column<int>(type: "integer", nullable: false),
+                    planID = table.Column<int>(type: "integer", nullable: false),
+                    priceID = table.Column<int>(type: "integer", nullable: true),
+                    status = table.Column<string>(type: "character varying(24)", maxLength: 24, nullable: false),
+                    autoRenew = table.Column<bool>(type: "boolean", nullable: false),
+                    startAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    trialEndAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    currentPeriodStart = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    currentPeriodEnd = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    cancelAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    cancelAtPeriodEnd = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -463,18 +464,18 @@ namespace FZ.WebAPI.Migrations
                 schema: "auth",
                 columns: table => new
                 {
-                    invoiceID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    userID = table.Column<int>(type: "int", nullable: false),
-                    subscriptionID = table.Column<int>(type: "int", nullable: true),
-                    orderID = table.Column<int>(type: "int", nullable: true),
-                    subtotal = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    discount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    tax = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    total = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    issuedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    dueAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    pdfUrl = table.Column<string>(type: "nvarchar(512)", maxLength: 512, nullable: true)
+                    invoiceID = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    userID = table.Column<int>(type: "integer", nullable: false),
+                    subscriptionID = table.Column<int>(type: "integer", nullable: true),
+                    orderID = table.Column<int>(type: "integer", nullable: true),
+                    subtotal = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
+                    discount = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
+                    tax = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
+                    total = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
+                    issuedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    dueAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    pdfUrl = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -506,15 +507,15 @@ namespace FZ.WebAPI.Migrations
                 schema: "auth",
                 columns: table => new
                 {
-                    paymentID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    invoiceID = table.Column<int>(type: "int", nullable: false),
-                    provider = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false),
-                    providerPaymentId = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: true),
-                    status = table.Column<string>(type: "nvarchar(24)", maxLength: 24, nullable: false),
-                    createdAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    paidAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    failureReason = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true)
+                    paymentID = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    invoiceID = table.Column<int>(type: "integer", nullable: false),
+                    provider = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
+                    providerPaymentId = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
+                    status = table.Column<string>(type: "character varying(24)", maxLength: 24, nullable: false),
+                    createdAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    paidAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    failureReason = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true)
                 },
                 constraints: table =>
                 {

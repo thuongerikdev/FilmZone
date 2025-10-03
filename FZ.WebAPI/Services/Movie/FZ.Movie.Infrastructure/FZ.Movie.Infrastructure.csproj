@@ -1,23 +1,30 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
 
-  <ItemGroup>
-	  <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.0" />
-	  <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.10" />
-	  <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.10" />
-	  <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="9.0.8" />
-	  <PackageReference Include="Microsoft.Net.Http.Headers" Version="8.*" />
-	  <PackageReference Include="StackExchange.Redis" Version="2.7.27" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.0" />
 
-  <ItemGroup>
-    <ProjectReference Include="..\FZ.Movie.Domain\FZ.Movie.Domain.csproj" />
-    <ProjectReference Include="..\FZ.Movie.Dtos\FZ.Movie.Dtos.csproj" />
-  </ItemGroup>
+		<!-- EF Core đồng bộ 8.0.11 để khớp với Npgsql 8.0.11 -->
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.11" />
+		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.11" />
+		<!-- (tùy chọn) nếu dùng NodaTime:
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL.NodaTime" Version="8.0.11" /> -->
+
+		<!-- Identity Core cho .NET 8 -->
+		<PackageReference Include="Microsoft.Extensions.Identity.Core" Version="8.0.11" />
+
+		<PackageReference Include="Microsoft.Net.Http.Headers" Version="8.0.0" />
+		<PackageReference Include="StackExchange.Redis" Version="2.7.27" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\FZ.Movie.Domain\FZ.Movie.Domain.csproj" />
+		<ProjectReference Include="..\FZ.Movie.Dtos\FZ.Movie.Dtos.csproj" />
+	</ItemGroup>
 
 </Project>

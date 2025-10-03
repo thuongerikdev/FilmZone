@@ -3,8 +3,8 @@ using System;
 using FZ.Auth.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
@@ -17,37 +17,37 @@ namespace FZ.WebAPI.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.10")
-                .HasAnnotation("Relational:MaxIdentifierLength", 128);
+                .HasAnnotation("ProductVersion", "8.0.11")
+                .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
-            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("FZ.Auth.Domain.Billing.Invoice", b =>
                 {
                     b.Property<int>("invoiceID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("invoiceID"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("invoiceID"));
 
                     b.Property<decimal>("discount")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("dueAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("issuedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int?>("orderID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<string>("pdfUrl")
                         .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
+                        .HasColumnType("character varying(512)");
 
                     b.Property<int?>("subscriptionID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<decimal>("subtotal")
                         .HasColumnType("decimal(18,2)");
@@ -59,7 +59,7 @@ namespace FZ.WebAPI.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("userID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.HasKey("invoiceID");
 
@@ -76,47 +76,47 @@ namespace FZ.WebAPI.Migrations
                 {
                     b.Property<int>("orderID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("orderID"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("orderID"));
 
                     b.Property<decimal>("amount")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("createdAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("currency")
                         .IsRequired()
                         .HasMaxLength(8)
-                        .HasColumnType("nvarchar(8)");
+                        .HasColumnType("character varying(8)");
 
                     b.Property<DateTime?>("expiresAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("planID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int>("priceID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<string>("provider")
                         .IsRequired()
                         .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
+                        .HasColumnType("character varying(32)");
 
                     b.Property<string>("providerSessionId")
                         .IsRequired()
                         .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                        .HasColumnType("character varying(128)");
 
                     b.Property<string>("status")
                         .IsRequired()
                         .HasMaxLength(24)
-                        .HasColumnType("nvarchar(24)");
+                        .HasColumnType("character varying(24)");
 
                     b.Property<int>("userID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.HasKey("orderID");
 
@@ -136,36 +136,36 @@ namespace FZ.WebAPI.Migrations
                 {
                     b.Property<int>("paymentID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("paymentID"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("paymentID"));
 
                     b.Property<DateTime>("createdAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("failureReason")
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("character varying(256)");
 
                     b.Property<int>("invoiceID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<DateTime?>("paidAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("provider")
                         .IsRequired()
                         .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
+                        .HasColumnType("character varying(32)");
 
                     b.Property<string>("providerPaymentId")
                         .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                        .HasColumnType("character varying(128)");
 
                     b.Property<string>("status")
                         .IsRequired()
                         .HasMaxLength(24)
-                        .HasColumnType("nvarchar(24)");
+                        .HasColumnType("character varying(24)");
 
                     b.HasKey("paymentID");
 
@@ -180,26 +180,26 @@ namespace FZ.WebAPI.Migrations
                 {
                     b.Property<int>("planID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("planID"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("planID"));
 
                     b.Property<string>("code")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasColumnType("character varying(64)");
 
                     b.Property<string>("description")
                         .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
+                        .HasColumnType("character varying(512)");
 
                     b.Property<bool>("isActive")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<string>("name")
                         .IsRequired()
                         .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                        .HasColumnType("character varying(128)");
 
                     b.HasKey("planID");
 
@@ -223,9 +223,9 @@ namespace FZ.WebAPI.Migrations
                 {
                     b.Property<int>("priceID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("priceID"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("priceID"));
 
                     b.Property<decimal>("amount")
                         .HasColumnType("decimal(18,2)");
@@ -233,24 +233,24 @@ namespace FZ.WebAPI.Migrations
                     b.Property<string>("currency")
                         .IsRequired()
                         .HasMaxLength(8)
-                        .HasColumnType("nvarchar(8)");
+                        .HasColumnType("character varying(8)");
 
                     b.Property<int>("intervalCount")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<string>("intervalUnit")
                         .IsRequired()
                         .HasMaxLength(16)
-                        .HasColumnType("nvarchar(16)");
+                        .HasColumnType("character varying(16)");
 
                     b.Property<bool>("isActive")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<int>("planID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int?>("trialDays")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.HasKey("priceID");
 
@@ -296,44 +296,44 @@ namespace FZ.WebAPI.Migrations
                 {
                     b.Property<int>("subscriptionID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("subscriptionID"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("subscriptionID"));
 
                     b.Property<bool>("autoRenew")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<DateTime?>("cancelAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("cancelAtPeriodEnd")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<DateTime>("currentPeriodEnd")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("currentPeriodStart")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("planID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int?>("priceID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("startAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("status")
                         .IsRequired()
                         .HasMaxLength(24)
-                        .HasColumnType("nvarchar(24)");
+                        .HasColumnType("character varying(24)");
 
                     b.Property<DateTime?>("trialEndAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("userID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.HasKey("subscriptionID");
 
@@ -352,35 +352,35 @@ namespace FZ.WebAPI.Migrations
                 {
                     b.Property<int>("auditID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("auditID"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("auditID"));
 
                     b.Property<string>("action")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("createdAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("detail")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("ip")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("result")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("userAgent")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<int?>("userID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.HasKey("auditID");
 
@@ -393,52 +393,52 @@ namespace FZ.WebAPI.Migrations
                 {
                     b.Property<int>("mfaID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("mfaID"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("mfaID"));
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion");
+                        .HasColumnType("bytea");
 
                     b.Property<DateTime?>("enabledAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime?>("enrollmentStartedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("isEnabled")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<string>("label")
                         .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                        .HasColumnType("character varying(128)");
 
                     b.Property<DateTime?>("lastVerifiedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("recoveryCodes")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("secret")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("status")
                         .IsRequired()
                         .HasMaxLength(16)
-                        .HasColumnType("nvarchar(16)");
+                        .HasColumnType("character varying(16)");
 
                     b.Property<string>("type")
                         .IsRequired()
                         .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
+                        .HasColumnType("character varying(32)");
 
                     b.Property<DateTime>("updatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("userID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.HasKey("mfaID");
 
@@ -455,33 +455,33 @@ namespace FZ.WebAPI.Migrations
                 {
                     b.Property<int>("sessionID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("sessionID"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("sessionID"));
 
                     b.Property<DateTime>("createdAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("deviceId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("ip")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<bool>("isRevoked")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<DateTime>("lastSeenAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("userAgent")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<int>("userID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.HasKey("sessionID");
 
@@ -494,19 +494,19 @@ namespace FZ.WebAPI.Migrations
                 {
                     b.Property<int>("permissionID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("permissionID"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("permissionID"));
 
                     b.Property<string>("permissionDescription")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("character varying(255)");
 
                     b.Property<string>("permissionName")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
+                        .HasColumnType("character varying(150)");
 
                     b.HasKey("permissionID");
 
@@ -517,22 +517,22 @@ namespace FZ.WebAPI.Migrations
                 {
                     b.Property<int>("roleID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("roleID"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("roleID"));
 
                     b.Property<bool>("isDefault")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<string>("roleDescription")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("character varying(255)");
 
                     b.Property<string>("roleName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.HasKey("roleID");
 
@@ -543,15 +543,15 @@ namespace FZ.WebAPI.Migrations
                 {
                     b.Property<int>("rolePermissionID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("rolePermissionID"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("rolePermissionID"));
 
                     b.Property<int>("permissionID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int>("roleID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.HasKey("rolePermissionID");
 
@@ -566,13 +566,13 @@ namespace FZ.WebAPI.Migrations
                 {
                     b.Property<int>("userID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("assignedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("roleID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.HasKey("userID");
 
@@ -585,25 +585,25 @@ namespace FZ.WebAPI.Migrations
                 {
                     b.Property<int>("emailVerificationID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("emailVerificationID"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("emailVerificationID"));
 
                     b.Property<string>("codeHash")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime?>("consumedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("createdAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("expiresAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("userID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.HasKey("emailVerificationID");
 
@@ -616,29 +616,29 @@ namespace FZ.WebAPI.Migrations
                 {
                     b.Property<int>("passwordResetID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("passwordResetID"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("passwordResetID"));
 
                     b.Property<string>("codeHash")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime?>("consumedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("createdAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("expiresAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("purpose")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<int>("userID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.HasKey("passwordResetID");
 
@@ -651,37 +651,37 @@ namespace FZ.WebAPI.Migrations
                 {
                     b.Property<int>("refreshTokenID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("refreshTokenID"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("refreshTokenID"));
 
                     b.Property<DateTime>("Created")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedByIp")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("Expires")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("ReplacedByToken")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime?>("Revoked")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("RevokedByIp")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Token")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<int>("sessionID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int>("userID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.HasKey("refreshTokenID");
 
@@ -696,32 +696,32 @@ namespace FZ.WebAPI.Migrations
                 {
                     b.Property<int>("profileID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("profileID"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("profileID"));
 
                     b.Property<string>("avatar")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime?>("dateOfBirth")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("firstName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("gender")
                         .HasMaxLength(16)
-                        .HasColumnType("nvarchar(16)");
+                        .HasColumnType("character varying(16)");
 
                     b.Property<string>("lastName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<int>("userID")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.HasKey("profileID");
 
@@ -735,47 +735,47 @@ namespace FZ.WebAPI.Migrations
                 {
                     b.Property<int>("userID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("userID"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("userID"));
 
                     b.Property<DateTime>("createdAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("email")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("character varying(255)");
 
                     b.Property<string>("googleSub")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<bool>("isEmailVerified")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<string>("passwordHash")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("phoneNumber")
                         .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
+                        .HasColumnType("character varying(32)");
 
                     b.Property<string>("status")
                         .IsRequired()
                         .HasMaxLength(16)
-                        .HasColumnType("nvarchar(16)");
+                        .HasColumnType("character varying(16)");
 
                     b.Property<int>("tokenVersion")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("updatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("userName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.HasKey("userID");
 

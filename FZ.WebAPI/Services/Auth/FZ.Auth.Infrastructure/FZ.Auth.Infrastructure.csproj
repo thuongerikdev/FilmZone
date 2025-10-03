@@ -1,21 +1,35 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
 
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
 	<ItemGroup>
-		<PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.0" />
-		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.10" />
-		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.10" />
-		<PackageReference Include="Microsoft.Extensions.Identity.Core" Version="9.0.8" />
-		<PackageReference Include="Microsoft.Net.Http.Headers" Version="8.*" />
+		<!-- EF Core / Npgsql -->
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.11" />
+		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.11" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.11">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+
+		<!-- Redis -->
 		<PackageReference Include="StackExchange.Redis" Version="2.7.27" />
-	</ItemGroup>
-	<ItemGroup>
-	  <ProjectReference Include="..\FZ.Auth.Domain\FZ.Auth.Domain.csproj" />
-	  <ProjectReference Include="..\FZ.Auth.Dtos\FZ.Auth.Dtos.csproj" />
+		<PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="8.0.20" />
+
+		<!-- Identity Core (PasswordHasher<T>, PasswordVerificationResult, ...) -->
+		<PackageReference Include="Microsoft.Extensions.Identity.Core" Version="8.0.11" />
 	</ItemGroup>
 
+	<!-- ✅ Tham chiếu shared framework ASP.NET Core để có Microsoft.AspNetCore.Http*, CookieOptions, SameSiteMode, IHttpContextAccessor -->
+	<ItemGroup>
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\Shared\FZ.Constant\FZ.Constant.csproj" />
+		<ProjectReference Include="..\FZ.Auth.Domain\FZ.Auth.Domain.csproj" />
+		<ProjectReference Include="..\FZ.Auth.Dtos\FZ.Auth.Dtos.csproj" />
+	</ItemGroup>
 </Project>

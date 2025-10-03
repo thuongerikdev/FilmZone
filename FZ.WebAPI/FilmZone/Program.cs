@@ -70,6 +70,7 @@ namespace FZ.WebAPI
             // === 3) Modules (đăng ký DbContext sẽ đọc từ Configuration ở trên) ===
             builder.ConfigureAuth(typeof(Program).Namespace);
             builder.ConfigureMovie(typeof(Program).Namespace);
+            builder.Services.AddHealthChecks();
 
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
@@ -113,9 +114,14 @@ namespace FZ.WebAPI
            
                 app.UseSwagger();
                 app.UseSwaggerUI();
-       
 
-            app.UseForwardedHeaders();
+
+            app.UseForwardedHeaders(new ForwardedHeadersOptions
+            {
+                ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+            });
+            app.MapGet("/healthz", () => Results.Ok("OK"));
+
 
             // Nếu bạn đang chạy HTTP thuần (không cert local), cân nhắc tắt dòng dưới khi DEV để tránh 30x->https:
             // app.UseHttpsRedirection();

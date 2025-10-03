@@ -1,29 +1,31 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
-
 	<PropertyGroup>
 		<TargetFramework>net8.0</TargetFramework>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<LangVersion>latest</LangVersion>
-	  <UserSecretsId>8d594c6c-f718-4e5e-b2ad-3ab4a48831c8</UserSecretsId>
-	  <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
-  </PropertyGroup>
+		<UserSecretsId>8d594c6c-f718-4e5e-b2ad-3ab4a48831c8</UserSecretsId>
+		<DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+	</PropertyGroup>
 
 	<ItemGroup>
 		<!-- Auth / Security -->
 		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.10" />
 		<PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="8.0.10" />
 
-		<!-- EF Core -->
-		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.10" />
-		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.10" />
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.10">
+		<!-- EF Core (đồng bộ 8.0.11) -->
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.11" />
+		<!-- Dùng Npgsql cho PostgreSQL -->
+		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.11" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.11">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
+		<!-- (tuỳ chọn) NodaTime
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL.NodaTime" Version="8.0.11" /> -->
 
-		<!-- Redis (đồng bộ .NET 8 để tránh lệch phiên bản) -->
-		<PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="9.0.2" />
+		<!-- Redis (đồng bộ .NET 8) -->
+		<PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="8.0.20" />
 
 		<!-- Swagger -->
 		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
@@ -42,6 +44,4 @@
 		<ProjectReference Include="..\Services\Movie\FZ.Movie.ApplicationService\FZ.Movie.ApplicationService.csproj" />
 		<ProjectReference Include="..\Services\Shared\FZ.Constant\FZ.Constant.csproj" />
 	</ItemGroup>
-
-	<!-- appsettings.json mặc định đã được include, không cần cấu hình thêm trừ khi bạn muốn behavior đặc biệt -->
 </Project>
