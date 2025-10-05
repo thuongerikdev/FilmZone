@@ -206,73 +206,73 @@ namespace FZ.WebAPI.Controllers.Auth
         }
         public sealed class GoogleIdLoginRequest { public string IdToken { get; set; } = default!; }
 
-        [HttpPost("login/mobile/google-id")] // đổi thành [HttpPost("google-id")] nếu muốn /login/google-id
-        [AllowAnonymous]
-        public async Task<IActionResult> LoginWithGoogleId([FromBody] GoogleIdLoginRequest req, CancellationToken ct)
-        {
-            if (string.IsNullOrWhiteSpace(req.IdToken))
-                return BadRequest(ResponseConst.Error<string>(400, "Missing idToken"));
+        //[HttpPost("login/mobile/google-id")] // đổi thành [HttpPost("google-id")] nếu muốn /login/google-id
+        //[AllowAnonymous]
+        //public async Task<IActionResult> LoginWithGoogleId([FromBody] GoogleIdLoginRequest req, CancellationToken ct)
+        //{
+        //    if (string.IsNullOrWhiteSpace(req.IdToken))
+        //        return BadRequest(ResponseConst.Error<string>(400, "Missing idToken"));
 
-            // 1) Xác thực ID Token từ Google (chữ ký, iss, aud, exp, ...)
-            var settings = new GoogleJsonWebSignature.ValidationSettings
-            {
-                Audience = new[]
-                {
-            _cfg["Google:ClientId:Web"],
-            _cfg["Google:ClientId:Android"],
-            _cfg["Google:ClientId:iOS"]
-        }.Where(x => !string.IsNullOrWhiteSpace(x)).ToArray()
-            };
+        //    // 1) Xác thực ID Token từ Google (chữ ký, iss, aud, exp, ...)
+        //    var settings = new GoogleJsonWebSignature.ValidationSettings
+        //    {
+        //        Audience = new[]
+        //        {
+        //    _cfg["Google:ClientId:Web"],
+        //    _cfg["Google:ClientId:Android"],
+        //    _cfg["Google:ClientId:iOS"]
+        //}.Where(x => !string.IsNullOrWhiteSpace(x)).ToArray()
+        //    };
 
-            GoogleJsonWebSignature.Payload payload;
-            try
-            {
-                payload = await GoogleJsonWebSignature.ValidateAsync(req.IdToken, settings);
-            }
-            catch
-            {
-                return Unauthorized(ResponseConst.Error<string>(401, "Invalid Google token"));
-            }
+        //    GoogleJsonWebSignature.Payload payload;
+        //    try
+        //    {
+        //        payload = await GoogleJsonWebSignature.ValidateAsync(req.IdToken, settings);
+        //    }
+        //    catch
+        //    {
+        //        return Unauthorized(ResponseConst.Error<string>(401, "Invalid Google token"));
+        //    }
 
-            if (payload.EmailVerified != true)
-                return Conflict(ResponseConst.Error<string>(409, "Email not verified"));
+        //    if (payload.EmailVerified != true)
+        //        return Conflict(ResponseConst.Error<string>(409, "Email not verified"));
 
-            // 2) Gọi service giống flow Google web
-            var dto = new AuthLoginGoogleRequest
-            {
-                GoogleSub = payload.Subject,
-                email = payload.Email,
-                fullName = payload.Name,
-                avatar = payload.Picture
-            };
+        //    // 2) Gọi service giống flow Google web
+        //    var dto = new AuthLoginGoogleRequest
+        //    {
+        //        GoogleSub = payload.Subject,
+        //        email = payload.Email,
+        //        fullName = payload.Name,
+        //        avatar = payload.Picture
+        //    };
 
-            var result = await _authLoginService.LoginWithGoogleAsync(dto, ct);
-            if (result is null)
-                return StatusCode(500, ResponseConst.Error<string>(500, "Auth service error"));
+        //    var result = await _authLoginService.LoginWithGoogleAsync(dto, ct);
+        //    if (result is null)
+        //        return StatusCode(500, ResponseConst.Error<string>(500, "Auth service error"));
 
-            if (result.ErrorCode != 200 || result.Data is null)
-                return StatusCode(result.ErrorCode, result);
+        //    if (result.ErrorCode != 200 || result.Data is null)
+        //        return StatusCode(result.ErrorCode, result);
 
-            // 3) Nếu yêu cầu MFA: trả về để app chuyển sang màn hình nhập code
-            if (TryGetBoolProp(result.Data, "requiresMfa") == true &&
-                !string.IsNullOrWhiteSpace(TryGetStringProp(result.Data, "mfaTicket")))
-            {
-                return Ok(result); // { requiresMfa: true, mfaTicket: "..." }
-            }
+        //    // 3) Nếu yêu cầu MFA: trả về để app chuyển sang màn hình nhập code
+        //    if (TryGetBoolProp(result.Data, "requiresMfa") == true &&
+        //        !string.IsNullOrWhiteSpace(TryGetStringProp(result.Data, "mfaTicket")))
+        //    {
+        //        return Ok(result); // { requiresMfa: true, mfaTicket: "..." }
+        //    }
 
-            // 4) Trả token dạng JSON (mobile không dùng cookie)
-            if (!TryExtractTokens(result.Data, out var access, out var refresh, out var accessExp, out var refreshExp))
-                return StatusCode(500, ResponseConst.Error<string>(500, "Không lấy được token"));
+        //    // 4) Trả token dạng JSON (mobile không dùng cookie)
+        //    if (!TryExtractTokens(result.Data, out var access, out var refresh, out var accessExp, out var refreshExp))
+        //        return StatusCode(500, ResponseConst.Error<string>(500, "Không lấy được token"));
 
-            Response.Headers["Cache-Control"] = "no-store";
-            return Ok(new
-            {
-                accessToken = access,
-                accessTokenExpiresAt = accessExp,
-                refreshToken = refresh,
-                refreshTokenExpiresAt = refreshExp
-            });
-        }
+        //    Response.Headers["Cache-Control"] = "no-store";
+        //    return Ok(new
+        //    {
+        //        accessToken = access,
+        //        accessTokenExpiresAt = accessExp,
+        //        refreshToken = refresh,
+        //        refreshTokenExpiresAt = refreshExp
+        //    });
+        //}
 
         [HttpPost("mfa/verify")]
         [AllowAnonymous]
