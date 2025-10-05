@@ -56,7 +56,7 @@ namespace FZ.WebAPI.Controllers.Source
             return Ok(new { jobId });
         }
 
-        [HttpPost("link")]
+        [HttpPost("link")]  
         public async Task<IActionResult> UploadLink([FromBody] UploadLinkRequest body, CancellationToken ct)
         {
             if (string.IsNullOrWhiteSpace(body.LinkUrl)) return BadRequest("No link");
