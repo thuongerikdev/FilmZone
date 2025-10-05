@@ -40,12 +40,22 @@ namespace FZ.Auth.Infrastructure.Repository.Billing
             return trackedEntity;
 
         }
-        public  Task<Price> DeleteAsync(Price entity, CancellationToken ct)
+        public async Task<Price> DeleteAsync(Price entity, CancellationToken ct)
         {
             _context.Attach(entity);
-            var entry = _context.prices.Remove(entity);
-            return Task.FromResult(entry.Entity);
 
+            // Ví dụ các bảng con tham chiếu priceID:
+            await _context.orders
+                .Where(o => o.priceID == entity.priceID)
+                .ExecuteDeleteAsync(ct);
+
+            // Nếu có OrderDetails/Payments… cùng tham chiếu priceID, xoá chúng trước:
+            // await _context.orderDetails.Where(d => d.priceID == entity.priceID).ExecuteDeleteAsync(ct);
+            // await _context.payments.Where(p => p.priceID == entity.priceID).ExecuteDeleteAsync(ct);
+
+            var entry = _context.prices.Remove(entity);
+            await _context.SaveChangesAsync(ct);
+            return entry.Entity;
         }
         public async Task<Price?> GetByIdAsync(int priceID, CancellationToken ct)
         {

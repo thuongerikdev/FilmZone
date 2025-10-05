@@ -32,12 +32,25 @@ namespace FZ.Auth.Infrastructure.Repository.Billing
             return tracked;
         }
 
-        public Task<Plan> DeleteAsync(Plan plan, CancellationToken ct)
+        public async Task<Plan> DeleteAsync(Plan plan, CancellationToken ct)
         {
             _context.Attach(plan);
+
+            // Xoá các Prices liên quan
+            var prices = _context.prices.Where(x => x.planID == plan.planID);
+            _context.prices.RemoveRange(prices);
+
+            // Xoá các Subscriptions liên quan
+            var subs = _context.userSubscriptions.Where(x => x.planID == plan.planID);
+            _context.userSubscriptions.RemoveRange(subs);
+
+            // Xoá Plan
             var entry = _context.plans.Remove(plan);
-            return Task.FromResult(entry.Entity);
+
+            await _context.SaveChangesAsync(ct);
+            return entry.Entity;
         }
+
 
         public Task<Plan?> GetByIDAsync(int planID, CancellationToken ct)
             => _context.plans.AsNoTracking()

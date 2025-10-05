@@ -531,6 +531,16 @@ namespace FZ.WebAPI.Migrations
 
             migrationBuilder.InsertData(
                 schema: "auth",
+                table: "AuthRole",
+                columns: new[] { "roleID", "isDefault", "roleDescription", "roleName" },
+                values: new object[,]
+                {
+                    { 10, true, "Khách hàng tiêu chuẩn", "customer" },
+                    { 11, false, "Khách hàng VIP (đồng bộ với gói VIP)", "customer-vip" }
+                });
+
+            migrationBuilder.InsertData(
+                schema: "auth",
                 table: "Plan",
                 columns: new[] { "planID", "code", "description", "isActive", "name" },
                 values: new object[] { 1, "VIP", "Quyền lợi VIP (không quảng cáo, chất lượng cao...)", true, "Gói VIP" });
@@ -596,6 +606,13 @@ namespace FZ.WebAPI.Migrations
                 schema: "auth",
                 table: "AuthRefreshToken",
                 column: "userID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AuthRole_roleName",
+                schema: "auth",
+                table: "AuthRole",
+                column: "roleName",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_AuthRolePermission_permissionID",

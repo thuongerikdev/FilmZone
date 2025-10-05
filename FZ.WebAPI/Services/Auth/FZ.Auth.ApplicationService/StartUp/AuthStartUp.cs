@@ -261,6 +261,9 @@ namespace FZ.Auth.ApplicationService.StartUp
             builder.Services.AddScoped<IOrderService, OrderService>();
             builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 
+            builder.Services.AddScoped<IPlanService, PlanService>();
+            builder.Services.AddScoped<IPriceService, PriceService>();
+
             // === Authentication (JWT + Cookies + Google) ===
             var secretKey = builder.Configuration["Jwt:SecretKey"] ?? "A_very_long_and_secure_secret_key_1234567890";
             var key = Encoding.UTF8.GetBytes(secretKey);

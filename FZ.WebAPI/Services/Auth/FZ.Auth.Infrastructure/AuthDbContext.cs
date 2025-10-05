@@ -93,6 +93,21 @@ namespace FZ.Auth.Infrastructure
                 .WithOne(rp => rp.role)
                 .HasForeignKey(rp => rp.roleID);
 
+            modelBuilder.Entity<AuthUserRole>(b =>
+            {
+                b.ToTable("AuthUserRole", "auth");
+
+                // ✅ Dùng composite PK chuẩn cho bảng liên kết M-N:
+                b.HasKey(x => new { x.userID, x.roleID });
+
+                // (tuỳ chọn) Nếu bạn vẫn muốn có cột Id riêng thì:
+                // b.HasKey(x => x.Id);
+                // b.HasIndex(x => new { x.userID, x.roleID }).IsUnique(); // bắt uniqueness
+
+                b.Property(x => x.assignedAt)
+                 .HasColumnType("timestamp with time zone");
+            });
+
             modelBuilder.Entity<AuthPermission>()
                 .HasMany(p => p.rolePermissions)
                 .WithOne(rp => rp.permission)
@@ -257,6 +272,36 @@ namespace FZ.Auth.Infrastructure
                 new Price { priceID = 102, planID = 1, currency = "VND", amount = 249000m, intervalUnit = "month", intervalCount = 3, isActive = true },
                 new Price { priceID = 103, planID = 1, currency = "VND", amount = 459000m, intervalUnit = "month", intervalCount = 6, isActive = true }
             );
+
+            // ====== AUTH CORE ======
+            modelBuilder.Entity<AuthRole>(e =>
+            {
+                e.HasKey(r => r.roleID);
+                e.Property(r => r.roleName).HasMaxLength(100).IsRequired();
+                e.Property(r => r.roleDescription).HasMaxLength(255);
+
+                // Khuyến nghị: tên vai trò là duy nhất
+                e.HasIndex(r => r.roleName).IsUnique();
+
+                // Seed sẵn 2 role
+                e.HasData(
+                    new AuthRole
+                    {
+                        roleID = 10,                     // đổi nếu bạn đã dùng 10
+                        roleName = "customer",
+                        roleDescription = "Khách hàng tiêu chuẩn",
+                        isDefault = true                 // role mặc định khi tạo user mới
+                    },
+                    new AuthRole
+                    {
+                        roleID = 11,                     // đổi nếu bạn đã dùng 11
+                        roleName = "customer-vip",
+                        roleDescription = "Khách hàng VIP (đồng bộ với gói VIP)",
+                        isDefault = false
+                    }
+                );
+            });
+
 
             base.OnModelCreating(modelBuilder);
         }

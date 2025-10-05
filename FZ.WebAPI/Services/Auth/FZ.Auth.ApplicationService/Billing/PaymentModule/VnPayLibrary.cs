@@ -28,7 +28,8 @@ namespace FZ.Auth.ApplicationService.Billing.PaymentModule
                 }
             }
             var orderId = Convert.ToInt64(vnPay.GetResponseData("vnp_TxnRef"));
-            var vnPayTranId = Convert.ToInt64(vnPay.GetResponseData("vnp_TransaionNo"));
+            var tranNoStr = vnPay.GetResponseData("vnp_TransactionNo");
+            long? vnPayTranId = long.TryParse(tranNoStr, out var tmp) ? tmp : (long?)null;
             var vnpResponseCode = vnPay.GetResponseData("vnp_ResponseCode");
             var vnpSecureHash =
                 colleion.FirstOrDefault(k => k.Key == "vnp_SecureHash").Value; //hash của dữ liệu trả về

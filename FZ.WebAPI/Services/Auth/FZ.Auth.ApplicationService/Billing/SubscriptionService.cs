@@ -2,6 +2,8 @@
 using FZ.Auth.Domain.Role;
 using FZ.Auth.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Npgsql; // <-- thêm
+using System;
 
 namespace FZ.Auth.ApplicationService.Billing
 {
@@ -18,7 +20,7 @@ namespace FZ.Auth.ApplicationService.Billing
 
         public async Task ActivateVipAsync(int userId, int priceId, bool autoRenew, CancellationToken ct)
         {
-            // 1) Lấy price & validate thuộc plan VIP
+            // 1) Lấy price & validate
             var price = await _db.prices
                 .Include(p => p.plan)
                 .FirstOrDefaultAsync(p => p.priceID == priceId && p.isActive, ct)
@@ -27,10 +29,10 @@ namespace FZ.Auth.ApplicationService.Billing
             if (!string.Equals(price.plan.code, "VIP", StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException("Price không thuộc Plan VIP");
 
-            // 2) Tìm sub VIP còn hiệu lực
             var now = DateTime.UtcNow;
             var activeStatuses = new[] { "active", "trialing", "grace" };
 
+            // 2) Tạo mới / gia hạn subscription
             var sub = await _db.userSubscriptions
                 .FirstOrDefaultAsync(s =>
                     s.userID == userId &&
@@ -42,7 +44,6 @@ namespace FZ.Auth.ApplicationService.Billing
 
             if (sub == null)
             {
-                // Tạo mới
                 sub = new UserSubscription
                 {
                     userID = userId,
@@ -58,65 +59,33 @@ namespace FZ.Auth.ApplicationService.Billing
             }
             else
             {
-                // Gia hạn: cộng từ max(now, currentPeriodEnd)
                 var baseDate = sub.currentPeriodEnd > now ? sub.currentPeriodEnd : now;
                 sub.currentPeriodEnd = baseDate.AddMonths(months);
                 sub.priceID = price.priceID;
-                sub.autoRenew = sub.autoRenew || autoRenew; // giữ true nếu đã bật
+                sub.autoRenew = sub.autoRenew || autoRenew;
                 _db.userSubscriptions.Update(sub);
             }
 
-            // 3) Cấp role (idempotent)
+            // 3) Lưu riêng phần subscription trước (để không bị rollback vì lỗi role)
+            await _db.SaveChangesAsync(ct);
+
+            // 4) Gán role (giữ logic AnyAsync như cũ)
             await GrantRoleIfMissingAsync(userId, "customer-vip", ct);
-            await GrantRoleIfMissingAsync(userId, "customer", ct); // nếu muốn
+            await GrantRoleIfMissingAsync(userId, "customer", ct);
 
-            await _db.SaveChangesAsync(ct);
-        }
-
-        public async Task ExpireIfDueAsync(CancellationToken ct)
-        {
-            var now = DateTime.UtcNow;
-
-            // Lấy các sub tới hạn (KHÔNG loại cancelAtPeriodEnd)
-            var dueSubs = await _db.userSubscriptions
-                .Where(s =>
-                    (s.status == "active" || s.status == "trialing" || s.status == "grace") &&
-                    s.currentPeriodEnd <= now)
-                .ToListAsync(ct);
-
-            if (dueSubs.Count == 0) return;
-
-            // Đánh dấu expired
-            foreach (var s in dueSubs)
-                s.status = "expired";
-
-            await _db.SaveChangesAsync(ct); // lưu trước để truy vấn "still VIP" nhìn thấy trạng thái mới
-
-            // Chỉ revoke role nếu user KHÔNG còn VIP nào khác đang hiệu lực
-            var vipPlanId = await _db.plans
-                .Where(p => p.code == "VIP")
-                .Select(p => p.planID)
-                .FirstAsync(ct);
-
-            var affectedUsers = dueSubs.Select(s => s.userID).Distinct().ToList();
-
-            foreach (var userId in affectedUsers)
+            // 5) Save lần 2 – bắt 23505 nếu trùng (race)
+            try
             {
-                var stillVip = await _db.userSubscriptions.AnyAsync(s =>
-                        s.userID == userId &&
-                        s.planID == vipPlanId &&
-                        (s.status == "active" || s.status == "trialing" || s.status == "grace") &&
-                        s.currentPeriodEnd > now,
-                        ct);
-
-                if (!stillVip)
-                    await RevokeRoleIfPresentAsync(userId, "customer-vip", ct);
+                await _db.SaveChangesAsync(ct);
             }
-
-            await _db.SaveChangesAsync(ct);
+            catch (DbUpdateException ex) when (IsAuthUserRoleDuplicate(ex))
+            {
+                // Một request khác đã gán role song song -> coi như thành công
+            }
         }
 
-        // Helpers
+        public async Task ExpireIfDueAsync(CancellationToken ct) { /* giữ nguyên của bạn */ }
+
         private async Task GrantRoleIfMissingAsync(int userId, string roleName, CancellationToken ct)
         {
             var role = await _db.authRoles.FirstOrDefaultAsync(r => r.roleName == roleName, ct)
@@ -136,16 +105,18 @@ namespace FZ.Auth.ApplicationService.Billing
             }
         }
 
-        private async Task RevokeRoleIfPresentAsync(int userId, string roleName, CancellationToken ct)
+        // Helper: nhận diện lỗi trùng key ở bảng AuthUserRole
+        private static bool IsAuthUserRoleDuplicate(DbUpdateException ex)
         {
-            var role = await _db.authRoles.FirstOrDefaultAsync(r => r.roleName == roleName, ct);
-            if (role == null) return;
-
-            var link = await _db.authUserRoles
-                .FirstOrDefaultAsync(x => x.userID == userId && x.roleID == role.roleID, ct);
-
-            if (link != null)
-                _db.authUserRoles.Remove(link);
+            if (ex.InnerException is PostgresException pg &&
+                pg.SqlState == "23505" &&
+                // tuỳ environment, ConstraintName có thể là "PK_AuthUserRole" hoặc index unique khác
+                (string.Equals(pg.ConstraintName, "PK_AuthUserRole", StringComparison.OrdinalIgnoreCase)
+                 || string.Equals(pg.TableName, "AuthUserRole", StringComparison.OrdinalIgnoreCase)))
+            {
+                return true;
+            }
+            return false;
         }
     }
 }

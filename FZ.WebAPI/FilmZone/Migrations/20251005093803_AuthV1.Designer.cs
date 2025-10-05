@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FZ.WebAPI.Migrations
 {
     [DbContext(typeof(AuthDbContext))]
-    [Migration("20251003030603_AuthV1")]
+    [Migration("20251005093803_AuthV1")]
     partial class AuthV1
     {
         /// <inheritdoc />
@@ -539,7 +539,26 @@ namespace FZ.WebAPI.Migrations
 
                     b.HasKey("roleID");
 
+                    b.HasIndex("roleName")
+                        .IsUnique();
+
                     b.ToTable("AuthRole", "auth");
+
+                    b.HasData(
+                        new
+                        {
+                            roleID = 10,
+                            isDefault = true,
+                            roleDescription = "Khách hàng tiêu chuẩn",
+                            roleName = "customer"
+                        },
+                        new
+                        {
+                            roleID = 11,
+                            isDefault = false,
+                            roleDescription = "Khách hàng VIP (đồng bộ với gói VIP)",
+                            roleName = "customer-vip"
+                        });
                 });
 
             modelBuilder.Entity("FZ.Auth.Domain.Role.AuthRolePermission", b =>
