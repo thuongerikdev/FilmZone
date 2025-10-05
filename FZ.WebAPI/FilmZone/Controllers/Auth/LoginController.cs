@@ -88,7 +88,7 @@ namespace FZ.WebAPI.Controllers.Auth
         }
 
         [HttpGet("google/callback")]
-        [HttpGet("/signin-google")]
+        [HttpGet("signin-google")]
         [AllowAnonymous]
         public async Task<IActionResult> GoogleCallback([FromQuery] string? returnUrl, CancellationToken ct)
         {
