@@ -115,6 +115,36 @@ namespace FZ.WebAPI
             app.UseSwagger();
             app.UseSwaggerUI();
 
+            app.Use(async (ctx, next) =>
+            {
+                var m = ctx.Request.Method;
+                var unsafeMethod = m is "POST" or "PUT" or "PATCH" or "DELETE";
+                if (unsafeMethod)
+                {
+                    // 1) Kiểm tra Origin (khuyến nghị)
+                    var origin = ctx.Request.Headers["Origin"].ToString();
+                    var allowed = new[] { "https://app.filmzone.vn", "https://localhost:3000" };
+                    if (!string.IsNullOrEmpty(origin) && !allowed.Contains(origin, StringComparer.OrdinalIgnoreCase))
+                    {
+                        ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
+                        await ctx.Response.WriteAsync("Invalid Origin");
+                        return;
+                    }
+
+                    // 2) Double-submit cookie
+                    var csrfCookie = ctx.Request.Cookies["fz.csrf"];
+                    var csrfHeader = ctx.Request.Headers["X-CSRF"].ToString();
+                    if (string.IsNullOrEmpty(csrfCookie) || csrfCookie != csrfHeader)
+                    {
+                        ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
+                        await ctx.Response.WriteAsync("CSRF validation failed");
+                        return;
+                    }
+                }
+                await next();
+            });
+
+
             var fwd = new ForwardedHeadersOptions
             {
                 ForwardedHeaders = ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost

@@ -61,5 +61,6 @@ namespace FZ.Auth.ApplicationService.MFAService.Abtracts
     {
         Task<ResponseDto<List<UserSlimDto>>> GetAllSlimAsync(CancellationToken ct);
         Task<ResponseDto<AuthUser>> DeleteUserAsync(int userID, CancellationToken ct);
+        Task<ResponseDto<AuthUser>> GetUserByIDAsync(int userID, CancellationToken ct);
     }
 }

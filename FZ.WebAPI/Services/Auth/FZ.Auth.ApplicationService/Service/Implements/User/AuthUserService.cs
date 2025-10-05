@@ -53,6 +53,26 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.User
                 return ResponseConst.Error<AuthUser>(500, "Internal error");
             }
         }
+        public async Task<ResponseDto<AuthUser>> GetUserByIDAsync(int userID, CancellationToken ct)
+        {
+            _logger.LogInformation("Fetching user with ID: {UserID}", userID);
+            try
+            {
+                var user = await _users.FindByIdAsync(userID, ct);
+                if (user == null)
+                {
+                    _logger.LogWarning("User with ID: {UserID} not found.", userID);
+                    return ResponseConst.Error<AuthUser>(404, "User not found");
+                }
+                _logger.LogInformation("Successfully fetched user with ID: {UserID}", userID);
+                return ResponseConst.Success("Fetched user successfully", user);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while fetching user with ID: {UserID}", userID);
+                return ResponseConst.Error<AuthUser>(500, "Internal error");
+            }
+        }
 
     }
 }

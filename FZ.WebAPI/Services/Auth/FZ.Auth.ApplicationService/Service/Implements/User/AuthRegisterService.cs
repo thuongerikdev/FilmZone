@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -48,7 +49,10 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.User
 
         }
 
-        private string GenerateVerificationToken() => Guid.NewGuid().ToString();
+        //private string GenerateVerificationToken() => Guid.NewGuid().ToString();
+
+        private static string GenerateVerificationToken()
+          => RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6");
 
 
         public Task<ResponseDto<RegisterResponse>> RegisterAsync(RegisterRequest req, CancellationToken ct)

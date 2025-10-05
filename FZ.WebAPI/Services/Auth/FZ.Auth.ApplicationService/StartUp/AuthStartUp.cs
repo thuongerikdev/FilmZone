@@ -280,60 +280,67 @@ namespace FZ.Auth.ApplicationService.StartUp
                     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
                     options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
                 })
-                .AddJwtBearer(options =>
-                {
-                    options.RequireHttpsMetadata = !isDev;
-                    options.SaveToken = true;
-                    options.TokenValidationParameters = new TokenValidationParameters
-                    {
-                        ValidateIssuerSigningKey = true,
-                        IssuerSigningKey = new SymmetricSecurityKey(key),
-                        ValidateIssuer = false,
-                        ValidateAudience = false,
-                        ValidateLifetime = true,
-                        ClockSkew = TimeSpan.FromSeconds(30),
+            .AddJwtBearer(options =>
+            {
+                options.RequireHttpsMetadata = !isDev;
+                options.SaveToken = true;
 
-                        RoleClaimType = "role",
-                        NameClaimType = "userName"
-                    };
-                    options.Events = new JwtBearerEvents
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(key),
+                    ValidateIssuer = false,
+                    ValidateAudience = false,
+                    ValidateLifetime = true,
+                    ClockSkew = TimeSpan.FromSeconds(30),
+
+                    RoleClaimType = "role",
+                    NameClaimType = "userName"
+                };
+
+                // 👇 Quan trọng: đọc JWT từ cookie fz.access nếu không có Authorization header
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = ctx =>
                     {
-                        OnAuthenticationFailed = ctx =>
+                        // Nếu FE KHÔNG gửi Authorization header thì lấy từ cookie "fz.access"
+                        if (string.IsNullOrEmpty(ctx.Token))
                         {
-                            if (ctx.Exception is SecurityTokenExpiredException)
-                                ctx.Response.Headers["x-token-expired"] = "true";
-                            return Task.CompletedTask;
-                        },
-                        OnChallenge = ctx =>
-                        {
-                            if (!ctx.Response.HasStarted)
-                            {
-                                ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                                ctx.Response.Headers.TryAdd("WWW-Authenticate",
-                                    "Bearer error=\"invalid_token\", error_description=\"The access token is expired\"");
-                            }
-                            ctx.HandleResponse();
-                            return Task.CompletedTask;
+                            var tokenFromCookie = ctx.Request.Cookies["fz.access"];
+                            if (!string.IsNullOrEmpty(tokenFromCookie))
+                                ctx.Token = tokenFromCookie;
                         }
-                    };
-                })
-                // App session cookie
-                .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
-                {
-                    options.Cookie.Name = "fz.auth";
-                    options.Cookie.SameSite = SameSiteMode.None;
-                    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-                    options.LoginPath = "/login";
-                    options.AccessDeniedPath = "/access-denied";
-                    options.ExpireTimeSpan = TimeSpan.FromDays(7);
-                })
-                // External cookie cho OAuth handshake
-                .AddCookie("External", opt =>
-                {
-                    opt.Cookie.Name = "external.auth";
-                    opt.Cookie.SameSite = SameSiteMode.None;
-                    opt.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-                });
+                        return Task.CompletedTask;
+                    },
+                    OnAuthenticationFailed = ctx =>
+                    {
+                        if (ctx.Exception is SecurityTokenExpiredException)
+                            ctx.Response.Headers["x-token-expired"] = "true";
+                        return Task.CompletedTask;
+                    },
+                    OnChallenge = ctx =>
+                    {
+                        if (!ctx.Response.HasStarted)
+                        {
+                            ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                            ctx.Response.Headers.TryAdd("WWW-Authenticate",
+                                "Bearer error=\"invalid_token\", error_description=\"The access token is expired\"");
+                        }
+                        ctx.HandleResponse();
+                        return Task.CompletedTask;
+                    }
+                };
+            })
+
+
+            // ✅ CHỈ giữ external cookie cho OAuth handshake (Google)
+            .AddCookie("External", opt =>
+            {
+                opt.Cookie.Name = "external.auth";
+                opt.Cookie.SameSite = SameSiteMode.None;   // FE/BE khác domain
+                opt.Cookie.SecurePolicy = CookieSecurePolicy.Always; // HTTPS
+            });
+
 
             if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(googleClientSecret))
             {

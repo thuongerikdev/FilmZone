@@ -1,5 +1,8 @@
 ﻿using FZ.Auth.ApplicationService.MFAService.Abtracts;
+using FZ.Auth.ApplicationService.MFAService.Implements.User;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace FZ.WebAPI.Controllers.Auth
 {
@@ -33,5 +36,22 @@ namespace FZ.WebAPI.Controllers.Auth
             }
             return Ok(result);
         }
+
+        [Authorize]
+        [HttpGet("me")]
+        public async Task<IActionResult> Me(CancellationToken ct)
+        {
+            var userIdStr = User.FindFirst("userId")?.Value
+                         ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                         ?? User.FindFirst("sub")?.Value;
+
+            if (!int.TryParse(userIdStr, out var userId))
+                return Unauthorized(new { error = "No user id in token" });
+
+            var result = await _userService.GetUserByIDAsync(userId , ct);
+            if (result.ErrorCode != 200) return StatusCode(result.ErrorCode, result);
+            return Ok(result);
+        }
+
     }
 }
