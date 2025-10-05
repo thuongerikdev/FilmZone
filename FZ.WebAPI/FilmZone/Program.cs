@@ -111,43 +111,73 @@ namespace FZ.WebAPI
 
             var app = builder.Build();
 
-           
-                app.UseSwagger();
-                app.UseSwaggerUI();
 
+            app.UseSwagger();
+            app.UseSwaggerUI();
 
-            app.UseForwardedHeaders(new ForwardedHeadersOptions
+            var fwd = new ForwardedHeadersOptions
             {
-                ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-            });
+                ForwardedHeaders = ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost
+                // (tuỳ thích thêm) | ForwardedHeaders.XForwardedFor
+            };
+            // Chấp nhận proxy của Koyeb (rất quan trọng)
+            fwd.KnownNetworks.Clear();
+            fwd.KnownProxies.Clear();
+
+            app.UseForwardedHeaders(fwd);
+
+            // (sau đó mới tới swagger/ui/cors/routing/auth...)
+            app.UseSwagger();
+            app.UseSwaggerUI();
+
             app.MapGet("/healthz", () => Results.Ok("OK"));
 
-
-            // Nếu bạn đang chạy HTTP thuần (không cert local), cân nhắc tắt dòng dưới khi DEV để tránh 30x->https:
-            // app.UseHttpsRedirection();
-
+            // app.UseHttpsRedirection(); // prod có thể bật, dev có thể tắt
             app.UseRouting();
-
-            // CORS cho FE (gửi cookie)
-            app.UseCors("FE");
-
-            // Map cookie -> Authorization header Bearer (phải trước Authenticate)
+            app.UseCors("FE");                  // policy "FE" phải được AddCors trước đó
             app.UseMiddleware<CookieJwtMiddleware>();
-            app.UseForwardedHeaders(new ForwardedHeadersOptions
-
-            {
-                ForwardedHeaders = ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost,
-                KnownNetworks = { },   // rất quan trọng cho Fly
-                KnownProxies = { }
-            });
             app.UseAuthentication();
             app.UseAuthorization();
 
             app.MapControllers();
-
             app.MapHub<UploadHub>("/hubs/upload");
-
             app.Run();
         }
+
+
+        //        app.UseForwardedHeaders(new ForwardedHeadersOptions
+        //        {
+        //            ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+        //        });
+        //        app.MapGet("/healthz", () => Results.Ok("OK"));
+
+
+        //        // Nếu bạn đang chạy HTTP thuần (không cert local), cân nhắc tắt dòng dưới khi DEV để tránh 30x->https:
+        //        // app.UseHttpsRedirection();
+
+        //        app.UseRouting();
+
+        //        // CORS cho FE (gửi cookie)
+        //        app.UseCors("FE");
+
+        //        // Map cookie -> Authorization header Bearer (phải trước Authenticate)
+        //        app.UseMiddleware<CookieJwtMiddleware>();
+        //        app.UseForwardedHeaders(new ForwardedHeadersOptions
+
+        //        {
+        //            ForwardedHeaders = ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost,
+        //            KnownNetworks = { },   // rất quan trọng cho Fly
+        //            KnownProxies = { }
+        //        });
+        //        app.UseAuthentication();
+        //        app.UseAuthorization();
+
+        //        app.MapControllers();
+
+        //        app.MapHub<UploadHub>("/hubs/upload");
+
+        //        app.Run();
+        //    }
+        //}
     }
 }
