@@ -315,38 +315,237 @@ namespace FZ.WebAPI.Controllers.Search
 
         // ===================== SUGGEST MOVIES =====================
         [HttpGet("movies/suggest")]
-        public async Task<IActionResult> SuggestMovies([FromQuery] string q, CancellationToken ct = default)
+        public async Task<IActionResult> SuggestMovies([FromQuery] string q, [FromQuery] int size = 10, CancellationToken ct = default)
         {
             if (string.IsNullOrWhiteSpace(q)) return Ok(Array.Empty<object>());
 
+            size = Math.Clamp(size, 1, 20);
+
+            var qs = q.Trim();
+            var qLower = qs.ToLowerInvariant();
+            var qLen = qs.Length;
+
             var http = CreateHttp();
+
+            // ===== Build should clauses cho rất nhiều field =====
+            var should = new List<object>();
+
+            // 1) Các field cấp document (không nested)
+            if (qLen <= 2)
+            {
+                // prefix cho chuỗi ngắn
+                should.Add(new { match_phrase_prefix = new Dictionary<string, object> { ["title"] = new { query = qs, max_expansions = 50 } } });
+                should.Add(new { match_phrase_prefix = new Dictionary<string, object> { ["originalTitle"] = new { query = qs, max_expansions = 50 } } });
+                should.Add(new { match_phrase_prefix = new Dictionary<string, object> { ["description"] = new { query = qs, max_expansions = 50 } } });
+                should.Add(new { match_phrase_prefix = new Dictionary<string, object> { ["regionName"] = new { query = qs, max_expansions = 50 } } });
+                should.Add(new { match_phrase_prefix = new Dictionary<string, object> { ["rated"] = new { query = qs, max_expansions = 50 } } });
+                // slug nên là keyword + normalizer lowercase → dùng prefix
+                should.Add(new { prefix = new Dictionary<string, object> { ["slug"] = new { value = qLower } } });
+                // movieType/status (text ngắn) → prefix cũng ổn
+                should.Add(new { match_phrase_prefix = new Dictionary<string, object> { ["movieType"] = new { query = qs, max_expansions = 10 } } });
+                should.Add(new { match_phrase_prefix = new Dictionary<string, object> { ["status"] = new { query = qs, max_expansions = 10 } } });
+            }
+            else
+            {
+                // multi_match + fuzziness cho chuỗi dài
+                should.Add(new
+                {
+                    multi_match = new
+                    {
+                        query = qs,
+                        fields = new[] {
+                    "title^6", "originalTitle^4", "description",
+                    "regionName^2", "slug^2", "movieType", "status", "rated"
+                },
+                        fuzziness = "AUTO"
+                    }
+                });
+            }
+
+            // 2) Nested: cast (fullName, characterName)
+            if (qLen <= 2)
+            {
+                should.Add(new
+                {
+                    nested = new
+                    {
+                        path = "cast",
+                        query = new
+                        {
+                            @bool = new
+                            {
+                                should = new object[]
+                                {
+                            new { match_phrase_prefix = new Dictionary<string, object> { ["cast.fullName"]     = new { query = qs, max_expansions = 50 } } },
+                            new { match_phrase_prefix = new Dictionary<string, object> { ["cast.characterName"] = new { query = qs, max_expansions = 50 } } }
+                                },
+                                minimum_should_match = 1
+                            }
+                        }
+                    }
+                });
+            }
+            else
+            {
+                should.Add(new
+                {
+                    nested = new
+                    {
+                        path = "cast",
+                        query = new
+                        {
+                            @bool = new
+                            {
+                                should = new object[]
+                                {
+                            new { match = new Dictionary<string, object> { ["cast.fullName"]     = new { query = qs, fuzziness = "AUTO" } } },
+                            new { match = new Dictionary<string, object> { ["cast.characterName"] = new { query = qs, fuzziness = "AUTO" } } }
+                                },
+                                minimum_should_match = 1
+                            }
+                        }
+                    }
+                });
+            }
+
+            // 3) Nested: tags (tagName, slug)
+            if (qLen <= 2)
+            {
+                should.Add(new
+                {
+                    nested = new
+                    {
+                        path = "tags",
+                        query = new
+                        {
+                            @bool = new
+                            {
+                                should = new object[]
+                                {
+                            new { match_phrase_prefix = new Dictionary<string, object> { ["tags.tagName"] = new { query = qs, max_expansions = 50 } } }
+                                },
+                                minimum_should_match = 1
+                            }
+                        }
+                    }
+                });
+                // slug keyword prefix (nếu slug là keyword + lowercase normalizer)
+                should.Add(new
+                {
+                    nested = new
+                    {
+                        path = "tags",
+                        query = new
+                        {
+                            prefix = new Dictionary<string, object> { ["tags.slug"] = new { value = qLower } }
+                        }
+                    }
+                });
+            }
+            else
+            {
+                should.Add(new
+                {
+                    nested = new
+                    {
+                        path = "tags",
+                        query = new
+                        {
+                            @bool = new
+                            {
+                                should = new object[]
+                                {
+                            new { match = new Dictionary<string, object> { ["tags.tagName"] = new { query = qs, fuzziness = "AUTO" } } },
+                            new { term  = new Dictionary<string, object> { ["tags.slug"]    = qLower } } // nếu slug là keyword
+                                },
+                                minimum_should_match = 1
+                            }
+                        }
+                    }
+                });
+            }
+
+            // 4) Heuristic: year, rated, movieType, status, regionCode
+            if (int.TryParse(qs, out var year) && year >= 1900 && year <= 2100)
+                should.Add(new { term = new Dictionary<string, object> { ["year"] = year } });
+
+            if (qLower.StartsWith("pg") || qLower is "g" or "r" or "nc-17")
+                should.Add(new { term = new Dictionary<string, object> { ["rated"] = qs } });
+
+            if (qLower is "movie" or "series")
+                should.Add(new { term = new Dictionary<string, object> { ["movieType"] = qLower } });
+
+            if (qLower is "completed" or "ongoing" or "coming_soon")
+                should.Add(new { term = new Dictionary<string, object> { ["status"] = qLower } });
+
+            // regionCode nếu bạn lưu dạng keyword (ví dụ "US", "VN", "001"...)
+            if (qs.Length <= 5)
+                should.Add(new { term = new Dictionary<string, object> { ["regionCode"] = qs } });
+
+
+            // ===== Combine query =====
+            var query = new
+            {
+                @bool = new
+                {
+                    should,
+                    minimum_should_match = 1
+                }
+            };
+
+            // ===== Gọi _search =====
             var body = new
             {
-                size = 8,
-                // Dùng prefix đơn giản trên title (tránh title.auto nếu chưa mapping)
-                query = new
+                size,
+                query,
+                sort = new object[]
                 {
-                    match_phrase_prefix = new Dictionary<string, object>
-                    {
-                        ["title"] = new { query = q.Trim(), max_expansions = 50 }
-                    }
+            new Dictionary<string, object> { ["popularity"] = new { order = "desc" } },
+            new Dictionary<string, object> { ["updatedAt"]  = new { order = "desc" } }
                 },
-                _source = new[] { "id", "slug", "title", "year" }
+                // Trả thêm nhiều field cho suggest
+                _source = new[]
+                {
+            "id","slug","title","originalTitle",
+            "year","image","releaseDate",
+            "regionId","regionCode","regionName",
+            "tags","popularity"
+        }
             };
 
             using var doc = await PostJsonAsync(http, $"{_moviesIdx}/_search", body, ct);
 
             var items = new List<object>();
             var hits = doc.RootElement.GetProperty("hits").GetProperty("hits");
+
             foreach (var h in hits.EnumerateArray())
             {
                 var src = h.GetProperty("_source").GetRawText();
-                var d = JsonSerializer.Deserialize<MovieDoc>(src, JsonOpts)!; // ✅
-                items.Add(new { d.Id, d.Slug, d.Title, d.Year });
+                var d = JsonSerializer.Deserialize<MovieDoc>(src, JsonOpts)!;
+
+                // chọn title hợp lý để hiển thị
+                var displayTitle = string.IsNullOrWhiteSpace(d.Title) ? d.OriginalTitle : d.Title;
+
+                // cắt bớt tags cho suggest (tránh payload nặng)
+                var topTags = (d.Tags ?? new List<MovieDoc.TagMini>()).Take(4);
+
+                items.Add(new
+                {
+                    id = d.Id,
+                    slug = d.Slug,
+                    title = displayTitle,
+                    year = d.Year,
+                    image = d.Image,
+                    releaseDate = d.ReleaseDate,
+                    region = new { id = d.RegionId, code = d.RegionCode, name = d.RegionName },
+                    tags = topTags,
+                    popularity = d.Popularity
+                });
             }
 
             return Ok(items);
         }
+
 
         // ===================== SEARCH PERSONS =====================
         [HttpGet("persons")]
