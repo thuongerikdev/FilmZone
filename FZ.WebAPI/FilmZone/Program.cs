@@ -1,5 +1,6 @@
 ﻿using FilmZone.Middlewares;
 using FZ.Auth.ApplicationService.StartUp;
+using FZ.Movie.ApplicationService.Search;
 using FZ.Movie.ApplicationService.StartUp;
 using FZ.WebAPI.SignalR;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -10,7 +11,7 @@ namespace FZ.WebAPI
 {
     public class Program
     {
-        public static void Main(string[] args)
+          public static async Task Main(string[] args)
         {
             ThreadPool.GetMinThreads(out var worker, out var iocp);
             var target = Math.Max(worker, Environment.ProcessorCount * 16);
@@ -115,34 +116,34 @@ namespace FZ.WebAPI
             app.UseSwagger();
             app.UseSwaggerUI();
 
-            app.Use(async (ctx, next) =>
-            {
-                var m = ctx.Request.Method;
-                var unsafeMethod = m is "POST" or "PUT" or "PATCH" or "DELETE";
-                if (unsafeMethod)
-                {
-                    // 1) Kiểm tra Origin (khuyến nghị)
-                    var origin = ctx.Request.Headers["Origin"].ToString();
-                    var allowed = new[] { "https://app.filmzone.vn", "https://localhost:3000" };
-                    if (!string.IsNullOrEmpty(origin) && !allowed.Contains(origin, StringComparer.OrdinalIgnoreCase))
-                    {
-                        ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
-                        await ctx.Response.WriteAsync("Invalid Origin");
-                        return;
-                    }
+            //app.Use(async (ctx, next) =>
+            //{
+            //    var m = ctx.Request.Method;
+            //    var unsafeMethod = m is "POST" or "PUT" or "PATCH" or "DELETE";
+            //    if (unsafeMethod)
+            //    {
+            //        // 1) Kiểm tra Origin (khuyến nghị)
+            //        var origin = ctx.Request.Headers["Origin"].ToString();
+            //        var allowed = new[] { "https://app.filmzone.vn", "https://localhost:3000" };
+            //        if (!string.IsNullOrEmpty(origin) && !allowed.Contains(origin, StringComparer.OrdinalIgnoreCase))
+            //        {
+            //            ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
+            //            await ctx.Response.WriteAsync("Invalid Origin");
+            //            return;
+            //        }
 
-                    // 2) Double-submit cookie
-                    var csrfCookie = ctx.Request.Cookies["fz.csrf"];
-                    var csrfHeader = ctx.Request.Headers["X-CSRF"].ToString();
-                    if (string.IsNullOrEmpty(csrfCookie) || csrfCookie != csrfHeader)
-                    {
-                        ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
-                        await ctx.Response.WriteAsync("CSRF validation failed");
-                        return;
-                    }
-                }
-                await next();
-            });
+            //        // 2) Double-submit cookie
+            //        var csrfCookie = ctx.Request.Cookies["fz.csrf"];
+            //        var csrfHeader = ctx.Request.Headers["X-CSRF"].ToString();
+            //        if (string.IsNullOrEmpty(csrfCookie) || csrfCookie != csrfHeader)
+            //        {
+            //            ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
+            //            await ctx.Response.WriteAsync("CSRF validation failed");
+            //            return;
+            //        }
+            //    }
+            //    await next();
+            //});
 
 
             var fwd = new ForwardedHeadersOptions
@@ -160,7 +161,26 @@ namespace FZ.WebAPI
             app.UseSwagger();
             app.UseSwaggerUI();
 
+            using (var scope = app.Services.CreateScope())
+            {
+                var cfg = scope.ServiceProvider.GetRequiredService<IConfiguration>().GetSection("OpenSearch");
+                await IndexBootstrap.EnsureMoviesIndexAsync(
+                    baseUrl: cfg["Url"]!,
+                    indexName: cfg["MoviesIndex"]!,
+                    username: cfg["Username"],
+                    password: cfg["Password"]
+                );
+
+                await IndexBootstrap.EnsurePersonsIndexAsync(
+                    baseUrl: cfg["Url"]!,
+                    indexName: cfg["PersonsIndex"]!,
+                    username: cfg["Username"],
+                    password: cfg["Password"]
+                );
+            }
+
             app.MapGet("/healthz", () => Results.Ok("OK"));
+
 
             // app.UseHttpsRedirection(); // prod có thể bật, dev có thể tắt
             app.UseRouting();
@@ -171,7 +191,7 @@ namespace FZ.WebAPI
 
             app.MapControllers();
             app.MapHub<UploadHub>("/hubs/upload");
-            app.Run();
+            await app.RunAsync();
         }
 
 

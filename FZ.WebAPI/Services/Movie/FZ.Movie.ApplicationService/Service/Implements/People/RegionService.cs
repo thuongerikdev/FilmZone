@@ -1,5 +1,6 @@
 ﻿using FZ.Constant;
 using FZ.Movie.ApplicationService.Common;
+using FZ.Movie.ApplicationService.Search;
 using FZ.Movie.ApplicationService.Service.Abtracts;
 using FZ.Movie.Domain.Catalog;
 using FZ.Movie.Domain.People;
@@ -19,10 +20,12 @@ namespace FZ.Movie.ApplicationService.Service.Implements.People
     {
         private readonly IRegionRepository _regionRepository;
         private IUnitOfWork _unitOfWork;
-        public RegionService(IRegionRepository regionRepository, IUnitOfWork unitOfWork, ILogger<RegionService> logger) : base(logger)
+        private readonly IMovieIndexService _movieIndexService;
+        public RegionService(IRegionRepository regionRepository, IUnitOfWork unitOfWork, ILogger<RegionService> logger , IMovieIndexService movieIndexService) : base(logger)
         {
             _regionRepository = regionRepository;
             _unitOfWork = unitOfWork;
+            _movieIndexService = movieIndexService;
         }
         public async Task<ResponseDto<Region>> CreateRegion(CreateRegionRequest request, CancellationToken ct)
         {
@@ -48,6 +51,7 @@ namespace FZ.Movie.ApplicationService.Service.Implements.People
                     await _regionRepository.AddAsync(newRegion, cancellationToken);
                     return newRegion;
                 }, ct: ct);
+                
                 _logger.LogInformation("Region created successfully with ID: {RegionID}", newRegion.regionID);
                 return ResponseConst.Success("Region created successfully", newRegion);
             }
@@ -76,6 +80,10 @@ namespace FZ.Movie.ApplicationService.Service.Implements.People
                     await _regionRepository.UpdateAsync(existingRegion, cancellationToken);
                     return existingRegion;
                 }, ct: ct);
+              
+                 await _movieIndexService.ReindexByRegionAsync(existingRegion.regionID, ct);
+
+
                 _logger.LogInformation("Region with ID: {RegionID} updated successfully", request.regionID);
                 return ResponseConst.Success("Region updated successfully", existingRegion);
             }

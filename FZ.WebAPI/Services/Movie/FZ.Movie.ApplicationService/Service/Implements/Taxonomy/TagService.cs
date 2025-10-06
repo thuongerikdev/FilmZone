@@ -1,5 +1,6 @@
 ﻿using FZ.Constant;
 using FZ.Movie.ApplicationService.Common;
+using FZ.Movie.ApplicationService.Search;
 using FZ.Movie.ApplicationService.Service.Abtracts;
 using FZ.Movie.Domain.Taxonomy;
 using FZ.Movie.Dtos.Request;
@@ -18,10 +19,20 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Taxonomy
     {
         private readonly ITagRepository _tagRepository;
         private readonly IUnitOfWork _unitOfWork;
-        public TagService(ITagRepository tagRepository, IUnitOfWork unitOfWork, ILogger<TagService> logger) : base(logger)
+        private readonly IMovieIndexService _movieIndexService;
+        private readonly IMovieTagRepository _movieTagRepository;
+        public TagService(
+            ITagRepository tagRepository, 
+            IUnitOfWork unitOfWork, 
+            ILogger<TagService> logger , 
+            IMovieTagRepository movieTagRepository,
+
+            IMovieIndexService movieIndexService) : base(logger)
         {
             _tagRepository = tagRepository;
             _unitOfWork = unitOfWork;
+            _movieIndexService = movieIndexService;
+            _movieTagRepository = movieTagRepository;
         }
 
         public async Task<ResponseDto<Tag>> CreateTag(CreateTagRequest request, CancellationToken ct)
@@ -48,6 +59,7 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Taxonomy
                     await _tagRepository.AddAsync(newTag, cancellationToken);
                     return newTag;
                 }, ct: ct);
+              
                 _logger.LogInformation("Tag created successfully with ID: {TagID}", newTag.tagID);
                 return ResponseConst.Success("Tag created successfully", newTag);
             }
@@ -76,6 +88,11 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Taxonomy
                     await _tagRepository.UpdateAsync(existingTag, cancellationToken);
                     return existingTag;
                 }, ct: ct);
+
+                if (existingTag.tagID > 0)
+                {
+                    await _movieIndexService.ReindexByTagAsync(existingTag.tagID, ct);
+                }
                 _logger.LogInformation("Tag updated successfully with ID: {TagID}", existingTag.tagID);
                 return ResponseConst.Success("Tag updated successfully", existingTag);
             }
@@ -96,11 +113,23 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Taxonomy
                     _logger.LogWarning("Tag with ID: {TagID} not found", tagID);
                     return ResponseConst.Error<bool>(404, "Tag not found");
                 }
+                var associatedMovieTags = await _movieTagRepository.GetByTagID(tagID, ct);
+
+
+
                 await _unitOfWork.ExecuteInTransactionAsync(async (cancellationToken) =>
                 {
                     await _tagRepository.RemoveAsync(existingTag.tagID);
+                    foreach (var movieTag in associatedMovieTags)
+                    {
+                        await _movieTagRepository.RemoveAsync(movieTag.movieTagID);
+                    }
                     return true;
                 }, ct: ct);
+                if (existingTag.tagID > 0)
+                {
+                    await _movieIndexService.ReindexByTagAsync(existingTag.tagID, ct);
+                }
                 _logger.LogInformation("Tag deleted successfully with ID: {TagID}", tagID);
                 return ResponseConst.Success("Tag deleted successfully", true);
             }

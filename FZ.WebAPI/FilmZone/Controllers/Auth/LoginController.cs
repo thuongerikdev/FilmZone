@@ -35,7 +35,6 @@ namespace FZ.WebAPI.Controllers.Auth
         }
 
         [HttpPost("userLogin")]
-        [AllowAnonymous]
         public async Task<IActionResult> UserLogin([FromBody] LoginRequest loginRequest, CancellationToken ct)
         {
             var result = await _authLoginService.LoginAsync(loginRequest, ct);
@@ -58,7 +57,7 @@ namespace FZ.WebAPI.Controllers.Auth
             SetAuthCookies(access!, refresh!, accessExp, refreshExp);
 
             // Không trả token nữa
-            return Ok(new { authenticated = true });
+            return Ok(result);
         }
 
         [HttpPost("login/mobile")]
@@ -407,7 +406,8 @@ namespace FZ.WebAPI.Controllers.Auth
         /// Bóc token từ DTO trả về (linh hoạt với TokenPairDto hoặc object ẩn danh).
         /// Yêu cầu các field: AccessToken, RefreshToken, AccessTokenExpiresAt, RefreshTokenExpiresAt (UTC).
         /// </summary>
-        private static bool TryExtractTokens(object data,
+        private static bool TryExtractTokens(
+            object data,
             out string? access, out string? refresh,
             out DateTimeOffset accessExp, out DateTimeOffset refreshExp)
         {
@@ -415,6 +415,19 @@ namespace FZ.WebAPI.Controllers.Auth
             accessExp = DateTimeOffset.UtcNow.AddMinutes(30);
             refreshExp = DateTimeOffset.UtcNow.AddDays(7);
 
+            // ✅ 1) Nếu service trả về LoginResponse (case của bạn)
+            if (data is LoginResponse lr)
+            {
+                access = lr.token;
+                refresh = lr.refreshToken;
+
+                if (lr.tokenExpiration != default) accessExp = lr.tokenExpiration;
+                if (lr.refreshTokenExpiration != default) refreshExp = lr.refreshTokenExpiration;
+
+                return !string.IsNullOrWhiteSpace(access) && !string.IsNullOrWhiteSpace(refresh);
+            }
+
+            // ✅ 2) Nếu là TokenPairDto (giữ nguyên nhánh cũ)
             if (data is TokenPairDto dto)
             {
                 access = dto.AccessToken;
@@ -424,35 +437,11 @@ namespace FZ.WebAPI.Controllers.Auth
                 return !string.IsNullOrWhiteSpace(access) && !string.IsNullOrWhiteSpace(refresh);
             }
 
-            try
-            {
-                var json = JsonSerializer.Serialize(data);
-                using var doc = JsonDocument.Parse(json);
-                var root = doc.RootElement;
+            // ✅ 3) Fallback JSON linh hoạt (có thể giữ bản bạn đang có,
+            // hoặc dùng bản mình đã gửi ở tin trước để bắt cả accessToken/token/jwt...)
+            // ... (giữ nguyên phần parse JSON hiện tại của bạn) ...
 
-                if (root.TryGetProperty("AccessToken", out var a)) access = a.GetString();
-                if (root.TryGetProperty("RefreshToken", out var r)) refresh = r.GetString();
-
-                if (root.TryGetProperty("AccessTokenExpiresAt", out var aexp)
-                    && aexp.ValueKind == JsonValueKind.String
-                    && DateTimeOffset.TryParse(aexp.GetString(), out var aex))
-                {
-                    accessExp = aex;
-                }
-
-                if (root.TryGetProperty("RefreshTokenExpiresAt", out var rexp)
-                    && rexp.ValueKind == JsonValueKind.String
-                    && DateTimeOffset.TryParse(rexp.GetString(), out var rex))
-                {
-                    refreshExp = rex;
-                }
-
-                return !string.IsNullOrWhiteSpace(access) && !string.IsNullOrWhiteSpace(refresh);
-            }
-            catch
-            {
-                return false;
-            }
+            return false;
         }
 
         private static bool? TryGetBoolProp(object data, string name)

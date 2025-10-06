@@ -1,5 +1,6 @@
 ﻿using FZ.Constant;
 using FZ.Movie.ApplicationService.Common;
+using FZ.Movie.ApplicationService.Search;
 using FZ.Movie.ApplicationService.Service.Abtracts;
 using FZ.Movie.Domain.People;
 using FZ.Movie.Dtos.Request;
@@ -12,6 +13,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace FZ.Movie.ApplicationService.Service.Implements.People
@@ -21,11 +23,26 @@ namespace FZ.Movie.ApplicationService.Service.Implements.People
         private readonly IPersonRepository _personRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICloudinaryService _cloudinaryService;
-        public PersonService(IPersonRepository personRepository, IUnitOfWork unitOfWork, ILogger<PersonService> logger , ICloudinaryService cloudinaryService) : base(logger)
+        private readonly IPersonIndexService _personIndexService;
+        private readonly IMovieIndexService _movieIndexService;
+        private readonly IMoviePersonRepository _moviePersonRepository;
+        public PersonService(
+            IPersonRepository personRepository, 
+            IUnitOfWork unitOfWork, 
+            ILogger<PersonService> logger , 
+            IPersonIndexService personIndexService,
+            IMovieIndexService movieIndexService,
+            IMoviePersonRepository moviePersonRepository,
+
+            ICloudinaryService cloudinaryService) : base(logger)
         {
             _personRepository = personRepository;
             _unitOfWork = unitOfWork;
             _cloudinaryService = cloudinaryService;
+            _personIndexService = personIndexService;
+            _movieIndexService = movieIndexService;
+            _moviePersonRepository = moviePersonRepository;
+
         }
         public async Task<ResponseDto<Person>> CreatePerson(CreatePersonRequest request, CancellationToken ct)
         {
@@ -48,8 +65,10 @@ namespace FZ.Movie.ApplicationService.Service.Implements.People
                 await _unitOfWork.ExecuteInTransactionAsync(async (cancellationToken) =>
                 {
                     await _personRepository.AddAsync(newPerson, cancellationToken);
+                   
                     return newPerson;
                 }, ct: ct);
+           
                 _logger.LogInformation("Person created successfully with ID: {PersonID}", newPerson.personID);
                 return ResponseConst.Success("Person created successfully", newPerson);
             }
@@ -93,6 +112,13 @@ namespace FZ.Movie.ApplicationService.Service.Implements.People
                     await _cloudinaryService.DeleteImageAsync(existingPerson.avatar);
                     _logger.LogInformation("Person avatar updated successfully for ID: {PersonID}", existingPerson.personID);
                 }
+                if (existingPerson.personID > 0)
+                {
+                    await _personIndexService.IndexByIdAsync(existingPerson.personID, ct);
+                    await _movieIndexService.ReindexByPersonAsync(existingPerson.personID, ct);
+                    _logger.LogInformation("Person indexed successfully in OpenSearch with ID: {PersonID}", existingPerson.personID);
+                }
+
                 _logger.LogInformation("Person updated successfully with ID: {PersonID}", existingPerson.personID);
                 return ResponseConst.Success("Person updated successfully", existingPerson);
             }
@@ -113,12 +139,32 @@ namespace FZ.Movie.ApplicationService.Service.Implements.People
                     _logger.LogWarning("Person with ID: {PersonID} not found", personID);
                     return ResponseConst.Error<bool>(404, "Person not found");
                 }
+                
+                var associatedMoviePersons = await _moviePersonRepository.GetAllByPersonIdAsync(personID, ct);
+
+
                 await _unitOfWork.ExecuteInTransactionAsync(async (cancellationToken) =>
                 {
                     await _personRepository.RemoveAsync(existingPerson.personID);
+                    foreach (var moviePerson in associatedMoviePersons)
+                    {
+                        await _moviePersonRepository.RemoveAsync(moviePerson.moviePersonID);
+                    }
+
                     return true;
                 }, ct: ct);
                 _logger.LogInformation("Person deleted successfully with ID: {PersonID}", personID);
+                if (!string.IsNullOrEmpty(existingPerson.avatar))
+                {
+                    await _cloudinaryService.DeleteImageAsync(existingPerson.avatar);
+                    _logger.LogInformation("Person avatar deleted successfully for ID: {PersonID}", existingPerson.personID);
+                }
+                if (existingPerson.personID > 0)
+                {
+                    await _personIndexService.DeleteAsync(existingPerson.personID, ct);
+                    await _movieIndexService.ReindexByPersonAsync(existingPerson.personID, ct);
+                    _logger.LogInformation("Person removed from OpenSearch with ID: {PersonID}", existingPerson.personID);
+                }
                 return ResponseConst.Success("Person deleted successfully", true);
             }
             catch (Exception ex)

@@ -21,11 +21,13 @@ namespace FZ.Movie.Infrastructure.Repository.Taxonomy
         Task<int> HardDeleteAsync(int movieTagID, CancellationToken ct);
         Task<List<Domain.Taxonomy.MovieTag>> GetAllMovieTagAsync(CancellationToken ct);
         Task<MovieTag> GetByMovieAndTagAsync(int movieID, int tagID, CancellationToken ct);
+        Task <MovieTag> GetByMovieID(int movieID,  CancellationToken ct);
 
         Task<List<MovieTag>> GetByMovieIDsync(int movieID, CancellationToken ct);
 
         Task<List<Tag>> GetTagByMovieID (int movieID, CancellationToken ct);
         Task<List<Movies>> GetMovieByTagID(List<int> tagID, CancellationToken ct);
+        Task<List<MovieTag>> GetByTagID(int tagID, CancellationToken ct);
     }
     public sealed class MovieTagRepository : IMovieTagRepository
     {
@@ -88,6 +90,15 @@ namespace FZ.Movie.Infrastructure.Repository.Taxonomy
         public Task<List<MovieTag>> GetByMovieIDsync(int movieID, CancellationToken ct)
             => _context.MovieTags.AsNoTracking()
                 .Where(x => x.movieID == movieID)
+                .ToListAsync(ct);
+
+
+        public Task<MovieTag> GetByMovieID(int movieID, CancellationToken ct)
+            => _context.MovieTags.AsNoTracking()
+                .FirstOrDefaultAsync(x => x.movieID == movieID, ct);
+        public Task<List<MovieTag>> GetByTagID(int tagID, CancellationToken ct)
+            => _context.MovieTags.AsNoTracking()
+                .Where(x => x.tagID == tagID)
                 .ToListAsync(ct);
 
 

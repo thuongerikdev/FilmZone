@@ -1,5 +1,6 @@
 ﻿using CloudinaryDotNet;
 using FZ.Constant.Database;
+using FZ.Movie.ApplicationService.Search;
 using FZ.Movie.ApplicationService.Service.Abtracts;
 using FZ.Movie.ApplicationService.Service.Implements;
 using FZ.Movie.ApplicationService.Service.Implements.Catalog;
@@ -26,7 +27,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-
+using OpenSearch.Client;
+using OpenSearch.Net;
 using StackExchange.Redis;
 using System;
 using System.Collections.Generic;
@@ -196,6 +198,28 @@ namespace FZ.Movie.ApplicationService.StartUp
             {
                 o.MultipartBodyLengthLimit = 256L * 1024L * 1024L; // 256MB
             });
+
+            var esCfg = builder.Configuration.GetSection("OpenSearch");
+            builder.Services.AddSingleton<IOpenSearchClient>(sp =>
+            {
+                var node = new Uri(esCfg["Url"]!); // VD: https://your-bonsai-endpoint
+                var pool = new SingleNodeConnectionPool(node);
+
+                var settings = new ConnectionSettings(pool)
+                    .DisableDirectStreaming()                // log debug dễ đọc
+                    .DefaultIndex(esCfg["MoviesIndex"])      // mặc định; vẫn nên chỉ rõ từng index khi gọi
+                    .ThrowExceptions();                      // tùy thích
+
+                var user = esCfg["Username"];
+                var pass = esCfg["Password"];
+                if (!string.IsNullOrWhiteSpace(user) && pass != null)
+                    settings = settings.BasicAuthentication(user, pass);
+
+                return new OpenSearchClient(settings);
+            });
+
+            builder.Services.AddScoped<IMovieIndexService ,MovieIndexService>();
+            builder.Services.AddScoped< IPersonIndexService, PersonIndexService>();
 
             // === DbContext (PostgreSQL/Neon) ===
             services.AddDbContext<MovieDbContext>(options =>

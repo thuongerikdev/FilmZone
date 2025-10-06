@@ -1,5 +1,6 @@
 ﻿using FZ.Constant;
 using FZ.Movie.ApplicationService.Common;
+using FZ.Movie.ApplicationService.Search;
 using FZ.Movie.ApplicationService.Service.Abtracts;
 using FZ.Movie.Domain.Catalog;
 using FZ.Movie.Domain.Media;
@@ -31,6 +32,7 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Catalog
         private readonly IMovieTagRepository _movieTagRepository;
         private readonly IMoviePersonRepository _moviePersonRepository;
         private readonly IMovieImageRepository _movieImageRepository;
+        private readonly IMovieIndexService _movieIndexService;
         public MoviesService(
             ILogger<MovieServiceBase> logger , 
             IMovieRepository movie , 
@@ -38,7 +40,8 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Catalog
             ICloudinaryService cloudinaryService,
             IMovieTagRepository movieTagRepository,
             IMoviePersonRepository movieperson,
-            IMovieImageRepository movieImageRepository
+            IMovieImageRepository movieImageRepository,
+            IMovieIndexService movieIndexService
 
             ) : base(logger)
         {
@@ -181,6 +184,7 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Catalog
 
                     return true;
                 }, ct: ct);
+                await _movieIndexService.IndexByIdAsync(created!.movieID, ct);
 
                 _logger.LogInformation("Successfully created a new movie with slug: {Slug}", request.slug);
                 return ResponseConst.Success("Successfully created a new movie", created);
@@ -350,6 +354,7 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Catalog
                 {
                     await _cloudinaryService.DeleteImageAsync(oldPoster);
                 }
+                await _movieIndexService.IndexByIdAsync(created!.movieID, ct);
 
                 _logger.LogInformation("Successfully updated movie with ID: {MovieID}", request.movieID);
                 return ResponseConst.Success("Successfully updated the movie", movie);
