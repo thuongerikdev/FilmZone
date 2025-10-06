@@ -145,5 +145,7 @@ namespace FZ.Movie.ApplicationService.Service.Implements.People
                 return ResponseConst.Error<List<MoviePerson>>(500, "An error occurred while retrieving the movie persons");
             }
         }
+
+        
     }
 }

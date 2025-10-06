@@ -36,6 +36,7 @@ using System.Net;
 using System.Security.Authentication;
 using System.Text;
 using System.Threading.Channels;
+using static FZ.Movie.ApplicationService.Search.IMovieIndexService;
 
 namespace FZ.Movie.ApplicationService.StartUp
 {
@@ -202,18 +203,13 @@ namespace FZ.Movie.ApplicationService.StartUp
             var esCfg = builder.Configuration.GetSection("OpenSearch");
             builder.Services.AddSingleton<IOpenSearchClient>(sp =>
             {
-                var node = new Uri(esCfg["Url"]!); // VD: https://your-bonsai-endpoint
-                var pool = new SingleNodeConnectionPool(node);
+                var cfg = sp.GetRequiredService<IConfiguration>().GetSection("OpenSearch");
+                var uri = new Uri(cfg["Url"]!);
 
+                var pool = new SingleNodeConnectionPool(uri);
                 var settings = new ConnectionSettings(pool)
-                    .DisableDirectStreaming()                // log debug dễ đọc
-                    .DefaultIndex(esCfg["MoviesIndex"])      // mặc định; vẫn nên chỉ rõ từng index khi gọi
-                    .ThrowExceptions();                      // tùy thích
-
-                var user = esCfg["Username"];
-                var pass = esCfg["Password"];
-                if (!string.IsNullOrWhiteSpace(user) && pass != null)
-                    settings = settings.BasicAuthentication(user, pass);
+                    .BasicAuthentication(cfg["Username"], cfg["Password"])
+                    .DisableDirectStreaming(); // tiện debug DebugInformation
 
                 return new OpenSearchClient(settings);
             });
