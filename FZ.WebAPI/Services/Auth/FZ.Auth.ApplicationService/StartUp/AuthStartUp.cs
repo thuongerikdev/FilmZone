@@ -260,6 +260,7 @@ namespace FZ.Auth.ApplicationService.StartUp
             builder.Services.AddScoped<IVnPayService, VnPayService>();
             builder.Services.AddScoped<IOrderService, OrderService>();
             builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
+            builder.Services.AddScoped<IInvoiceService, InvoiceService>();
 
             builder.Services.AddScoped<IPlanService, PlanService>();
             builder.Services.AddScoped<IPriceService, PriceService>();
