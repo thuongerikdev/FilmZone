@@ -14,6 +14,7 @@ namespace FZ.Auth.Infrastructure.Repository.Billing
         Task<Order> UpdateAsync (Order entity, CancellationToken ct); 
         Task<Order> DeleteAsync (Order entity, CancellationToken ct);
         Task<Order> GetByIdAsync (int orderID, CancellationToken ct);
+        Task<List<Order>> GetAllAsync (CancellationToken ct);
         Task<List<Order>> GetOrdersByUserID (int userID, CancellationToken ct);
         Task<List<Order>> GetOrdersByStatus (string status, CancellationToken ct);
 
@@ -60,6 +61,10 @@ namespace FZ.Auth.Infrastructure.Repository.Billing
         public async Task<List<Order>> GetOrdersByStatus (string status, CancellationToken ct)
         {
             return await _context.orders.Where(o => o.status == status).ToListAsync(ct);
+        }
+        public async Task<List<Order>> GetAllAsync (CancellationToken ct)
+        {
+            return await _context.orders.ToListAsync(ct);
         }
 
 

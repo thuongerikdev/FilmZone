@@ -2,6 +2,7 @@
 using FZ.Auth.Infrastructure;
 using FZ.Auth.Infrastructure.Repository.Abtracts;
 using FZ.Auth.Infrastructure.Repository.Billing;
+using FZ.Constant;
 using global::FZ.Auth.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,6 +14,8 @@ namespace FZ.Auth.ApplicationService.Billing
         Task<bool> MarkPaidAndActivateAsync(int orderId, string provider, string providerPaymentId, decimal paidAmount, CancellationToken ct);
         Task MarkFailedAsync(int orderId, string provider, string? reasonCode, CancellationToken ct);
         Task<Order?> GetOrderByID(int orderID, CancellationToken ct);
+        Task<List<ResponseDto<Order>>> GetOrdersByUserID(int userID, CancellationToken ct);
+        Task<ResponseDto<List<Order>>> GetAllOrder();
     }
 
     public class OrderService : IOrderService
@@ -158,6 +161,29 @@ namespace FZ.Auth.ApplicationService.Billing
 
 
         public Task<Order?> GetOrderByID(int orderID, CancellationToken ct) => _orders.GetByIdAsync(orderID, ct);
+
+        public async Task<ResponseDto<List<Order>>> GetAllOrder()
+        {
+            try
+            {
+                var orders = await _orders.GetAllAsync(CancellationToken.None);
+                return ResponseConst.Success("Lấy danh sách đơn hàng thành công", orders);
+            }
+            catch (Exception ex)
+            {
+                return ResponseConst.Error<List<Order>>(500, "Lấy danh sách đơn hàng thất bại");
+            }
+        }
+        public async Task<List<ResponseDto<Order>>> GetOrdersByUserID(int userID, CancellationToken ct)
+        {
+            var orders = await _orders.GetOrdersByUserID(userID, ct);
+            var responseList = new List<ResponseDto<Order>>();
+            foreach (var order in orders)
+            {
+                responseList.Add(ResponseConst.Success("Lấy đơn hàng thành công", order));
+            }
+            return responseList;
+        }
     }
 }
 

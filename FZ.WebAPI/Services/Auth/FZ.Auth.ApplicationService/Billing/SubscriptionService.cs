@@ -1,6 +1,7 @@
 ﻿using FZ.Auth.Domain.Billing;
 using FZ.Auth.Domain.Role;
 using FZ.Auth.Infrastructure;
+using FZ.Constant;
 using Microsoft.EntityFrameworkCore;
 using Npgsql; // <-- thêm
 using System;
@@ -11,6 +12,10 @@ namespace FZ.Auth.ApplicationService.Billing
     {
         Task ActivateVipAsync(int userId, int priceId, bool autoRenew, CancellationToken ct);
         Task ExpireIfDueAsync(CancellationToken ct);
+        Task<ResponseDto<bool>> CancelSubscriptionAsync(int userId, CancellationToken ct);
+        Task <ResponseDto<List<UserSubscription>>> GetAllSubscription();
+        Task <ResponseDto<UserSubscription>> GetSubscriptionByID(int subscriptionID, CancellationToken ct);
+        Task <ResponseDto<UserSubscription>> GetSubscriptionByUserID(int userID, CancellationToken ct);
     }
 
     public class SubscriptionService : ISubscriptionService
@@ -82,7 +87,77 @@ namespace FZ.Auth.ApplicationService.Billing
             }
         }
 
-        public async Task ExpireIfDueAsync(CancellationToken ct) { /* giữ nguyên của bạn */ }
+        public async Task ExpireIfDueAsync(CancellationToken ct)
+        {
+            // 1. Lấy Role VIP để lát nữa gỡ khỏi user
+            var vipRole = await _db.authRoles
+                .FirstOrDefaultAsync(r => r.roleName == "customer-vip", ct);
+
+            if (vipRole == null) return; // Chưa seed role thì không cần làm gì
+
+            // 2. Tìm các subscription đang active nhưng đã quá hạn (currentPeriodEnd <= UtcNow)
+            // Lưu ý: Chỉ xử lý những cái không autoRenew hoặc logic gia hạn thất bại (ở đây làm đơn giản: cứ quá hạn là cắt)
+            var expiredSubs = await _db.userSubscriptions
+                .Where(s => (s.status == "active" || s.status == "trialing")
+                         && s.currentPeriodEnd <= DateTime.UtcNow)
+                .ToListAsync(ct);
+
+            if (!expiredSubs.Any()) return;
+
+            // 3. Xử lý từng sub
+            foreach (var sub in expiredSubs)
+            {
+                // a. Đổi trạng thái sang canceled
+                sub.status = "canceled";
+                sub.autoRenew = false;
+
+                // b. Tìm UserRole tương ứng để xoá
+                var userRole = await _db.authUserRoles
+                    .FirstOrDefaultAsync(ur => ur.userID == sub.userID && ur.roleID == vipRole.roleID, ct);
+
+                if (userRole != null)
+                {
+                    _db.authUserRoles.Remove(userRole);
+                }
+            }
+
+            // 4. Lưu thay đổi
+            await _db.SaveChangesAsync(ct);
+        }
+
+        public async Task<ResponseDto<bool>> CancelSubscriptionAsync(int userId, CancellationToken ct)
+        {
+            // 1. Tìm subscription đang chạy của user
+            var sub = await _db.userSubscriptions
+                .FirstOrDefaultAsync(s => s.userID == userId
+                                       && (s.status == "active" || s.status == "trialing"), ct);
+
+            if (sub == null)
+            {
+                return ResponseConst.Error<bool>(404, "Bạn không có gói đăng ký nào đang hoạt động.");
+            }
+
+            // 2. Logic Huỷ:
+            // Cách 1 (Chuẩn SaaS): Tắt gia hạn tự động, khách vẫn dùng được đến hết ngày hết hạn.
+            // Khi chạy ExpireIfDueAsync, hệ thống sẽ tự cắt role khi đến ngày.
+            if (sub.autoRenew == false)
+            {
+                return ResponseConst.Error<bool>(400, "Gói đăng ký này đã được huỷ gia hạn trước đó.");
+            }
+
+            sub.autoRenew = false;
+            _db.userSubscriptions.Update(sub);
+
+            /* Cách 2 (Huỷ ngay lập tức - nếu nghiệp vụ yêu cầu):
+               sub.status = "canceled";
+               sub.currentPeriodEnd = DateTime.UtcNow; // Kết thúc ngay
+               // Gọi logic gỡ Role ngay lập tức ở đây hoặc để ExpireIfDueAsync quét sau
+            */
+
+            await _db.SaveChangesAsync(ct);
+
+            return ResponseConst.Success("Đã huỷ gia hạn gói thành công. Bạn vẫn có thể sử dụng quyền VIP đến hết chu kỳ hiện tại.", true);
+        }
 
         private async Task GrantRoleIfMissingAsync(int userId, string roleName, CancellationToken ct)
         {
@@ -115,6 +190,31 @@ namespace FZ.Auth.ApplicationService.Billing
                 return true;
             }
             return false;
+        }
+        public async Task<ResponseDto<List<UserSubscription>>> GetAllSubscription()
+        {
+            var subscriptions = await _db.userSubscriptions.AsNoTracking().ToListAsync();
+            return ResponseConst.Success("Lấy danh sách subscription thành công", subscriptions);
+        }
+        public async Task<ResponseDto<UserSubscription>> GetSubscriptionByID(int subscriptionID, CancellationToken ct)
+        {
+            var subscription = await _db.userSubscriptions.AsNoTracking()
+                                        .FirstOrDefaultAsync(s => s.subscriptionID == subscriptionID, ct);
+            if (subscription == null)
+            {
+                return ResponseConst.Error<UserSubscription>(404, "Subscription không tồn tại");
+            }
+            return ResponseConst.Success("Lấy subscription thành công", subscription);
+        }
+        public async Task<ResponseDto<UserSubscription>> GetSubscriptionByUserID(int userID, CancellationToken ct)
+        {
+            var subscription = await _db.userSubscriptions.AsNoTracking()
+                                        .FirstOrDefaultAsync(s => s.userID == userID, ct);
+            if (subscription == null)
+            {
+                return ResponseConst.Error<UserSubscription>(404, "Subscription không tồn tại");
+            }
+            return ResponseConst.Success("Lấy subscription thành công", subscription);
         }
     }
 }

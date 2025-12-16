@@ -14,6 +14,7 @@ namespace FZ.Auth.Infrastructure.Repository.Billing
         Task<Invoice> UpdateAsync(Invoice entity, CancellationToken ct);
         Task<Invoice?> GetByIdAsync(int id, CancellationToken ct);
         Task<Invoice> DeleteAsync(Invoice entity, CancellationToken ct);
+        Task<List<Invoice>> GetAllAsync(CancellationToken ct);
         Task<List<Invoice>> GetInvoicesByUserID(int userID, CancellationToken ct);
 
     }
@@ -53,6 +54,10 @@ namespace FZ.Auth.Infrastructure.Repository.Billing
             }
             _context.Entry(existingInvoice).CurrentValues.SetValues(entity);
             return existingInvoice;
+        }
+        public Task<List<Invoice>> GetAllAsync(CancellationToken ct)
+        {
+            return _context.invoices.ToListAsync(ct);
         }
     }
 }
