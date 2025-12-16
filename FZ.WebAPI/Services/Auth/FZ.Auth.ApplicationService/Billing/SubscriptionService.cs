@@ -26,8 +26,6 @@ namespace FZ.Auth.ApplicationService.Billing
                 .FirstOrDefaultAsync(p => p.priceID == priceId && p.isActive, ct)
                 ?? throw new InvalidOperationException("Price không tồn tại");
 
-            if (!string.Equals(price.plan.code, "VIP", StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException("Price không thuộc Plan VIP");
 
             var now = DateTime.UtcNow;
             var activeStatuses = new[] { "active", "trialing", "grace" };

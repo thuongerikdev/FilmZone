@@ -74,6 +74,7 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media
                         isActive = request.isActive,
                         isVipOnly = request.isVipOnly,
                         quality = request.quality,
+                        rawSubTitle = "",
                         language = request.language,
                         createdAt = DateTime.UtcNow,
                         updatedAt = DateTime.UtcNow,

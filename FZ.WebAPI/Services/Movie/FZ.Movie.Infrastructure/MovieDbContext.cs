@@ -30,6 +30,7 @@ namespace FZ.Movie.Infrastructure
         public DbSet<ImageSource> ImageSources => Set<ImageSource>();
         public DbSet<MovieImage> MovieImages => Set<MovieImage>();
         public DbSet<Region> Regions => Set<Region>();
+        public DbSet<MovieSubTitle> MovieSubTitles => Set<MovieSubTitle>();
 
         protected override void OnModelCreating(ModelBuilder mb)
         {
@@ -122,6 +123,11 @@ namespace FZ.Movie.Infrastructure
               .HasOne(s => s.movie)
               .WithMany(m => m.sources)
               .HasForeignKey(s => s.movieID)
+              .OnDelete(DeleteBehavior.Cascade);
+            mb.Entity<MovieSubTitle>()
+              .HasOne(s => s.movieSource)
+              .WithMany(ms => ms.movieSubTitles)
+              .HasForeignKey(s => s.movieSourceID)
               .OnDelete(DeleteBehavior.Cascade);
 
             mb.Entity<EpisodeSource>()

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace FZ.Movie.Dtos.Respone
@@ -79,6 +80,25 @@ namespace FZ.Movie.Dtos.Respone
     {
         public int regionID { get; set; }
         public string regionName { get; set; }
+    }
+
+
+    public class TranscribeApiResponse
+    {
+        public string srt { get; set; }
+
+        public string language { get; set; }
+
+        // Map field "raw_segments" từ JSON Python sang property C#
+        [JsonPropertyName("raw_segments")]
+        public List<SegmentItem> RawSegments { get; set; }
+    }
+
+    public class SegmentItem
+    {
+        public double start { get; set; }
+        public double end { get; set; }
+        public string text { get; set; }
     }
 
 

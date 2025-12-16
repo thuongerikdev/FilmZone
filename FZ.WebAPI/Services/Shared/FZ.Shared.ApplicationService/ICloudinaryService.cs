@@ -11,5 +11,8 @@ namespace FZ.Shared.ApplicationService
     {
         Task<string> UploadImageAsync(IFormFile file);
         public Task DeleteImageAsync(string imageUrl);
+
+        Task<string> UploadSrtAsync(IFormFile file);
+        Task DeleteRawAsync(string publicId);
     }
 }

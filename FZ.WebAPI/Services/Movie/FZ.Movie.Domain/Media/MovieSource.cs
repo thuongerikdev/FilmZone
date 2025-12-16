@@ -16,6 +16,7 @@ namespace FZ.Movie.Domain.Media
         public int movieSourceID { get; set; }
 
         public int movieID { get; set; }
+        public string rawSubTitle { get; set; }   // raw data of subtitle if any
 
         [Required, MaxLength(32)]
         public string sourceName { get; set; }     // YouTube | Archive | Vimeo | Proxy | R2...
@@ -44,5 +45,6 @@ namespace FZ.Movie.Domain.Media
         // Navigation
         [ForeignKey(nameof(movieID))]
         public virtual Catalog.Movies movie { get; set; }
+        public virtual ICollection<MovieSubTitle> movieSubTitles { get; set; }
     }
 }

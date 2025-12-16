@@ -34,6 +34,7 @@ namespace FZ.Movie.Dtos.Request
         public string? sourceId { get; set; }      // VIDEO_ID / identifier
         public string? quality { get; set; }       // 1080p...
         public string? language { get; set; }      // vi | en...
+        public string? rawSubTitle { get; set; }  // raw data of subtitle if any
         public bool isVipOnly { get; set; }
         public bool isActive { get; set; }
     }
@@ -87,4 +88,32 @@ namespace FZ.Movie.Dtos.Request
         public bool IsVipOnly { get; set; }
         public bool IsActive { get; set; } = true;
     }
+
+    public class CreateMovieSubTitleRequest
+    {
+        public int movieSourceID { get; set; }
+        public string language { get; set; }      // vi | en...
+  
+        public string subTitleName { get; set; }     // English | Vietnamese | Chinese...
+        public string linkSubTitle { get; set; }      // link subtitle file
+        public bool isActive { get; set; } = true;
+
+
+    }
+    public class UpdateMovieSubTitleRequest : CreateMovieSubTitleRequest
+    {
+        public int movieSubTitleID { get; set; }
+    }
+
+    public class AutoGenerateSubTitleRequest
+    {
+        public IFormFile videoFile { get; set; }
+        public int movieSourceID { get; set; }
+    }
+
+
+    //public class CreateSubTitleByFile
+    //{
+
+    //}
 }

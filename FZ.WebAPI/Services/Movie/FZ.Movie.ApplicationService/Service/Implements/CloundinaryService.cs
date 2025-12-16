@@ -223,5 +223,134 @@ namespace FZ.Movie.ApplicationService.Service.Implements
                 return null;
             }
         }
+
+        public async Task<string> UploadSrtAsync(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+            {
+                _logger.LogWarning("SRT file is null or empty");
+                return null;
+            }
+
+            // Kiểm tra đuôi file cơ bản
+            var extension = System.IO.Path.GetExtension(file.FileName).ToLowerInvariant();
+            if (extension != ".srt" && extension != ".vtt")
+            {
+                throw new InvalidOperationException("Only .srt or .vtt files are allowed for subtitles.");
+            }
+
+            try
+            {
+                _logger.LogInformation("Uploading raw file {FileName} with size {FileSize}", file.FileName, file.Length);
+                await using var stream = file.OpenReadStream();
+
+                // Dùng RawUploadParams cho các file không phải media (srt, txt, pdf...)
+                var uploadParams = new RawUploadParams
+                {
+                    File = new FileDescription(file.FileName, stream),
+                    UseFilename = true,
+                    UniqueFilename = true,
+                    Overwrite = false,
+                    // Folder = "subtitles", // Tùy chọn: gom vào thư mục riêng
+
+                    // QUAN TRỌNG: Cần giữ lại đuôi file trong PublicId cho file Raw 
+                    // để URL sinh ra có dạng .../filename.srt thì player mới hiểu.
+                    // Cloudinary mặc định RawUploadParams sẽ giữ đuôi file nếu UseFilename = true.
+                };
+
+                var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+
+                if (uploadResult?.SecureUrl == null)
+                {
+                    _logger.LogError("Cloudinary raw upload failed. Status: {Status}, Error: {Error}",
+                        uploadResult?.StatusCode, uploadResult?.Error?.Message);
+                    return null;
+                }
+
+                _logger.LogInformation("SRT uploaded. PublicId: {PublicId}, URL: {Url}",
+                    uploadResult.PublicId, uploadResult.SecureUrl);
+
+                return uploadResult.SecureUrl.ToString();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to upload SRT to Cloudinary");
+                throw new InvalidOperationException("Failed to upload SRT to Cloudinary", ex);
+            }
+        }
+
+        /// <summary>
+        /// Xóa file Raw (SRT). 
+        /// Cần hàm riêng vì hàm DeleteImageAsync đang set ResourceType = Image.
+        /// </summary>
+        /// <param name="publicId">PublicId của file srt (Lưu ý: với file Raw, PublicId thường bao gồm cả đuôi file, ví dụ: "my_sub.srt")</param>
+        public async Task DeleteRawAsync(string publicId)
+        {
+            if (string.IsNullOrWhiteSpace(publicId)) return;
+
+            // Nếu lỡ truyền vào URL, cố gắng tách lấy PublicId (Logic khác với Image một chút)
+            if (IsUrl(publicId))
+            {
+                publicId = ExtraPublicIdFromRawUrl(publicId); // Hàm tách ID cho Raw (viết thêm bên dưới)
+                if (string.IsNullOrWhiteSpace(publicId)) return;
+            }
+
+            try
+            {
+                _logger.LogInformation("Deleting Cloudinary RAW file. public_id={PublicId}", publicId);
+
+                var deletionParams = new DeletionParams(publicId)
+                {
+                    ResourceType = ResourceType.Raw, // <--- BẮT BUỘC PHẢI LÀ RAW
+                    Invalidate = true
+                };
+
+                var result = await _cloudinary.DestroyAsync(deletionParams);
+
+                if (result.Result == "ok" || result.Result == "not found")
+                {
+                    _logger.LogInformation("Delete raw success: {Result}", result.Result);
+                }
+                else
+                {
+                    _logger.LogWarning("Delete raw failed: {Result}, {Error}", result.Result, result.Error?.Message);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error deleting raw file: {PublicId}", publicId);
+            }
+        }
+
+        /// <summary>
+        /// Hàm tách PublicId dành riêng cho URL dạng Raw (khác cấu trúc URL Image)
+        /// URL Raw thường là: .../raw/upload/v12345/filename.srt
+        /// </summary>
+        private string ExtraPublicIdFromRawUrl(string rawUrl)
+        {
+            try
+            {
+                var uri = new Uri(rawUrl);
+                var path = uri.AbsolutePath;
+                // Tìm vị trí sau "/raw/upload/"
+                var marker = "/raw/upload/";
+                var idx = path.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+                if (idx < 0) return null;
+
+                var remainder = path.Substring(idx + marker.Length).TrimStart('/');
+
+                // Bỏ version (v12345/)
+                remainder = Regex.Replace(remainder, @"^v\d+\/", "", RegexOptions.IgnoreCase);
+
+                // LƯU Ý: Với file Raw, Public ID BAO GỒM cả đuôi file (.srt)
+                // Nên ta KHÔNG dùng Regex để cắt đuôi file như hàm xử lý ảnh.
+
+                return string.IsNullOrWhiteSpace(remainder) ? null : remainder;
+            }
+            catch
+            {
+                return null;
+            }
+        }
     }
 }

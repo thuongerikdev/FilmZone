@@ -1,6 +1,7 @@
 ﻿using FZ.Constant;
 using FZ.Movie.Domain.Media;
 using FZ.Movie.Dtos.Request;
+using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -36,5 +37,19 @@ namespace FZ.Movie.ApplicationService.Service.Abtracts
         Task<ResponseDto<List<ImageSource>>> GetImageSourcesByTpe(string type, CancellationToken ct);
        
 
+    }
+    public interface IMovieSubTitleService
+    {
+        Task<ResponseDto<MovieSubTitle>> AutoGenerateSubTitleAsync(AutoGenerateSubTitleRequest autoGenerateSubTitleRequest, CancellationToken ct);
+
+
+
+        Task<ResponseDto<MovieSubTitle>> CreateMovieSubTitle(CreateMovieSubTitleRequest request, CancellationToken ct);
+        Task<ResponseDto<MovieSubTitle>> UpdateMovieSubTitle(UpdateMovieSubTitleRequest request, CancellationToken ct);
+        Task<ResponseDto<bool>> DeleteMovieSubTitle(int movieSubTitleID, CancellationToken ct);
+        Task<ResponseDto<MovieSubTitle>> GetMovieSubTitleByID(int movieSubTitleID, CancellationToken ct);
+        Task<ResponseDto<List<MovieSubTitle>>> GetMovieSubTitlesByMovieSourceID(int movieSourceID, CancellationToken ct);
+        Task<ResponseDto<List<MovieSubTitle>>> GetAllMovieSubTitile (CancellationToken ct);
+        
     }
 }

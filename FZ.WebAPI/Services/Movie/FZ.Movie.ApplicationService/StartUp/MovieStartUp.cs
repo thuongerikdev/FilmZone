@@ -298,6 +298,7 @@ namespace FZ.Movie.ApplicationService.StartUp
             services.AddScoped<IImageSourceRepository, ImageSourceRepository>();
             services.AddScoped<IMovieImageRepository, MovieImageRepository>();
             services.AddScoped<IMovieSourceRepository, MovieSourceRepository>();
+            services.AddScoped<IMovieSubTitleRepository, MovieSubTitleRepository>();
             services.AddScoped<IMoviePersonRepository, MoviePersonRepository>();
             services.AddScoped<IPersonRepository, PersonRepository>();
             services.AddScoped<IMovieTagRepository, MovieTagRepository>();
@@ -316,6 +317,7 @@ namespace FZ.Movie.ApplicationService.StartUp
             services.AddScoped<IEpisodeSourceService, EpisodeSourceService>();
             services.AddScoped<IImageSourceService, ImageSourceService>();
             services.AddScoped<IMovieSourceService, MovieSourceService>();
+            services.AddScoped<IMovieSubTitleService, MovieSubTitleService>();
             services.AddScoped<IPersonService, PersonService>();
             services.AddScoped<IMoviePersonService, MoviePersonService>();
             services.AddScoped<IMovieTagService, MovieTagService>();
@@ -323,6 +325,8 @@ namespace FZ.Movie.ApplicationService.StartUp
             services.AddScoped<IRegionService, RegionService>();
 
             services.AddScoped<ICloudinaryService, CloudinaryService>();
+
+
 
             // Background worker
             services.AddHostedService<UploadCoordinator>();
