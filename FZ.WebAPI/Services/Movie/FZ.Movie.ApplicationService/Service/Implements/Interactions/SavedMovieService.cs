@@ -95,7 +95,7 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Interactions
                 }
                 await _unitOfWork.ExecuteInTransactionAsync(async (cancellationToken) =>
                 {
-                    await _savedMovieRepository.RemoveAsync(existingSavedMovie.movieID);
+                    await _savedMovieRepository.RemoveAsync(existingSavedMovie.savedMovieID);
                     return true;
                 }, ct: ct);
                 _logger.LogInformation("Saved movie deleted successfully with ID: {SavedMovieID}", savedMovieID);
