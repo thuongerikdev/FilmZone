@@ -1,5 +1,8 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Http;
+using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -18,6 +21,7 @@ namespace FZ.Auth.Dtos.User
         public string gender { get; set; }
     }
 
+
     public class LoginRequest
     {
         public string userName { get; set; }
@@ -33,8 +37,17 @@ namespace FZ.Auth.Dtos.User
         public string refreshToken { get; set; } = string.Empty;
     }
 
+    public sealed class AuthUpdateProfileRequest
+    {
 
-    
+        public int userID { get; set; }
+        public string firstName { get; set; }
+        public string lastName { get; set; }
+        public IFormFile? avatar { get; set; }
+        public string? gender { get; set; }
+        public DateTime? dateOfBirth { get; set; }
+    }
+
 
 
 

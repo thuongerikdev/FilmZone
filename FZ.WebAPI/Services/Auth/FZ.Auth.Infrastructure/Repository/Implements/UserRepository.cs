@@ -126,7 +126,6 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
         public async Task<GetUserResponseDto?> GetUserByIDAsync(int userID, CancellationToken ct)
         {
             var user = await _db.authUsers
-                .AsNoTracking()
                 .Where(u => u.userID == userID)
                 .Select(u => new GetUserResponseDto
                 {

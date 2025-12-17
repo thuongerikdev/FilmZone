@@ -41,6 +41,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Shared\FZ.Shared.ApplicationService\FZ.Shared.ApplicationService.csproj" />
     <ProjectReference Include="..\FZ.Auth.Domain\FZ.Auth.Domain.csproj" />
     <ProjectReference Include="..\FZ.Auth.Dtos\FZ.Auth.Dtos.csproj" />
     <ProjectReference Include="..\FZ.Auth.Infrastructure\FZ.Auth.Infrastructure.csproj" />

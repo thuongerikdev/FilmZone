@@ -3,6 +3,7 @@ using FZ.Auth.Domain.User;
 using FZ.Auth.Dtos.User;
 using FZ.Auth.Infrastructure.Repository.Abtracts; // <- dùng repo
 using FZ.Constant;
+using FZ.Shared.ApplicationService;
 using Microsoft.Extensions.Logging;
 using static FZ.Auth.Dtos.User.ProfileResponseDto;
 
@@ -13,12 +14,16 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.User
         private readonly ILogger<AuthUserService> _logger;
         private readonly IUserRepository _users;   // <-- inject repo, không phải IAuthUserService
         private readonly IUnitOfWork _uow;
+        private readonly IProfileRepository _profiles;
+        private ICloudinaryService _cloudinaryService;
 
-        public AuthUserService(ILogger<AuthUserService> logger, IUserRepository users , IUnitOfWork unitOfWork)
+        public AuthUserService(ILogger<AuthUserService> logger, IUserRepository users , IUnitOfWork unitOfWork, IProfileRepository profiles, ICloudinaryService cloudinaryService)
         {
             _logger = logger;
             _users = users;
             _uow = unitOfWork;
+            _profiles = profiles;
+            _cloudinaryService = cloudinaryService;
         }
 
         public async Task<ResponseDto<List<UserSlimDto>>> GetAllSlimAsync(CancellationToken ct)
@@ -73,6 +78,47 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.User
                 _logger.LogError(ex, "Error occurred while fetching user with ID: {UserID}", userID);
                 return ResponseConst.Error<GetUserResponseDto>(500, "Internal error");
             }
+        }
+        public async Task<ResponseDto<bool>> AuthUpdateProfileRequest(AuthUpdateProfileRequest req, CancellationToken ct)
+        {
+            _logger.LogInformation("Updating profile for user ID: {UserID}", req.userID);
+            try
+            {
+                var user = await _users.FindByIdAsync(req.userID, ct);
+                if (user == null)
+                {
+                    _logger.LogWarning("User with ID: {UserID} not found.", req.userID);
+                    return ResponseConst.Error<bool>(404, "User not found");
+                }
+                var profile = await _profiles.GetByUserIdAsync(req.userID, ct);
+                if (profile == null)
+                {
+                    _logger.LogWarning("Profile for user ID: {UserID} not found.", req.userID);
+                    return ResponseConst.Error<bool>(404, "Profile not found");
+                }
+                if (req.avatar != null)
+                {
+                    var img = await _cloudinaryService.UploadImageAsync(req.avatar);
+                    profile.avatar = img;
+                }
+                
+                profile.firstName = req.firstName;
+                profile.lastName = req.lastName;
+                profile.gender = req.gender;
+                profile.dateOfBirth = req.dateOfBirth;
+                await _profiles.UpdateAsync(profile, ct);
+
+
+                await _uow.SaveChangesAsync(ct);
+                _logger.LogInformation("Successfully updated profile for user ID: {UserID}", req.userID);
+                return ResponseConst.Success("Profile updated successfully", true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while updating profile for user ID: {UserID}", req.userID);
+                return ResponseConst.Error<bool>(500, "Internal error");
+            }
+
         }
 
     }

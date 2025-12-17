@@ -1,5 +1,6 @@
 ﻿using FZ.Auth.ApplicationService.MFAService.Abtracts;
 using FZ.Auth.ApplicationService.MFAService.Implements.User;
+using FZ.Auth.Dtos.User;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -63,6 +64,15 @@ namespace FZ.WebAPI.Controllers.Auth
             }
             return Ok(result);
 
+        }
+
+        [HttpPut("update/profile")]
+        public async Task<IActionResult> UpdateProfile([FromForm] AuthUpdateProfileRequest req, CancellationToken ct)
+        {
+
+            var result = await _userService.AuthUpdateProfileRequest(req, ct);
+            if (result.ErrorCode != 200) return StatusCode(result.ErrorCode, result);
+            return Ok(result);
         }
     }
 }
