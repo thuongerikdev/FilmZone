@@ -5,6 +5,7 @@ using FZ.Constant;
 using Microsoft.EntityFrameworkCore;
 using Npgsql; // <-- thêm
 using System;
+using System.Linq;
 
 namespace FZ.Auth.ApplicationService.Billing
 {
@@ -15,7 +16,7 @@ namespace FZ.Auth.ApplicationService.Billing
         Task<ResponseDto<bool>> CancelSubscriptionAsync(int userId, CancellationToken ct);
         Task <ResponseDto<List<UserSubscription>>> GetAllSubscription();
         Task <ResponseDto<UserSubscription>> GetSubscriptionByID(int subscriptionID, CancellationToken ct);
-        Task <ResponseDto<UserSubscription>> GetSubscriptionByUserID(int userID, CancellationToken ct);
+        Task<ResponseDto<List<UserSubscription>>> GetSubscriptionByUserID(int userID, CancellationToken ct);
     }
 
     public class SubscriptionService : ISubscriptionService
@@ -206,15 +207,16 @@ namespace FZ.Auth.ApplicationService.Billing
             }
             return ResponseConst.Success("Lấy subscription thành công", subscription);
         }
-        public async Task<ResponseDto<UserSubscription>> GetSubscriptionByUserID(int userID, CancellationToken ct)
+        public async Task<ResponseDto<List<UserSubscription>>> GetSubscriptionByUserID(int userID, CancellationToken ct)
         {
-            var subscription = await _db.userSubscriptions.AsNoTracking()
-                                        .FirstOrDefaultAsync(s => s.userID == userID, ct);
-            if (subscription == null)
+            var subscriptions = await _db.userSubscriptions
+                         .Where(s => s.userID == userID) // 1. Bỏ ct ở đây
+                         .ToListAsync(ct);
+            if (subscriptions == null)
             {
-                return ResponseConst.Error<UserSubscription>(404, "Subscription không tồn tại");
+                return ResponseConst.Error<List<UserSubscription>>(404, "Subscription không tồn tại");
             }
-            return ResponseConst.Success("Lấy subscription thành công", subscription);
+            return ResponseConst.Success("Lấy subscription thành công", subscriptions);
         }
     }
 }
