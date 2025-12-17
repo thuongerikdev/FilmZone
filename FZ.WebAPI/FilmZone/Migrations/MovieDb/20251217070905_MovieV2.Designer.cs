@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FZ.WebAPI.Migrations.MovieDb
 {
     [DbContext(typeof(MovieDbContext))]
-    [Migration("20251210084010_MovieV2")]
+    [Migration("20251217070905_MovieV2")]
     partial class MovieV2
     {
         /// <inheritdoc />
