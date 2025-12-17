@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static FZ.Auth.Dtos.User.ProfileResponseDto;
 using static FZ.Auth.Infrastructure.Repository.Implements.UserRepository;
 
 namespace FZ.Auth.ApplicationService.MFAService.Abtracts
@@ -61,6 +62,6 @@ namespace FZ.Auth.ApplicationService.MFAService.Abtracts
     {
         Task<ResponseDto<List<UserSlimDto>>> GetAllSlimAsync(CancellationToken ct);
         Task<ResponseDto<AuthUser>> DeleteUserAsync(int userID, CancellationToken ct);
-        Task<ResponseDto<AuthUser>> GetUserByIDAsync(int userID, CancellationToken ct);
+        Task<ResponseDto<GetUserResponseDto>> GetUserByIDAsync(int userID, CancellationToken ct);
     }
 }

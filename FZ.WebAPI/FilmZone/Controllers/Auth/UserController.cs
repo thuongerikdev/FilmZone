@@ -48,10 +48,21 @@ namespace FZ.WebAPI.Controllers.Auth
             if (!int.TryParse(userIdStr, out var userId))
                 return Unauthorized(new { error = "No user id in token" });
 
-            var result = await _userService.GetUserByIDAsync(userId , ct);
+            var result = await _userService.GetUserByIDAsync(userId, ct);
             if (result.ErrorCode != 200) return StatusCode(result.ErrorCode, result);
             return Ok(result);
         }
 
+        [HttpGet("getUserById")]
+        public async Task<IActionResult> GetUserById([FromQuery] int userId, CancellationToken ct)
+        {
+            var result = await _userService.GetUserByIDAsync(userId, ct);
+            if (result.ErrorCode != 200)
+            {
+                return BadRequest(result);
+            }
+            return Ok(result);
+
+        }
     }
 }

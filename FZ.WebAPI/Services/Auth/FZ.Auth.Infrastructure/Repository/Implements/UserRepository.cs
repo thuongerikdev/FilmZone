@@ -2,6 +2,7 @@
 using FZ.Auth.Dtos.User;
 using FZ.Auth.Infrastructure.Repository.Abtracts;
 using Microsoft.EntityFrameworkCore;
+using static FZ.Auth.Dtos.User.ProfileResponseDto;
 
 namespace FZ.Auth.Infrastructure.Repository.Implements
 {
@@ -122,6 +123,30 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
                 .ToListAsync(ct);
         }
 
+        public async Task<GetUserResponseDto?> GetUserByIDAsync(int userID, CancellationToken ct)
+        {
+            var user = await _db.authUsers
+                .AsNoTracking()
+                .Where(u => u.userID == userID)
+                .Select(u => new GetUserResponseDto
+                {
+                    userID = u.userID,
+                    userName = u.userName,
+                    email = u.email,
+                    status = u.status,
+                    isEmailVerified = u.isEmailVerified,
+                    profile = u.profile == null ? null : new ProfileResponseDto
+                    {
+                        firstName = u.profile.firstName,
+                        lastName = u.profile.lastName,
+                        avatar = u.profile.avatar,
+                        gender = u.profile.gender,
+                        dateOfBirth = u.profile.dateOfBirth
+                    }
+                })
+                .FirstOrDefaultAsync(ct);
+            return user;
+        }
 
         public Task<AuthUser> DeleteUser( int id ,CancellationToken ct)
         {  
@@ -180,6 +205,8 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
             _db.authProfiles.Update(profile);
             return Task.CompletedTask;
         }
+
+      
     }
 
 }

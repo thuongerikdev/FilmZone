@@ -56,6 +56,24 @@ namespace FZ.Auth.Dtos.User
         public DateTime canChangeUntil { get; set; } // ví dụ: +10 phút
     }
 
+    public class GetUserResponseDto
+    {
+        public int userID { get; set; }
+        public string userName { get; set; }
+        public string email { get; set; }
+        public string status { get; set; }
+        public bool isEmailVerified { get; set; }
+        public ProfileResponseDto? profile { get; set; }
+
+    }
+    public class ProfileResponseDto
+    {
+        public string? firstName { get; set; }
+        public string? lastName { get; set; }
+        public string? avatar { get; set; }
+        public string? gender { get; set; }
+        public DateTime? dateOfBirth { get; set; }
+    }
 
 
 
@@ -73,7 +91,8 @@ namespace FZ.Auth.Dtos.User
 
 
 
-    public record UserSlimDto(
+
+        public record UserSlimDto(
             int userID,
             string userName,
             string email,
@@ -113,6 +132,7 @@ namespace FZ.Auth.Dtos.User
             string? replacedByToken, // có thể null
             bool isActive
         );
+
 
     
 }

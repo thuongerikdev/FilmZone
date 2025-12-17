@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static FZ.Auth.Dtos.User.ProfileResponseDto;
 
 namespace FZ.Auth.Infrastructure.Repository.Abtracts
 {
@@ -28,6 +29,7 @@ namespace FZ.Auth.Infrastructure.Repository.Abtracts
         Task UpdateAsync(AuthUser user, CancellationToken ct);
 
         //Task<bool> verifyEmail(VerifyEmailDto verifyEmailDto, CancellationToken ct);
+        Task<GetUserResponseDto?> GetUserByIDAsync(int userID, CancellationToken ct);
 
         Task AddAsync(AuthUser user, CancellationToken ct);
     }

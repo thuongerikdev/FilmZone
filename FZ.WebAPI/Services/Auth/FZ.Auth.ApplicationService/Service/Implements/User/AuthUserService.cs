@@ -4,6 +4,7 @@ using FZ.Auth.Dtos.User;
 using FZ.Auth.Infrastructure.Repository.Abtracts; // <- dùng repo
 using FZ.Constant;
 using Microsoft.Extensions.Logging;
+using static FZ.Auth.Dtos.User.ProfileResponseDto;
 
 namespace FZ.Auth.ApplicationService.MFAService.Implements.User
 {
@@ -53,16 +54,16 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.User
                 return ResponseConst.Error<AuthUser>(500, "Internal error");
             }
         }
-        public async Task<ResponseDto<AuthUser>> GetUserByIDAsync(int userID, CancellationToken ct)
+        public async Task<ResponseDto<GetUserResponseDto>> GetUserByIDAsync(int userID, CancellationToken ct)
         {
             _logger.LogInformation("Fetching user with ID: {UserID}", userID);
             try
             {
-                var user = await _users.FindByIdAsync(userID, ct);
+                var user = await _users.GetUserByIDAsync(userID, ct);
                 if (user == null)
                 {
                     _logger.LogWarning("User with ID: {UserID} not found.", userID);
-                    return ResponseConst.Error<AuthUser>(404, "User not found");
+                    return ResponseConst.Error<GetUserResponseDto>(404, "User not found");
                 }
                 _logger.LogInformation("Successfully fetched user with ID: {UserID}", userID);
                 return ResponseConst.Success("Fetched user successfully", user);
@@ -70,7 +71,7 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.User
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred while fetching user with ID: {UserID}", userID);
-                return ResponseConst.Error<AuthUser>(500, "Internal error");
+                return ResponseConst.Error<GetUserResponseDto>(500, "Internal error");
             }
         }
 
