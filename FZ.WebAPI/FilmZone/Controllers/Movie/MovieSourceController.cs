@@ -110,9 +110,23 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
 
+        [HttpGet("getByMovieId/{movieId}")]
+        public async Task<IActionResult> GetMovieSourcesByMovieIdPublic(int movieId, CancellationToken ct)
+        {
+            try
+            {
+                var result = await _movieSourceService.GetMovieSourcesByMovieID(movieId, ct);
+                if (result.ErrorCode != 200)
+                {
+                    BadRequest(result);
+                }
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while processing your request.", details = ex.Message });
+            }
 
-
-
-
+        }
     }
 }
