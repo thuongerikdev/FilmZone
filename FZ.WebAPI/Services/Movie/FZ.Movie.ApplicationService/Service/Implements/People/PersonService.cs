@@ -80,7 +80,7 @@ namespace FZ.Movie.ApplicationService.Service.Implements.People
         }
         public async Task<ResponseDto<Person>> UpdatePerson(UpdatePersonRequest request, CancellationToken ct)
         {
-                       _logger.LogInformation("Updating person with ID: {PersonID}", request.personID);
+            _logger.LogInformation("Updating person with ID: {PersonID}", request.personID);
             try
             {
                 var existingPerson = await _personRepository.GetByIdAsync(request.personID, ct);
@@ -89,33 +89,61 @@ namespace FZ.Movie.ApplicationService.Service.Implements.People
                     _logger.LogWarning("Person with ID: {PersonID} not found", request.personID);
                     return ResponseConst.Error<Person>(404, "Person not found");
                 }
-                if ( request.avatar != null)
+
+                // 1. Lưu lại URL ảnh cũ để xóa sau khi cập nhật thành công
+                string oldAvatarUrl = existingPerson.avatar;
+
+                // 2. Upload ảnh mới (nếu có)
+                if (request.avatar != null)
                 {
-                    var avatarUrl = await _cloudinaryService.UploadImageAsync(request.avatar);
-                    existingPerson.avatar = avatarUrl;
+                    var newAvatarUrl = await _cloudinaryService.UploadImageAsync(request.avatar);
+                    existingPerson.avatar = newAvatarUrl;
                 }
 
-
+                // 3. Cập nhật các trường thông tin (Dùng ?? để giữ nguyên nếu null)
                 existingPerson.fullName = request.fullName ?? existingPerson.fullName;
                 existingPerson.knownFor = request.knownFor ?? existingPerson.knownFor;
                 existingPerson.biography = request.biography ?? existingPerson.biography;
-                existingPerson.regionID = request.regionID ;
+
+                // Lưu ý: Nếu regionID là nullable (int?) thì nên dùng ??, nếu không sẽ bị gán đè null
+                // Nếu request.regionID là int thường thì logic này cần xem lại tùy nghiệp vụ
+                if (request.regionID != null)
+                {
+                    existingPerson.regionID = request.regionID;
+                }
+
                 existingPerson.birthDate = request.birthDate ?? existingPerson.birthDate;
                 existingPerson.updatedAt = DateTime.UtcNow;
+
+                // 4. Lưu vào Database
                 await _unitOfWork.ExecuteInTransactionAsync(async (cancellationToken) =>
                 {
                     await _personRepository.UpdateAsync(existingPerson, cancellationToken);
                     return existingPerson;
                 }, ct: ct);
-                if (request.avatar is not null && !string.IsNullOrEmpty(existingPerson.avatar))
+
+                // 5. Xóa ảnh cũ trên Cloudinary (Chỉ xóa khi đã lưu DB thành công và có upload ảnh mới)
+                if (request.avatar != null && !string.IsNullOrEmpty(oldAvatarUrl))
                 {
-                    await _cloudinaryService.DeleteImageAsync(existingPerson.avatar);
-                    _logger.LogInformation("Person avatar updated successfully for ID: {PersonID}", existingPerson.personID);
+                    try
+                    {
+                        // Truyền vào oldAvatarUrl (URL cũ) chứ không phải existingPerson.avatar (URL mới)
+                        await _cloudinaryService.DeleteImageAsync(oldAvatarUrl);
+                        _logger.LogInformation("Deleted old avatar: {OldAvatar}", oldAvatarUrl);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Không return lỗi ở đây để tránh rollback transaction chỉ vì lỗi xóa ảnh cũ
+                        _logger.LogError(ex, "Failed to delete old avatar for PersonID: {PersonID}", existingPerson.personID);
+                    }
                 }
+
                 if (existingPerson.personID > 0)
                 {
+                    // SỬA LẠI: Chạy tuần tự thay vì song song để tránh lỗi DbContext concurrency
                     await _personIndexService.IndexByIdAsync(existingPerson.personID, ct);
                     await _movieIndexService.ReindexByPersonAsync(existingPerson.personID, ct);
+
                     _logger.LogInformation("Person indexed successfully in OpenSearch with ID: {PersonID}", existingPerson.personID);
                 }
 
