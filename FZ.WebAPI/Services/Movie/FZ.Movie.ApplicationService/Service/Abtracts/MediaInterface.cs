@@ -1,6 +1,7 @@
 ﻿using FZ.Constant;
 using FZ.Movie.Domain.Media;
 using FZ.Movie.Dtos.Request;
+using FZ.Movie.Dtos.Respone;
 using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
@@ -40,9 +41,11 @@ namespace FZ.Movie.ApplicationService.Service.Abtracts
     }
     public interface IMovieSubTitleService
     {
-        Task<ResponseDto<MovieSubTitle>> AutoGenerateSubTitleAsync(AutoGenerateSubTitleRequest autoGenerateSubTitleRequest, CancellationToken ct);
+        //Task<ResponseDto<MovieSubTitle>> AutoGenerateSubTitleAsync(AutoGenerateSubTitleRequest autoGenerateSubTitleRequest, CancellationToken ct);
 
+        Task<ResponseDto<string>> AutoGenerateSubTitleAsync(AutoGenerateSubTitleRequest request, CancellationToken ct);
 
+        Task<ResponseDto<MovieSubTitle>> ProcessTranscribeCallbackAsync(TranscribeCallbackRequest request, CancellationToken ct);
 
         Task<ResponseDto<MovieSubTitle>> CreateMovieSubTitle(CreateMovieSubTitleRequest request, CancellationToken ct);
         Task<ResponseDto<MovieSubTitle>> UpdateMovieSubTitle(UpdateMovieSubTitleRequest request, CancellationToken ct);

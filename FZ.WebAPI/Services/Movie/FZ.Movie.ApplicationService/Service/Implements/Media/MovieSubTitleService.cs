@@ -189,39 +189,74 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media
         }
         //AutoGenerateSubTitleAsync 
 
-        public async Task<ResponseDto<MovieSubTitle>> AutoGenerateSubTitleAsync(AutoGenerateSubTitleRequest autoGenerateSubTitleRequest, CancellationToken ct)
+        public async Task<ResponseDto<string>> AutoGenerateSubTitleAsync(AutoGenerateSubTitleRequest request, CancellationToken ct)
         {
-            _logger.LogInformation("Start auto-generating subtitle for MovieSourceID: {SourceID}", autoGenerateSubTitleRequest.movieSourceID);
+            _logger.LogInformation("Start sending video to AI Service. SourceID: {SourceID}, URL: {Url}", request.movieSourceID, request.externalApiUrl);
 
             // 1. Validate Input
-            if (autoGenerateSubTitleRequest.videoFile == null || autoGenerateSubTitleRequest.videoFile.Length == 0)
-                return ResponseConst.Error<MovieSubTitle>(400, "File video không hợp lệ");
+            if (request.videoFile == null || request.videoFile.Length == 0)
+                return ResponseConst.Error<string>(400, "File video không hợp lệ");
+
+            if (string.IsNullOrEmpty(request.externalApiUrl))
+                return ResponseConst.Error<string>(400, "URL API không được để trống");
 
             // 2. Kiểm tra MovieSource có tồn tại không
-            // Cần lấy entity ra để tí nữa còn update cột rawSubTitle
-            var existingSource = await _movieSourceRepository.GetByIdAsync(autoGenerateSubTitleRequest.movieSourceID, ct);
+            var existingSource = await _movieSourceRepository.GetByIdAsync(request.movieSourceID, ct);
             if (existingSource == null)
             {
-                return ResponseConst.Error<MovieSubTitle>(404, "Không tìm thấy Movie Source");
+                return ResponseConst.Error<string>(404, "Không tìm thấy Movie Source");
             }
 
             try
             {
-                // 3. Gọi API Python Local để Transcribe
-                // Hàm này sẽ trả về SRT và List Segments
-                var transcribeData = await CallTranscribeApiAsync(autoGenerateSubTitleRequest.videoFile, ct);
+                // 3. Gọi API Python để lấy Task ID
+                var taskResponse = await CallTranscribeApiAsync(request, ct);
 
-                if (transcribeData == null || string.IsNullOrEmpty(transcribeData.srt))
+                if (taskResponse == null || string.IsNullOrEmpty(taskResponse.task_id))
                 {
-                    return ResponseConst.Error<MovieSubTitle>(500, "API AI trả về dữ liệu rỗng");
+                    return ResponseConst.Error<string>(500, "API AI không trả về Task ID hoặc bị lỗi");
                 }
 
-                // 4. Upload file SRT lên Cloudinary
-                // Tạo file ảo từ chuỗi SRT
-                var srtFileName = Path.GetFileNameWithoutExtension(autoGenerateSubTitleRequest.videoFile.FileName) + ".srt";
-                var srtFile = ConvertStringToFormFile(transcribeData.srt, srtFileName);
+                _logger.LogInformation("Task started successfully. TaskID: {TaskId}", taskResponse.task_id);
 
-                // Upload
+                // Lưu ý: Ở đây bạn có thể lưu TaskID vào DB nếu cần theo dõi tiến độ, 
+                // nhưng yêu cầu hiện tại chỉ cần trả về kết quả.
+
+                return ResponseConst.Success("Đã gửi yêu cầu xử lý thành công. Vui lòng chờ Callback.", taskResponse.task_id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error calling AI Service for SourceID: {SourceID}", request.movieSourceID);
+                return ResponseConst.Error<string>(500, "Lỗi hệ thống: " + ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Bước 2: Hàm Webhook để bên thứ 3 gọi lại khi có kết quả (SRT, Language, Segments)
+        /// </summary>
+        public async Task<ResponseDto<MovieSubTitle>> ProcessTranscribeCallbackAsync(TranscribeCallbackRequest request, CancellationToken ct)
+        {
+            _logger.LogInformation("Received Callback for MovieSourceID: {SourceID}", request.movieSourceID);
+
+            // 1. Validate logic
+            if (string.IsNullOrEmpty(request.srt))
+            {
+                return ResponseConst.Error<MovieSubTitle>(400, "Dữ liệu SRT rỗng");
+            }
+
+            var existingSource = await _movieSourceRepository.GetByIdAsync(request.movieSourceID, ct);
+            if (existingSource == null)
+            {
+                return ResponseConst.Error<MovieSubTitle>(404, $"Không tìm thấy Movie Source với ID {request.movieSourceID}");
+            }
+
+            try
+            {
+                // 2. Upload file SRT lên Cloudinary
+                // Tạo tên file ảo
+                var srtFileName = $"sub_{request.movieSourceID}_{DateTime.UtcNow.Ticks}.srt";
+                var srtFile = ConvertStringToFormFile(request.srt, srtFileName);
+
                 var cloudUrl = await _cloudinaryService.UploadSrtAsync(srtFile);
 
                 if (string.IsNullOrEmpty(cloudUrl))
@@ -229,75 +264,89 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media
                     return ResponseConst.Error<MovieSubTitle>(500, "Lỗi khi upload file phụ đề lên Cloudinary");
                 }
 
-                // 5. Cập nhật dữ liệu vào Object
+                // 3. Prepare Data
 
-                // A. Tạo SubTitle mới (Lưu link file srt)
+                // A. Tạo SubTitle mới
                 var movieSubTitle = new MovieSubTitle
                 {
-                    movieSourceID = autoGenerateSubTitleRequest.movieSourceID,
-                    subTitleName = srtFileName + " (Auto Generated)",
+                    movieSourceID = request.movieSourceID,
+                    subTitleName = $"Auto Generated ({request.language ?? "unk"})",
                     linkSubTitle = cloudUrl,
-                    language = transcribeData.language ?? "unknown",
+                    language = request.language ?? "unknown",
                     isActive = true,
                     createdAt = DateTime.UtcNow,
                     updatedAt = DateTime.UtcNow
                 };
 
-                // B. Cập nhật MovieSource (Lưu JSON raw_segments)
-                if (transcribeData.RawSegments != null && transcribeData.RawSegments.Any())
+                // B. Cập nhật Raw Segments vào MovieSource
+                if (request.RawSegments != null && request.RawSegments.Any())
                 {
-                    // Serialize list object thành chuỗi JSON để lưu vào DB
-                    // Cột rawSubTitle trong DB phải là kiểu nvarchar(max) hoặc text
-                    existingSource.rawSubTitle = JsonSerializer.Serialize(transcribeData.RawSegments);
+                    existingSource.rawSubTitle = JsonSerializer.Serialize(request.RawSegments);
                 }
                 else
                 {
-                    // Nếu không có segment thì lưu tạm mảng rỗng hoặc giữ nguyên
                     existingSource.rawSubTitle = "[]";
                 }
                 existingSource.updatedAt = DateTime.UtcNow;
 
-                // 6. Thực thi Transaction (Lưu cả 2 bảng cùng lúc)
+                // 4. Save to DB (Transaction)
                 await _unitOfWork.ExecuteInTransactionAsync(async token =>
                 {
-                    // Lưu bảng SubTitle
                     await _movieSubTitleRepository.AddAsync(movieSubTitle, token);
-
-                    // Update bảng Source
-                    await _movieSourceRepository.UpdateAsync(existingSource); // Đảm bảo Repo có hàm UpdateAsync hỗ trợ UnitOfWork
-
+                    await _movieSourceRepository.UpdateAsync(existingSource);
                     return movieSubTitle;
                 }, ct: ct);
 
-                _logger.LogInformation("Auto-generated subtitle success. ID: {SubId}", movieSubTitle.movieSubTitleID);
-                return ResponseConst.Success("Tạo phụ đề thành công", movieSubTitle);
+                _logger.LogInformation("Callback processed successfully. New SubID: {SubId}", movieSubTitle.movieSubTitleID);
+                return ResponseConst.Success("Xử lý callback và tạo phụ đề thành công", movieSubTitle);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error auto-generating subtitle for SourceID: {SourceID}", autoGenerateSubTitleRequest.movieSourceID);
-                return ResponseConst.Error<MovieSubTitle>(500, "Lỗi hệ thống: " + ex.Message);
+                _logger.LogError(ex, "Error processing callback for SourceID: {SourceID}", request.movieSourceID);
+                return ResponseConst.Error<MovieSubTitle>(500, "Lỗi xử lý callback: " + ex.Message);
             }
         }
 
+
         // --- PRIVATE HELPER METHODS ---
 
-        private async Task<TranscribeApiResponse?> CallTranscribeApiAsync(IFormFile videoFile, CancellationToken ct)
+        private async Task<TranscribeTaskResponse?> CallTranscribeApiAsync(AutoGenerateSubTitleRequest request, CancellationToken ct)
         {
             var client = _httpClientFactory.CreateClient();
-
-            // Tăng timeout vì upload video và chờ AI xử lý rất lâu
             client.Timeout = TimeSpan.FromMinutes(10);
 
-            // URL API Python
-            var apiUrl = "http://localhost:8080/transcribe/audio_video_2_srt";
+            // --- XỬ LÝ URL ---
+            // 1. Lấy URL từ request
+            var targetUrl = request.externalApiUrl;
 
+            // 2. Logic kiểm tra: Nếu URL chưa có đuôi "/transcribe/process" thì tự động nối vào
+            // Cách này giúp user nhập "http://localhost:8000" hay "http://localhost:8000/" đều chạy đúng
+            if (!targetUrl.EndsWith("/transcribe/process"))
+            {
+                // TrimEnd('/') để xóa dấu gạch chéo thừa ở cuối nếu user lỡ nhập (vd: ...8000/)
+                targetUrl = targetUrl.TrimEnd('/') + "/transcribe/process";
+            }
+
+            // Setup Multipart Form Data
             using var content = new MultipartFormDataContent();
-            using var fileStream = videoFile.OpenReadStream();
+            using var fileStream = request.videoFile.OpenReadStream();
 
-            // Tham số "file" phải khớp với bên Python (FastAPI: file: UploadFile)
-            content.Add(new StreamContent(fileStream), "file", videoFile.FileName);
+            // 1. Add File
+            content.Add(new StreamContent(fileStream), "file", request.videoFile.FileName);
 
-            var response = await client.PostAsync(apiUrl, content, ct);
+            // 2. Add Parameters
+            content.Add(new StringContent("turbo"), "model_id");
+            content.Add(new StringContent("srt"), "output_format");
+
+            // 3. Add Headers
+            if (!string.IsNullOrEmpty(request.apiToken))
+            {
+                client.DefaultRequestHeaders.Add("x-token", request.apiToken);
+            }
+            client.DefaultRequestHeaders.Add("accept", "application/json");
+
+            // 4. Call API (Dùng targetUrl đã xử lý thay vì request.externalApiUrl gốc)
+            var response = await client.PostAsync(targetUrl, content, ct);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -306,8 +355,7 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media
                 return null;
             }
 
-            // Map JSON response về DTO
-            return await response.Content.ReadFromJsonAsync<TranscribeApiResponse>(cancellationToken: ct);
+            return await response.Content.ReadFromJsonAsync<TranscribeTaskResponse>(cancellationToken: ct);
         }
 
         private IFormFile ConvertStringToFormFile(string content, string fileName)
@@ -329,6 +377,5 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media
 
 
 
-
-    }
+}
 

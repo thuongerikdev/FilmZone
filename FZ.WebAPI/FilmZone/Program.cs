@@ -5,6 +5,7 @@ using FZ.Movie.ApplicationService.StartUp;
 using FZ.WebAPI.SignalR;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.OpenApi.Models;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
 namespace FZ.WebAPI
@@ -73,7 +74,15 @@ namespace FZ.WebAPI
             builder.ConfigureMovie(typeof(Program).Namespace);
             builder.Services.AddHealthChecks();
 
-            builder.Services.AddControllers();
+            builder.Services.AddControllers()
+                .AddJsonOptions(options =>
+                {
+                    // Dòng này giúp bỏ qua các vòng lặp tham chiếu (Fix lỗi Object cycle)
+                    options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+
+                    // (Tùy chọn) Giữ nguyên định dạng Property (viết hoa/thường) như Model
+                    // options.JsonSerializerOptions.PropertyNamingPolicy = null; 
+                });
             builder.Services.AddEndpointsApiExplorer();
 
             // Redis cache (tuỳ dùng) - đọc Redis__ConnectionString từ env/.env

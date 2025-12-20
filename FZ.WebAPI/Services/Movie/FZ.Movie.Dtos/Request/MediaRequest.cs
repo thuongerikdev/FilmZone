@@ -107,8 +107,12 @@ namespace FZ.Movie.Dtos.Request
 
     public class AutoGenerateSubTitleRequest
     {
-        public IFormFile videoFile { get; set; }
         public int movieSourceID { get; set; }
+        public IFormFile videoFile { get; set; }
+
+        // Thêm trường nhập đường dẫn và token như yêu cầu
+        public string externalApiUrl { get; set; } = "http://localhost:8000/transcribe/process";
+        public string? apiToken { get; set; } // Token xác thực nếu cần
     }
 
 
