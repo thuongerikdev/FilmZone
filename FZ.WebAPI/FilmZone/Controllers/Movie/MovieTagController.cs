@@ -99,7 +99,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("getMovieByTagID")]
-        public async Task<IActionResult> GetMoviesByTagIDs ( [FromBody] List<int> tagID ,CancellationToken ct)
+        public async Task<IActionResult> GetMoviesByTagIDs ( [FromQuery] List<int> tagID ,CancellationToken ct)
         {
             try
             {
