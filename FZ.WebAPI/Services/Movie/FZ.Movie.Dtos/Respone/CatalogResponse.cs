@@ -87,9 +87,27 @@ namespace FZ.Movie.Dtos.Respone
 
 
     // DTO Mới: Dành cho Webhook callback
+    public class AutoGenerateSubTitleRequest
+    {
+        // Các trường Input từ Client
+        public int sourceID { get; set; } // ID của Movie hoặc Episode
+        public IFormFile videoFile { get; set; }
+        public string externalApiUrl { get; set; } = "http://localhost:8000";
+        public string? apiToken { get; set; }
+
+        // Trường này Service tự gán (Client không cần gửi)
+        public string type { get; set; } // "movie" hoặc "episode"
+    }
+
     public class TranscribeCallbackRequest
     {
-        public int movieSourceID { get; set; }
+        // Các trường API Python trả về
+        [JsonPropertyName("type")]
+        public string type { get; set; } // "movie" hoặc "episode"
+
+        [JsonPropertyName("source_id")]
+        public int sourceID { get; set; }
+
         public string srt { get; set; }
         public string language { get; set; }
 
@@ -97,13 +115,13 @@ namespace FZ.Movie.Dtos.Respone
         public List<SegmentItemDto> RawSegments { get; set; }
     }
 
-    // DTO phụ cho Segments
     public class SegmentItemDto
     {
         public double start { get; set; }
         public double end { get; set; }
         public string text { get; set; }
     }
+
 
     // DTO để hứng response từ API Python (Task ID)
     public class TranscribeTaskResponse

@@ -29,30 +29,40 @@ namespace FZ.Movie.ApplicationService.Service.Abtracts
         Task<ResponseDto<List<MovieSource>>> GetMovieSourcesByMovieID(int movieID, CancellationToken ct);
         Task<ResponseDto<MovieSource>> UpsertFromVendorAsync(UpsertMovieSourceFromVendorRequest request, CancellationToken ct);
     }
-    public interface  IImageSourceService
+    public interface IImageSourceService
     {
         Task<ResponseDto<ImageSource>> CreateImageSource(CreateImageSourceRequest request, CancellationToken ct);
         Task<ResponseDto<ImageSource>> UpdateImageSource(UpdateImageSourceRequest request, CancellationToken ct);
         Task<ResponseDto<bool>> DeleteImageSource(int imageSourceID, CancellationToken ct);
         Task<ResponseDto<ImageSource>> GetImageSourceByID(int imageSourceID, CancellationToken ct);
         Task<ResponseDto<List<ImageSource>>> GetImageSourcesByTpe(string type, CancellationToken ct);
-       
+
 
     }
     public interface IMovieSubTitleService
     {
         //Task<ResponseDto<MovieSubTitle>> AutoGenerateSubTitleAsync(AutoGenerateSubTitleRequest autoGenerateSubTitleRequest, CancellationToken ct);
 
-        Task<ResponseDto<string>> AutoGenerateSubTitleAsync(AutoGenerateSubTitleRequest request, CancellationToken ct);
+        //Task<ResponseDto<string>> AutoGenerateSubTitleAsync(AutoGenerateSubTitleRequest request, CancellationToken ct);
 
-        Task<ResponseDto<MovieSubTitle>> ProcessTranscribeCallbackAsync(TranscribeCallbackRequest request, CancellationToken ct);
+        //Task<ResponseDto<MovieSubTitle>> ProcessTranscribeCallbackAsync(TranscribeCallbackRequest request, CancellationToken ct);
 
         Task<ResponseDto<MovieSubTitle>> CreateMovieSubTitle(CreateMovieSubTitleRequest request, CancellationToken ct);
         Task<ResponseDto<MovieSubTitle>> UpdateMovieSubTitle(UpdateMovieSubTitleRequest request, CancellationToken ct);
         Task<ResponseDto<bool>> DeleteMovieSubTitle(int movieSubTitleID, CancellationToken ct);
         Task<ResponseDto<MovieSubTitle>> GetMovieSubTitleByID(int movieSubTitleID, CancellationToken ct);
         Task<ResponseDto<List<MovieSubTitle>>> GetMovieSubTitlesByMovieSourceID(int movieSourceID, CancellationToken ct);
-        Task<ResponseDto<List<MovieSubTitle>>> GetAllMovieSubTitile (CancellationToken ct);
-        
+        Task<ResponseDto<List<MovieSubTitle>>> GetAllMovieSubTitile(CancellationToken ct);
+
+    }
+    public interface IEpisodeSubTitleService
+    {
+        Task<ResponseDto<EpisodeSubTitle>> CreateEpisodeSubTitle(CreateEpisodeSubTitleRequest request, CancellationToken ct);
+        Task<ResponseDto<EpisodeSubTitle>> UpdateEpisodeSubTitle(UpdateEpisodeSubTitleRequest request, CancellationToken ct);
+        Task<ResponseDto<bool>> DeleteEpisodeSubTitle(int episodeSubTitleID, CancellationToken ct);
+        Task<ResponseDto<EpisodeSubTitle>> GetEpisodeSubTitleByID(int episodeSubTitleID, CancellationToken ct);
+        Task<ResponseDto<List<EpisodeSubTitle>>> GetEpisodeSubTitlesByEpisodeSourceID(int episodeSourceID, CancellationToken ct);
+        Task<ResponseDto<List<EpisodeSubTitle>>> GetAllEpisodeSubTitile(CancellationToken ct);
     }
 }
+

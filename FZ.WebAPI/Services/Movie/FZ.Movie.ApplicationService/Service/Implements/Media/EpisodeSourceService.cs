@@ -78,6 +78,7 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media
                         isActive = request.isActive,
                         createdAt = DateTime.UtcNow,
                         updatedAt = DateTime.UtcNow,
+                        rawSubTitle = ""
                     };
 
                     await _unitOfWork.ExecuteInTransactionAsync(async token =>

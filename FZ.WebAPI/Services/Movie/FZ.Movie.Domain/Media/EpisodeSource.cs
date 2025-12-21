@@ -20,6 +20,8 @@ namespace FZ.Movie.Domain.Media
         [Required, MaxLength(32)]
         public string sourceName { get; set; }
 
+        public string? rawSubTitle { get; set; }    // raw data of subtitle if any
+
         [Required, MaxLength(16)]
         public string sourceType { get; set; }
 
@@ -44,5 +46,6 @@ namespace FZ.Movie.Domain.Media
         // Navigation
         [ForeignKey(nameof(episodeID))]
         public virtual Catalog.Episode episode { get; set; }
+        public virtual ICollection<EpisodeSubTitle> episodeSubTitles { get; set; }
     }
 }

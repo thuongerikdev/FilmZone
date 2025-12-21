@@ -105,16 +105,20 @@ namespace FZ.Movie.Dtos.Request
         public int movieSubTitleID { get; set; }
     }
 
-    public class AutoGenerateSubTitleRequest
+    public class CreateEpisodeSubTitleRequest
     {
-        public int movieSourceID { get; set; }
-        public IFormFile videoFile { get; set; }
-
-        // Thêm trường nhập đường dẫn và token như yêu cầu
-        public string externalApiUrl { get; set; } = "http://localhost:8000/transcribe/process";
-        public string? apiToken { get; set; } // Token xác thực nếu cần
+        public int episodeSourceID { get; set; }
+        public string language { get; set; }      // vi | en...
+        public string subTitleName { get; set; }     // English | Vietnamese | Chinese...
+        public string linkSubTitle { get; set; }      // link subtitle file
+        public bool isActive { get; set; } = true;
+    }
+    public class UpdateEpisodeSubTitleRequest : CreateEpisodeSubTitleRequest
+    {
+        public int episodeSubTitleID { get; set; }
     }
 
+   
 
     //public class CreateSubTitleByFile
     //{

@@ -25,4 +25,17 @@ namespace FZ.Movie.Domain.Media
         public virtual MovieSource movieSource { get; set; }
 
     }
+    public class EpisodeSubTitle
+    {
+        public int episodeSubTitleID { get; set; }
+        public int episodeSourceID { get; set; }
+        public string subTitleName { get; set; }     // English | Vietnamese | Chinese...
+        public string linkSubTitle { get; set; }      // link subtitle file
+        public string language { get; set; }      // vi | en...
+        public bool isActive { get; set; }
+        public DateTime createdAt { get; set; }
+        public DateTime updatedAt { get; set; }
+        // Navigation
+        public virtual EpisodeSource episodeSource { get; set; }
+    }
 }
