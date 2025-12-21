@@ -11,11 +11,16 @@ namespace FZ.WebAPI.Controllers.Movie
     public class MovieSubTitleController : Controller
     {
         private readonly IMovieSubTitleService _movieSubTitleService;
+        private readonly IEpisodeSubTitleService _episodeSubTitleService;
         private readonly ITranscribeIntegrationService _transcribeService;
-        public MovieSubTitleController(IMovieSubTitleService movieSubTitleService , ITranscribeIntegrationService transcribeIntegrationService)
+        public MovieSubTitleController(
+            IMovieSubTitleService movieSubTitleService,
+            ITranscribeIntegrationService transcribeIntegrationService,
+            IEpisodeSubTitleService episodeSubTitleService)
         {
             _movieSubTitleService = movieSubTitleService;
             _transcribeService = transcribeIntegrationService;
+            _episodeSubTitleService = episodeSubTitleService;
         }
         [HttpPost("UploadMovieSubTitle")]
         [DisableRequestSizeLimit]
@@ -68,7 +73,7 @@ namespace FZ.WebAPI.Controllers.Movie
                 return StatusCode(500, new { message = "Lỗi khi xử lý callback.", details = ex.Message });
             }
         }
-        [HttpGet("GetAllSubTitlesBySourceID/{sourceID}")]
+        [HttpGet("movie/GetAllSubTitlesBySourceID/{sourceID}")]
         public async Task<IActionResult> GetAllSubTitlesByMovieId(int sourceID, CancellationToken ct)
         {
             try
@@ -85,7 +90,7 @@ namespace FZ.WebAPI.Controllers.Movie
                 return StatusCode(500, new { message = "An error occurred while processing your request.", details = ex.Message });
             }
         }
-        [HttpGet("GetAllSubTitles")]
+        [HttpGet("movie/GetAllSubTitles")]
         public async Task<IActionResult> GetAllSubTitles(CancellationToken ct)
         {
             try
@@ -102,7 +107,7 @@ namespace FZ.WebAPI.Controllers.Movie
                 return StatusCode(500, new { message = "An error occurred while processing your request.", details = ex.Message });
             }
         }
-        [HttpPost("createMovieSubTitle")]
+        [HttpPost("movie/createMovieSubTitle")]
         public async Task<IActionResult> CreateMovieSubTitle([FromBody] CreateMovieSubTitleRequest request, CancellationToken ct)
         {
             try
@@ -119,7 +124,7 @@ namespace FZ.WebAPI.Controllers.Movie
                 return StatusCode(500, new { message = "An error occurred while processing your request.", details = ex.Message });
             }
         }
-        [HttpPut("updateMovieSubTitle")]
+        [HttpPut("movie/updateMovieSubTitle")]
         public async Task<IActionResult> UpdateMovieSubTitle([FromBody] UpdateMovieSubTitleRequest request, CancellationToken ct)
         {
             try
@@ -136,12 +141,134 @@ namespace FZ.WebAPI.Controllers.Movie
                 return StatusCode(500, new { message = "An error occurred while processing your request.", details = ex.Message });
             }
         }
-        [HttpDelete("deleteMovieSubTitle/{movieSubTitleID}")]
+        [HttpDelete("movie/deleteMovieSubTitle/{movieSubTitleID}")]
         public async Task<IActionResult> DeleteMovieSubTitle(int movieSubTitleID, CancellationToken ct)
         {
             try
             {
                 var result = await _movieSubTitleService.DeleteMovieSubTitle(movieSubTitleID, ct);
+                if (result.ErrorCode != 200)
+                {
+                    return BadRequest(result);
+                }
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while processing your request.", details = ex.Message });
+            }
+        }
+        [HttpGet("movie/GetMovieSubTitleByID/{movieSubTitleID}")]
+        public async Task<IActionResult> GetMovieSubTitleByID(int movieSubTitleID, CancellationToken ct)
+        {
+            try
+            {
+                var result = await _movieSubTitleService.GetMovieSubTitleByID(movieSubTitleID, ct);
+                if (result.ErrorCode != 200)
+                {
+                    return BadRequest(result);
+                }
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while processing your request.", details = ex.Message });
+            }
+        }
+
+
+        [HttpPost("episode/createEpisodeSubTitle")]
+        public async Task<IActionResult> CreateEpisodeSubTitle([FromBody] CreateEpisodeSubTitleRequest request, CancellationToken ct)
+        {
+            try
+            {
+                var result = await _episodeSubTitleService.CreateEpisodeSubTitle(request, ct);
+                if (result.ErrorCode != 200)
+                {
+                    return BadRequest(result);
+                }
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while processing your request.", details = ex.Message });
+            }
+        }
+        [HttpPut("episode/updateEpisodeSubTitle")]
+        public async Task<IActionResult> UpdateEpisodeSubTitle([FromBody] UpdateEpisodeSubTitleRequest request, CancellationToken ct)
+        {
+            try
+            {
+                var result = await _episodeSubTitleService.UpdateEpisodeSubTitle(request, ct);
+                if (result.ErrorCode != 200)
+                {
+                    return BadRequest(result);
+                }
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while processing your request.", details = ex.Message });
+            }
+        }
+        [HttpDelete("episode/deleteEpisodeSubTitle/{episodeSubTitleID}")]
+        public async Task<IActionResult> DeleteEpisodeSubTitle(int episodeSubTitleID, CancellationToken ct)
+        {
+            try
+            {
+                var result = await _episodeSubTitleService.DeleteEpisodeSubTitle(episodeSubTitleID, ct);
+                if (result.ErrorCode != 200)
+                {
+                    return BadRequest(result);
+                }
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while processing your request.", details = ex.Message });
+            }
+        }
+        [HttpGet("episode/GetAllSubTitlesBySourceID/{sourceID}")]
+        public async Task<IActionResult> GetAllSubTitlesByEpisodeId(int sourceID, CancellationToken ct)
+        {
+            try
+            {
+                var result = await _episodeSubTitleService.GetEpisodeSubTitlesByEpisodeSourceID(sourceID, ct);
+                if (result.ErrorCode != 200)
+                {
+                    return BadRequest(result);
+                }
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while processing your request.", details = ex.Message });
+            }
+        }
+        [HttpGet("episode/GetEpisodeSubTitleByID/{episodeSubTitleID}")]
+        public async Task<IActionResult> GetEpisodeSubTitleByID(int episodeSubTitleID, CancellationToken ct)
+        {
+            try
+            {
+                var result = await _episodeSubTitleService.GetEpisodeSubTitleByID(episodeSubTitleID, ct);
+                if (result.ErrorCode != 200)
+                {
+                    return BadRequest(result);
+                }
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while processing your request.", details = ex.Message });
+            }
+        }
+      
+        [HttpGet("episode/GetAllSubTitles")]
+        public async Task<IActionResult> GetAllEpisodeSubTitles(CancellationToken ct)
+        {
+            try
+            {
+                var result = await _episodeSubTitleService.GetAllEpisodeSubTitile(ct);
                 if (result.ErrorCode != 200)
                 {
                     return BadRequest(result);
