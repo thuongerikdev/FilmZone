@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace FZ.Movie.ApplicationService.Service.Implements.Taxonomy
@@ -21,12 +21,12 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Taxonomy
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMovieIndexService _movieIndexService;
         private readonly IMovieTagRepository _movieTagRepository;
-        public TagService(
-            ITagRepository tagRepository, 
-            IUnitOfWork unitOfWork, 
-            ILogger<TagService> logger , 
-            IMovieTagRepository movieTagRepository,
 
+        public TagService(
+            ITagRepository tagRepository,
+            IUnitOfWork unitOfWork,
+            ILogger<TagService> logger,
+            IMovieTagRepository movieTagRepository,
             IMovieIndexService movieIndexService) : base(logger)
         {
             _tagRepository = tagRepository;
@@ -48,18 +48,17 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Taxonomy
                 }
                 Tag newTag = new Tag
                 {
-                   tagName = request.tagName,
-                   tagDescription = request.tagDescription,
+                    tagName = request.tagName,
+                    tagDescription = request.tagDescription,
                     createAt = DateTime.UtcNow,
                     updateAt = DateTime.UtcNow,
-
                 };
                 await _unitOfWork.ExecuteInTransactionAsync(async (cancellationToken) =>
                 {
                     await _tagRepository.AddAsync(newTag, cancellationToken);
                     return newTag;
                 }, ct: ct);
-              
+
                 _logger.LogInformation("Tag created successfully with ID: {TagID}", newTag.tagID);
                 return ResponseConst.Success("Tag created successfully", newTag);
             }
@@ -69,9 +68,10 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Taxonomy
                 return ResponseConst.Error<Tag>(500, "An error occurred while creating the tag");
             }
         }
+
         public async Task<ResponseDto<Tag>> UpdateTag(UpdateTagRequest request, CancellationToken ct)
         {
-                       _logger.LogInformation("Updating tag with ID: {TagID}", request.tagID);
+            _logger.LogInformation("Updating tag with ID: {TagID}", request.tagID);
             try
             {
                 var existingTag = await _tagRepository.GetByIdAsync(request.tagID, ct);
@@ -80,19 +80,23 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Taxonomy
                     _logger.LogWarning("Tag with ID: {TagID} not found", request.tagID);
                     return ResponseConst.Error<Tag>(404, "Tag not found");
                 }
+
                 existingTag.tagName = request.tagName;
                 existingTag.tagDescription = request.tagDescription;
                 existingTag.updateAt = DateTime.UtcNow;
+
                 await _unitOfWork.ExecuteInTransactionAsync(async (cancellationToken) =>
                 {
                     await _tagRepository.UpdateAsync(existingTag, cancellationToken);
                     return existingTag;
                 }, ct: ct);
 
+                // ✅ UPDATE SEARCH: Dùng ReindexByTagAsync là OK vì quan hệ trong DB vẫn còn
                 if (existingTag.tagID > 0)
                 {
                     await _movieIndexService.ReindexByTagAsync(existingTag.tagID, ct);
                 }
+
                 _logger.LogInformation("Tag updated successfully with ID: {TagID}", existingTag.tagID);
                 return ResponseConst.Success("Tag updated successfully", existingTag);
             }
@@ -102,9 +106,10 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Taxonomy
                 return ResponseConst.Error<Tag>(500, "An error occurred while updating the tag");
             }
         }
+
         public async Task<ResponseDto<bool>> DeleteTag(int tagID, CancellationToken ct)
         {
-                       _logger.LogInformation("Deleting tag with ID: {TagID}", tagID);
+            _logger.LogInformation("Deleting tag with ID: {TagID}", tagID);
             try
             {
                 var existingTag = await _tagRepository.GetByIdAsync(tagID, ct);
@@ -113,10 +118,14 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Taxonomy
                     _logger.LogWarning("Tag with ID: {TagID} not found", tagID);
                     return ResponseConst.Error<bool>(404, "Tag not found");
                 }
+
+                // 1. Lấy danh sách MovieTags liên quan
                 var associatedMovieTags = await _movieTagRepository.GetByTagID(tagID, ct);
 
+                // 2. ⚠️ Lấy danh sách MovieID bị ảnh hưởng TRƯỚC khi xóa DB
+                var affectedMovieIds = associatedMovieTags.Select(x => x.movieID).Distinct().ToList();
 
-
+                // 3. Xóa DB
                 await _unitOfWork.ExecuteInTransactionAsync(async (cancellationToken) =>
                 {
                     await _tagRepository.RemoveAsync(existingTag.tagID);
@@ -126,10 +135,14 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Taxonomy
                     }
                     return true;
                 }, ct: ct);
-                if (existingTag.tagID > 0)
+
+                // 4. ✅ UPDATE SEARCH: Reindex các phim vừa bị mất tag
+                // Không dùng ReindexByTagAsync được vì DB đã mất quan hệ rồi
+                if (affectedMovieIds.Any())
                 {
-                    await _movieIndexService.ReindexByTagAsync(existingTag.tagID, ct);
+                    await _movieIndexService.BulkIndexByIdsAsync(affectedMovieIds, ct);
                 }
+
                 _logger.LogInformation("Tag deleted successfully with ID: {TagID}", tagID);
                 return ResponseConst.Success("Tag deleted successfully", true);
             }
@@ -139,6 +152,7 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Taxonomy
                 return ResponseConst.Error<bool>(500, "An error occurred while deleting the tag");
             }
         }
+
         public async Task<ResponseDto<Tag>> GetTagByID(int tagID, CancellationToken ct)
         {
             _logger.LogInformation("Retrieving tag with ID: {TagID}", tagID);
@@ -159,6 +173,7 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Taxonomy
                 return ResponseConst.Error<Tag>(500, "An error occurred while retrieving the tag");
             }
         }
+
         public async Task<ResponseDto<List<Tag>>> GetAllTags(CancellationToken ct)
         {
             _logger.LogInformation("Retrieving all tags");

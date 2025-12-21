@@ -382,6 +382,7 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Catalog
                     await _movieRepository.RemoveAsync(movieID);
                     return true;
                 }, ct: ct);
+                await _movieIndexService.DeleteAsync(movieID, ct);
                 _logger.LogInformation("Successfully deleted movie with ID: {MovieID}", movieID);
                 return ResponseConst.Success("Successfully deleted the movie", true);
             }

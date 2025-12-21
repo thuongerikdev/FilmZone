@@ -16,17 +16,23 @@ using System.Threading.Tasks;
 
 namespace FZ.Movie.ApplicationService.Service.Implements.People
 {
-    public class RegionService : MovieServiceBase , IRegionService
+    public class RegionService : MovieServiceBase, IRegionService
     {
         private readonly IRegionRepository _regionRepository;
         private IUnitOfWork _unitOfWork;
         private readonly IMovieIndexService _movieIndexService;
-        public RegionService(IRegionRepository regionRepository, IUnitOfWork unitOfWork, ILogger<RegionService> logger , IMovieIndexService movieIndexService) : base(logger)
+
+        public RegionService(
+            IRegionRepository regionRepository,
+            IUnitOfWork unitOfWork,
+            ILogger<RegionService> logger,
+            IMovieIndexService movieIndexService) : base(logger)
         {
             _regionRepository = regionRepository;
             _unitOfWork = unitOfWork;
             _movieIndexService = movieIndexService;
         }
+
         public async Task<ResponseDto<Region>> CreateRegion(CreateRegionRequest request, CancellationToken ct)
         {
             _logger.LogInformation("Creating a new region with name: {Name}", request.name);
@@ -51,7 +57,7 @@ namespace FZ.Movie.ApplicationService.Service.Implements.People
                     await _regionRepository.AddAsync(newRegion, cancellationToken);
                     return newRegion;
                 }, ct: ct);
-                
+
                 _logger.LogInformation("Region created successfully with ID: {RegionID}", newRegion.regionID);
                 return ResponseConst.Success("Region created successfully", newRegion);
             }
@@ -61,6 +67,7 @@ namespace FZ.Movie.ApplicationService.Service.Implements.People
                 return ResponseConst.Error<Region>(500, "An error occurred while creating the region");
             }
         }
+
         public async Task<ResponseDto<Region>> UpdateRegion(UpdateRegionRequest request, CancellationToken ct)
         {
             _logger.LogInformation("Updating region with ID: {RegionID}", request.regionID);
@@ -72,17 +79,20 @@ namespace FZ.Movie.ApplicationService.Service.Implements.People
                     _logger.LogWarning("Region with ID: {RegionID} not found", request.regionID);
                     return ResponseConst.Error<Region>(404, "Region not found");
                 }
+
+                // Cập nhật thông tin
                 existingRegion.name = request.name;
                 existingRegion.code = request.code;
                 existingRegion.updatedAt = DateTime.UtcNow;
+
                 await _unitOfWork.ExecuteInTransactionAsync(async (cancellationToken) =>
                 {
                     await _regionRepository.UpdateAsync(existingRegion, cancellationToken);
                     return existingRegion;
                 }, ct: ct);
-              
-                 await _movieIndexService.ReindexByRegionAsync(existingRegion.regionID, ct);
 
+                // ✅ UPDATE SEARCH: Reindex lại toàn bộ phim thuộc Region này để cập nhật tên mới
+                await _movieIndexService.ReindexByRegionAsync(existingRegion.regionID, ct);
 
                 _logger.LogInformation("Region with ID: {RegionID} updated successfully", request.regionID);
                 return ResponseConst.Success("Region updated successfully", existingRegion);
@@ -93,6 +103,7 @@ namespace FZ.Movie.ApplicationService.Service.Implements.People
                 return ResponseConst.Error<Region>(500, "An error occurred while updating the region");
             }
         }
+
         public async Task<ResponseDto<bool>> DeleteRegion(int regionID, CancellationToken ct)
         {
             _logger.LogInformation("Deleting region with ID: {RegionID}", regionID);
@@ -104,11 +115,24 @@ namespace FZ.Movie.ApplicationService.Service.Implements.People
                     _logger.LogWarning("Region with ID: {RegionID} not found", regionID);
                     return ResponseConst.Error<bool>(404, "Region not found");
                 }
+
+                // ⚠️ QUAN TRỌNG: Lấy danh sách Movie ID bị ảnh hưởng TRƯỚC khi xóa Region
+                // Vì sau khi xóa, quan hệ trong DB có thể bị mất (Set Null) hoặc xóa luôn phim.
+                var affectedMovies = await _regionRepository.GetMoviesByRegionIDAsync(regionID, ct);
+                var affectedMovieIds = affectedMovies?.Select(m => m.movieID).ToList() ?? new List<int>();
+
                 await _unitOfWork.ExecuteInTransactionAsync(async (cancellationToken) =>
                 {
                     await _regionRepository.RemoveAsync(existingRegion.regionID);
                     return true;
                 }, ct: ct);
+
+                // ✅ UPDATE SEARCH: Index lại các phim vừa bị mất Region
+                if (affectedMovieIds.Any())
+                {
+                    await _movieIndexService.BulkIndexByIdsAsync(affectedMovieIds, ct);
+                }
+
                 _logger.LogInformation("Region with ID: {RegionID} deleted successfully", regionID);
                 return ResponseConst.Success("Region deleted successfully", true);
             }
@@ -118,6 +142,7 @@ namespace FZ.Movie.ApplicationService.Service.Implements.People
                 return ResponseConst.Error<bool>(500, "An error occurred while deleting the region");
             }
         }
+
         public async Task<ResponseDto<Region>> GetRegionByID(int regionID, CancellationToken ct)
         {
             _logger.LogInformation("Fetching region with ID: {RegionID}", regionID);
@@ -157,7 +182,7 @@ namespace FZ.Movie.ApplicationService.Service.Implements.People
 
         public async Task<ResponseDto<List<Movies>>> GetMoviesByRegionIDAsync(int regionID, CancellationToken ct)
         {
-                       _logger.LogInformation("Fetching movies for region ID: {RegionID}", regionID);
+            _logger.LogInformation("Fetching movies for region ID: {RegionID}", regionID);
             try
             {
                 var regions = await _regionRepository.GetMoviesByRegionIDAsync(regionID, ct);
@@ -178,7 +203,7 @@ namespace FZ.Movie.ApplicationService.Service.Implements.People
 
         public async Task<ResponseDto<List<Person>>> GetPeopleByRegionID(int regionID, CancellationToken ct)
         {
-                       _logger.LogInformation("Fetching people for region ID: {RegionID}", regionID);
+            _logger.LogInformation("Fetching people for region ID: {RegionID}", regionID);
             try
             {
                 var people = await _regionRepository.GetPeopleByRegionID(regionID, ct);

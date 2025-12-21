@@ -21,8 +21,8 @@ namespace FZ.Movie.ApplicationService.Search
         Task ReindexByTagAsync(int tagId, CancellationToken ct = default);
         Task ReindexByRegionAsync(int regionId, CancellationToken ct = default);
         Task<(int total, int batches)> ReindexAllMoviesAsync(CancellationToken ct = default);
-
-        public sealed class MovieIndexService : IMovieIndexService
+    }
+    public sealed class MovieIndexService : IMovieIndexService
         {
             private readonly MovieDbContext _db;
             private readonly IOpenSearchClient _os;
@@ -225,5 +225,4 @@ namespace FZ.Movie.ApplicationService.Search
         }
 
         
-    }
 }
