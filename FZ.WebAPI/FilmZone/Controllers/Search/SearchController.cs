@@ -268,15 +268,17 @@ namespace FZ.WebAPI.Controllers.Search
                 query,
                 sort = new object[]
                 {
-            new Dictionary<string, object> { ["popularity"] = new { order = "desc" } },
-            new Dictionary<string, object> { ["updatedAt"]  = new { order = "desc" } }
+                    new Dictionary<string, object> { ["popularity"] = new { order = "desc" } },
+                    new Dictionary<string, object> { ["updatedAt"]  = new { order = "desc" } }
                 },
                 _source = new[]
                 {
-            "id","slug","title","year",
-            "regionId","regionCode","regionName",
-            "tags","popularity","updatedAt"
-        }
+                    "id", "slug", "title", "year",
+                    "regionId", "regionCode", "regionName",
+                    "tags", "popularity", "updatedAt",
+                    "image",      // ⬅️ Thêm
+                    "movieType",   // ⬅️ Thêm
+                }
             };
             using var searchDoc = await PostJsonAsync(http, $"{_moviesIdx}/_search", searchBody, ct);
 
@@ -302,6 +304,8 @@ namespace FZ.WebAPI.Controllers.Search
                     slug = doc.Slug,
                     title = doc.Title,
                     year = doc.Year,
+                    image = doc.Image,          // ⬅️ Map Image
+                    movieType = doc.MovieType,
                     region = new { id = doc.RegionId, code = doc.RegionCode, name = doc.RegionName },
                     tags = doc.Tags ?? new List<MovieDoc.TagMini>(),
                     popularity = doc.Popularity,
@@ -509,7 +513,8 @@ namespace FZ.WebAPI.Controllers.Search
             "id","slug","title","originalTitle",
             "year","image","releaseDate",
             "regionId","regionCode","regionName",
-            "tags","popularity"
+            "tags","popularity",      // ⬅️ Thêm
+            "movieType"
         }
             };
 
@@ -539,6 +544,7 @@ namespace FZ.WebAPI.Controllers.Search
                     releaseDate = d.ReleaseDate,
                     region = new { id = d.RegionId, code = d.RegionCode, name = d.RegionName },
                     tags = topTags,
+                    movieType = d.MovieType,
                     popularity = d.Popularity
                 });
             }
