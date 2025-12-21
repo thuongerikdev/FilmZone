@@ -21,9 +21,11 @@ namespace FZ.Movie.ApplicationService.Search
         Task ReindexByTagAsync(int tagId, CancellationToken ct = default);
         Task ReindexByRegionAsync(int regionId, CancellationToken ct = default);
         Task<(int total, int batches)> ReindexAllMoviesAsync(CancellationToken ct = default);
+        Task DeleteIndexAsync(CancellationToken ct = default); // Cách 1
+        Task<int> SyncOrphanMoviesAsync(CancellationToken ct = default); // Cách 2
     }
     public sealed class MovieIndexService : IMovieIndexService
-        {
+    {
             private readonly MovieDbContext _db;
             private readonly IOpenSearchClient _os;
             private readonly string _indexName;
@@ -34,6 +36,9 @@ namespace FZ.Movie.ApplicationService.Search
                 _os = os;
                 _indexName = cfg["OpenSearch:MoviesIndex"]!;
             }
+
+
+
 
             public async Task IndexByIdAsync(int movieId, CancellationToken ct = default)
             {
@@ -222,7 +227,92 @@ namespace FZ.Movie.ApplicationService.Search
                     UpdatedAt = mv.updatedAt
                 };
             }
+
+        public async Task DeleteIndexAsync(CancellationToken ct = default)
+        {
+            var existsResponse = await _os.Indices.ExistsAsync(_indexName, ct: ct);
+            if (existsResponse.Exists)
+            {
+                await _os.Indices.DeleteAsync(_indexName, ct: ct);
+            }
+            // Sau khi xóa, bạn cần gọi lại EnsureMoviesIndexAsync ở Controller hoặc Bootstrap để tạo lại mapping
         }
+
+        // =========================================================
+        // CÁCH 2: QUÉT VÀ XÓA RÁC (Sync Logic)
+        // =========================================================
+        public async Task<int> SyncOrphanMoviesAsync(CancellationToken ct = default)
+        {
+            // BƯỚC 1: Lấy tất cả MovieID ĐANG CÓ trong Database (Source of Truth)
+            // Dùng HashSet để tra cứu cực nhanh O(1)
+            var dbIds = await _db.Movies
+                .AsNoTracking()
+                .Select(x => x.movieID)
+                .ToListAsync(ct);
+
+            var validIdSet = new HashSet<int>(dbIds);
+
+            // BƯỚC 2: Quét (Scroll) tất cả document trong OpenSearch để lấy ID
+            var orphanIds = new List<string>();
+
+            // Scroll request: Lấy 1000 items mỗi lần, chỉ lấy field _id để nhẹ gánh
+            var searchResponse = await _os.SearchAsync<MovieDoc>(s => s
+                .Index(_indexName)
+                .From(0)
+                .Size(1000)
+                .Scroll("2m") // Giữ context trong 2 phút
+                .Source(src => src.Includes(f => f.Field(p => p.Id))) // Chỉ lấy ID
+                .Query(q => q.MatchAll())
+            , ct);
+
+            if (!searchResponse.IsValid || string.IsNullOrEmpty(searchResponse.ScrollId))
+                return 0;
+
+            string scrollId = searchResponse.ScrollId;
+            var results = searchResponse.Documents;
+
+            while (results.Any())
+            {
+                foreach (var doc in results)
+                {
+                    // Parse ID từ string về int
+                    if (int.TryParse(doc.Id, out int osId))
+                    {
+                        // Nếu ID trong OpenSearch KHÔNG CÓ trong DB -> Là rác
+                        if (!validIdSet.Contains(osId))
+                        {
+                            orphanIds.Add(doc.Id);
+                        }
+                    }
+                }
+
+                // Scroll tiếp batch sau
+                var scrollResponse = await _os.ScrollAsync<MovieDoc>("2m", scrollId, ct: ct);
+                if (!scrollResponse.IsValid) break;
+
+                results = scrollResponse.Documents;
+                scrollId = scrollResponse.ScrollId;
+            }
+
+            // Clear scroll context để giải phóng bộ nhớ server
+            await _os.ClearScrollAsync(c => c.ScrollId(scrollId), ct);
+
+            // BƯỚC 3: Bulk Delete các ID rác
+            if (orphanIds.Count > 0)
+            {
+                // Chia nhỏ ra delete mỗi lần 1000 items để tránh lỗi request quá to
+                foreach (var batch in orphanIds.Chunk(1000))
+                {
+                    await _os.BulkAsync(b => b
+                        .Index(_indexName)
+                        .DeleteMany(batch)
+                    , ct);
+                }
+            }
+
+            return orphanIds.Count;
+        }
+    }
 
         
 }

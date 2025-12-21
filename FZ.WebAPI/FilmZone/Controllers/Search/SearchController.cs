@@ -616,5 +616,39 @@ namespace FZ.WebAPI.Controllers.Search
             var (total, batches) = await _movieIndexService.ReindexAllMoviesAsync(ct);
             return Ok(new { message = "Reindex done", totalIndexed = total, batches });
         }
+
+        [HttpPost("movies/reset-index")]
+        public async Task<IActionResult> ResetMoviesIndex(CancellationToken ct)
+        {
+            // 1. Xóa Index cũ
+            await _movieIndexService.DeleteIndexAsync(ct);
+
+            // 2. Tạo lại Index mới (Mapping rỗng)
+            await IndexBootstrap.EnsureMoviesIndexAsync(_esBaseUrl, _moviesIdx, _esUser, _esPass, ct);
+
+            // 3. Đổ lại dữ liệu từ DB sang
+            var (total, batches) = await _movieIndexService.ReindexAllMoviesAsync(ct);
+
+            return Ok(new
+            {
+                message = "Index has been reset and re-populated.",
+                deletedOldIndex = true,
+                totalIndexed = total,
+                batches
+            });
+        }
+
+        // 👇 API 2: Chỉ xóa những thằng thừa (Sync)
+        // Dùng cái này nếu muốn giữ lại data cũ, chỉ xóa cái đã mất ở DB
+        [HttpPost("movies/sync-orphans")]
+        public async Task<IActionResult> SyncOrphanMovies(CancellationToken ct)
+        {
+            var deletedCount = await _movieIndexService.SyncOrphanMoviesAsync(ct);
+            return Ok(new
+            {
+                message = "Orphan synchronization complete.",
+                orphansDeleted = deletedCount
+            });
+        }
     }
 }
