@@ -83,8 +83,32 @@ namespace FZ.Movie.Dtos.Respone
         public string regionName { get; set; }
     }
 
+    public class SegmentDto
+    {
+        public double start { get; set; }
+        public double end { get; set; }
+        public string text { get; set; } = string.Empty;
+    }
 
+    public class TranslateSourceRawRequest
+    {
+        // Thông tin để tìm kiếm trong DB
+        public int sourceID { get; set; }
+        public string type { get; set; } = "movie"; // "movie" hoặc "episode"
 
+        // Thông tin cấu hình External API
+        public string externalApiUrl { get; set; }
+        public string apiToken { get; set; }
+
+        // Ngôn ngữ muốn dịch sang
+        public string targetLanguage { get; set; } = "vi";
+    }
+    public class RawSegmentDto
+    {
+        public double start { get; set; }
+        public double end { get; set; }
+        public string text { get; set; }
+    }
 
     // DTO Mới: Dành cho Webhook callback
     public class AutoGenerateSubTitleRequest

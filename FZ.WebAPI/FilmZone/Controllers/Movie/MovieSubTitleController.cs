@@ -73,6 +73,35 @@ namespace FZ.WebAPI.Controllers.Movie
                 return StatusCode(500, new { message = "Lỗi khi xử lý callback.", details = ex.Message });
             }
         }
+
+        [HttpPost("Translate/AutoFromSource")]
+        public async Task<IActionResult> TranslateFromSource([FromBody] TranslateSourceRawRequest request, CancellationToken ct)
+        {
+            try
+            {
+                // 1. Validate Input cơ bản
+                if (string.IsNullOrEmpty(request.externalApiUrl))
+                    return BadRequest(new { message = "Vui lòng nhập External API URL" });
+
+                if (request.sourceID <= 0)
+                    return BadRequest(new { message = "SourceID không hợp lệ" });
+
+                // 2. Gọi Service
+                var result = await _transcribeService.TranslateFromRawDataAsync(request, ct);
+
+                if (result.ErrorCode != 200)
+                {
+                    return StatusCode(result.ErrorCode, result);
+                }
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Lỗi xử lý request.", details = ex.Message });
+            }
+        }
+
         [HttpGet("movie/GetAllSubTitlesBySourceID/{sourceID}")]
         public async Task<IActionResult> GetAllSubTitlesByMovieId(int sourceID, CancellationToken ct)
         {

@@ -21,6 +21,8 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media
     {
         Task<ResponseDto<string>> SendRequestAsync(AutoGenerateSubTitleRequest request, CancellationToken ct);
         Task<ResponseDto<bool>> HandleCallbackAsync(TranscribeCallbackRequest request, CancellationToken ct);
+
+        Task<ResponseDto<string>> TranslateFromRawDataAsync(TranslateSourceRawRequest request, CancellationToken ct);
     }
 
     public class TranscribeIntegrationService : ITranscribeIntegrationService
@@ -33,6 +35,7 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media
         private readonly IMovieSubTitleRepository _movieSubTitleRepository;
         private readonly IMovieSourceRepository _movieSourceRepository;
         private readonly IEpisodeSubTitleRepository _episodeSubTitleRepository;
+        private readonly IEpisodeSourceRepository _episodeSourceRepository;
         // private readonly IEpisodeSourceRepository _episodeSourceRepository; // Inject thêm nếu cần update raw data cho episode
 
         public TranscribeIntegrationService(
@@ -41,6 +44,7 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media
             ICloudinaryService cloudinaryService,
             IUnitOfWork unitOfWork,
             IMovieSubTitleRepository movieSubTitleRepository,
+            IEpisodeSourceRepository episodeSourceRepository,
             IMovieSourceRepository movieSourceRepository,
             IEpisodeSubTitleRepository episodeSubTitleRepository)
         {
@@ -50,7 +54,104 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media
             _unitOfWork = unitOfWork;
             _movieSubTitleRepository = movieSubTitleRepository;
             _movieSourceRepository = movieSourceRepository;
+            _episodeSourceRepository = episodeSourceRepository;
             _episodeSubTitleRepository = episodeSubTitleRepository;
+        }
+        public async Task<ResponseDto<string>> TranslateFromRawDataAsync(TranslateSourceRawRequest request, CancellationToken ct)
+        {
+            try
+            {
+                string rawSubTitleJson = string.Empty;
+
+                // 1. Tìm kiếm Raw Data từ DB dựa trên Type
+                if (request.type.Equals("movie", StringComparison.OrdinalIgnoreCase))
+                {
+                    var movieSource = await _movieSourceRepository.GetByIdAsync(request.sourceID, ct);
+                    if (movieSource == null)
+                        return ResponseConst.Error<string>(404, "Movie Source không tồn tại.");
+
+                    rawSubTitleJson = movieSource.rawSubTitle;
+                }
+                else if (request.type.Equals("episode", StringComparison.OrdinalIgnoreCase))
+                {
+                    var episodeSource = await _episodeSourceRepository.GetByIdAsync(request.sourceID, ct);
+                    if (episodeSource == null)
+                        return ResponseConst.Error<string>(404, "Episode Source không tồn tại.");
+
+                    rawSubTitleJson = episodeSource.rawSubTitle;
+                }
+                else
+                {
+                    return ResponseConst.Error<string>(400, "Type không hợp lệ (chỉ chấp nhận 'movie' hoặc 'episode').");
+                }
+
+                // 2. Validate Raw Data
+                if (string.IsNullOrWhiteSpace(rawSubTitleJson))
+                {
+                    return ResponseConst.Error<string>(400, "Source này chưa có dữ liệu Raw SubTitle.");
+                }
+
+                // 3. Deserialize chuỗi JSON từ DB thành List Object
+                // DB lưu: "[{\"start\":0...}]" -> Cần chuyển thành List<RawSegmentDto>
+                List<RawSegmentDto> segments;
+                try
+                {
+                    segments = JsonSerializer.Deserialize<List<RawSegmentDto>>(rawSubTitleJson, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                }
+                catch
+                {
+                    return ResponseConst.Error<string>(500, "Lỗi format JSON trong Database.");
+                }
+
+                if (segments == null || !segments.Any())
+                    return ResponseConst.Error<string>(400, "Raw SubTitle rỗng.");
+
+                // 4. Chuẩn bị gọi External API
+                var client = _httpClientFactory.CreateClient();
+                client.Timeout = TimeSpan.FromMinutes(5);
+                var targetUrl = request.externalApiUrl.TrimEnd('/') + "/translate/segments";
+
+                if (!string.IsNullOrEmpty(request.apiToken))
+                {
+                    if (client.DefaultRequestHeaders.Contains("x-token"))
+                        client.DefaultRequestHeaders.Remove("x-token");
+                    client.DefaultRequestHeaders.Add("x-token", request.apiToken);
+                }
+
+                // 5. Đóng gói Payload gửi đi
+                var payload = new
+                {
+                    segments = segments,           // List object đã deserialize
+                    language = request.targetLanguage,
+                    type = request.type.ToLower(),
+                    source_id = request.sourceID.ToString()
+                };
+
+                // 6. Gửi Request
+                var response = await client.PostAsJsonAsync(targetUrl, payload, ct);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var msg = await response.Content.ReadAsStringAsync(ct);
+                    return ResponseConst.Error<string>((int)response.StatusCode, $"AI Service Error: {msg}");
+                }
+
+                var result = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: ct);
+                if (result.TryGetProperty("task_id", out var taskIdElement))
+                {
+                    return ResponseConst.Success("Đã gửi yêu cầu dịch thành công.", taskIdElement.GetString());
+                }
+
+                return ResponseConst.Success("Thành công (Không có TaskID).", "");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "TranslateFromRawData Error");
+                return ResponseConst.Error<string>(500, ex.Message);
+            }
         }
 
         public async Task<ResponseDto<string>> SendRequestAsync(AutoGenerateSubTitleRequest request, CancellationToken ct)
@@ -159,6 +260,10 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media
 
         private async Task<ResponseDto<bool>> SaveEpisodeData(TranscribeCallbackRequest request, string cloudUrl, CancellationToken ct)
         {
+
+            var source = await _episodeSourceRepository.GetByIdAsync(request.sourceID, ct);
+            if (source == null) return ResponseConst.Error<bool>(404, "Movie Source Not Found");
+
             var sub = new EpisodeSubTitle
             {
                 episodeSourceID = request.sourceID,
@@ -171,10 +276,13 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media
             };
 
             // Có thể update rawSubTitle cho EpisodeSource tại đây nếu cần
+            source.rawSubTitle = JsonSerializer.Serialize(request.RawSegments);
+            source.updatedAt = DateTime.UtcNow;
 
             await _unitOfWork.ExecuteInTransactionAsync(async token =>
             {
                 await _episodeSubTitleRepository.AddAsync(sub, token);
+                await _episodeSourceRepository.UpdateAsync(source);
                 return true;
             }, ct: ct);
 
