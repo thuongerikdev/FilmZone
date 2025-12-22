@@ -133,6 +133,88 @@ namespace FZ.WebAPI.Controllers.Auth
             return Ok(res);
         }
 
+        [HttpPost("login/mobile/google")]
+        [AllowAnonymous]
+        public async Task<IActionResult> MobileGoogleLogin([FromBody] GoogleMobileLoginRequest req, CancellationToken ct)
+        {
+            // --- BƯỚC 1: Validate đầu vào ---
+            if (string.IsNullOrWhiteSpace(req.IdToken))
+                return BadRequest(ResponseConst.Error<string>(400, "Thiếu idToken từ Google"));
+
+            try
+            {
+                // --- BƯỚC 2: Xác thực Token với Google ---
+                // Đây là bước quan trọng nhất: Server tự hỏi Google xem token này có phải đồ thật không
+                var settings = new GoogleJsonWebSignature.ValidationSettings
+                {
+                    // QUAN TRỌNG: Chỉ chấp nhận token được cấp cho Client ID của hệ thống mình
+                    // Vì Mobile App đã config dùng Web Client ID, nên ở đây ta check theo Web Client ID
+                    Audience = new[]
+                    {
+                        _cfg["Google:ClientId"] // Hoặc _cfg["Authentication:Google:ClientId"] tùy config
+                    }
+                };
+
+                // Hàm này sẽ throw Exception nếu token giả, hết hạn, hoặc sai ClientID
+                var payload = await GoogleJsonWebSignature.ValidateAsync(req.IdToken, settings);
+
+                // --- BƯỚC 3: Mapping thông tin ---
+                var dto = new AuthLoginGoogleRequest
+                {
+                    GoogleSub = payload.Subject,       // ID người dùng duy nhất bên Google
+                    email = payload.Email,
+                    fullName = payload.Name,
+                    avatar = payload.Picture,
+                    // Nếu cần verify email:
+                    // IsEmailVerified = payload.EmailVerified 
+                };
+
+                // --- BƯỚC 4: Gọi Service xử lý Login/Register (Giống hệt Web) ---
+                var result = await _authLoginService.LoginWithGoogleAsync(dto, ct);
+
+                // Nếu lỗi từ Service
+                if (result.ErrorCode != 200 || result.Data is null)
+                    return StatusCode(result.ErrorCode, result);
+
+                // --- BƯỚC 5: Xử lý MFA (Nếu hệ thống có bật) ---
+                if (TryGetBoolProp(result.Data, "requiresMfa") == true)
+                {
+                    // Mobile tự lo việc điều hướng sang màn nhập OTP
+                    return Ok(result);
+                }
+
+                // --- BƯỚC 6: Trả về Token (JSON) ---
+                // Mobile không dùng Cookie, phải trả JSON thẳng
+                if (!TryExtractTokens(result.Data, out var access, out var refresh, out var accessExp, out var refreshExp))
+                    return StatusCode(500, ResponseConst.Error<string>(500, "Không tạo được token hệ thống"));
+
+                return Ok(new
+                {
+                    accessToken = access,
+                    accessTokenExpiresAt = accessExp,
+                    refreshToken = refresh,
+                    refreshTokenExpiresAt = refreshExp,
+                    // Trả thêm thông tin user nếu mobile cần hiển thị ngay
+                    user = new
+                    {
+                        email = payload.Email,
+                        name = payload.Name,
+                        avatar = payload.Picture
+                    }
+                });
+            }
+            catch (InvalidJwtException ex)
+            {
+                // Token Google hết hạn hoặc không hợp lệ
+                return Unauthorized(ResponseConst.Error<string>(401, $"Token Google không hợp lệ: {ex.Message}"));
+            }
+            catch (Exception ex)
+            {
+                // Lỗi hệ thống khác
+                return StatusCode(500, ResponseConst.Error<string>(500, $"Lỗi server: {ex.Message}"));
+            }
+        }
+
         [HttpGet("google/callback")]
         [HttpGet("signin-google")]
         [AllowAnonymous]
@@ -494,5 +576,9 @@ namespace FZ.WebAPI.Controllers.Auth
         public string RefreshToken { get; set; } = default!;
         public DateTimeOffset AccessTokenExpiresAt { get; set; }
         public DateTimeOffset RefreshTokenExpiresAt { get; set; }
+    }
+    public sealed class GoogleMobileLoginRequest
+    {
+        public string IdToken { get; set; } = default!;
     }
 }
