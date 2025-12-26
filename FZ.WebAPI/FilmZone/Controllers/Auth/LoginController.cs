@@ -283,7 +283,7 @@ namespace FZ.WebAPI.Controllers.Auth
 
             var appBase = _cfg["Frontend:AppUrl"] ?? "http://localhost:3000";
             var successUrl = $"{appBase.TrimEnd('/')}/business/mainScreen";
-            return Redirect(successUrl);
+            return Redirect(appBase);
         }
         public sealed class GoogleIdLoginRequest { public string IdToken { get; set; } = default!; }
 
