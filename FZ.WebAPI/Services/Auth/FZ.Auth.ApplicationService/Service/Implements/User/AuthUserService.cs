@@ -101,7 +101,9 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.User
                     var img = await _cloudinaryService.UploadImageAsync(req.avatar);
                     profile.avatar = img;
                 }
-                
+                await _users.UpdateUserName(req.newUserName, req.userID, ct);
+
+
                 profile.firstName = req.firstName;
                 profile.lastName = req.lastName;
                 profile.gender = req.gender;

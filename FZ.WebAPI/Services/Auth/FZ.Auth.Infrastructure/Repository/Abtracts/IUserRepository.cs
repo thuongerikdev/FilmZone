@@ -14,6 +14,8 @@ namespace FZ.Auth.Infrastructure.Repository.Abtracts
 
         Task<AuthUser?> Login (string username, string password , CancellationToken ct);
 
+        Task UpdateUserName(string newUserName, int userId, CancellationToken ct);
+
         Task<List<UserSlimDto>> GetAllSlimAsync(CancellationToken ct);
 
         Task<AuthUser?> FindByGoogleSub(string googleSub, CancellationToken ct);

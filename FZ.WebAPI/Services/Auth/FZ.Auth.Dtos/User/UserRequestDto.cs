@@ -39,6 +39,7 @@ namespace FZ.Auth.Dtos.User
 
     public sealed class AuthUpdateProfileRequest
     {
+        public string newUserName { get; set; }
 
         public int userID { get; set; }
         public string firstName { get; set; }

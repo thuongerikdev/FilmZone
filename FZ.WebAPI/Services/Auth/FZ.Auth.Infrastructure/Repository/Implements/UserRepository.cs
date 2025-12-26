@@ -14,6 +14,17 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
         public Task<AuthUser?> Login(string username, string password, CancellationToken ct)
             => _db.authUsers.FirstOrDefaultAsync(x => (x.userName == username || x.email == username) && x.passwordHash == password, ct);
 
+        public Task UpdateUserName(string newUserName, int userId, CancellationToken ct)
+        {
+            var user = _db.authUsers.FirstOrDefault(x => x.userID == userId);
+            if (user != null)
+            {
+                user.userName = newUserName;
+                _db.authUsers.Update(user);
+            }
+            return Task.CompletedTask;
+        }   
+
         // >>> NEW: trả DTO để không loop
         public Task<List<UserSlimDto>> GetAllSlimAsync(CancellationToken ct)
         {
