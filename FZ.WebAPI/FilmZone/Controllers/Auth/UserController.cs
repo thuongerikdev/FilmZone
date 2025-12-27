@@ -74,5 +74,12 @@ namespace FZ.WebAPI.Controllers.Auth
             if (result.ErrorCode != 200) return StatusCode(result.ErrorCode, result);
             return Ok(result);
         }
+        [HttpPut("update/username")]
+        public async Task<IActionResult> UpdateUsername([FromQuery] int userId, [FromQuery] string newUsername, CancellationToken ct)
+        {
+            var result = await _userService.AuthUpdateUserName(userId, newUsername, ct);
+            if (result.ErrorCode != 200) return StatusCode(result.ErrorCode, result);
+            return Ok(result);
+        }
     }
 }

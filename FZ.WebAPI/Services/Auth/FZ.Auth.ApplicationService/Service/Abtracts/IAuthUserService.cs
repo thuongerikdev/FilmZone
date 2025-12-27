@@ -65,5 +65,6 @@ namespace FZ.Auth.ApplicationService.MFAService.Abtracts
         Task<ResponseDto<GetUserResponseDto>> GetUserByIDAsync(int userID, CancellationToken ct);
 
         Task<ResponseDto<bool>> AuthUpdateProfileRequest ( AuthUpdateProfileRequest req, CancellationToken ct);
+        Task<ResponseDto<bool>> AuthUpdateUserName(int userID, string userName, CancellationToken ct);
     }
 }

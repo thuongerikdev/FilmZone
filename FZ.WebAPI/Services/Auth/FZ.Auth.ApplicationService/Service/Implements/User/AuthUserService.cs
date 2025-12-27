@@ -79,6 +79,30 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.User
                 return ResponseConst.Error<GetUserResponseDto>(500, "Internal error");
             }
         }
+        public async  Task<ResponseDto<bool>> AuthUpdateUserName(int userID, string userName, CancellationToken ct)
+        {
+            _logger.LogInformation("Updating username for user ID: {UserID}", userID);
+            try
+            {
+                var user = await _users.FindByIdAsync(userID, ct);
+                if (user == null)
+                {
+                    _logger.LogWarning("User with ID: {UserID} not found.", userID);
+                    return ResponseConst.Error<bool>(404, "User not found");
+                }
+                await _users.UpdateUserName( userName, userID, ct);
+                await _uow.SaveChangesAsync(ct);
+                _logger.LogInformation("Successfully updated username for user ID: {UserID}", userID);
+                return ResponseConst.Success("Username updated successfully", true);
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while updating username for user ID: {UserID}", userID);
+                return ResponseConst.Error<bool>(500, "Internal error");
+            }
+
+        }
         public async Task<ResponseDto<bool>> AuthUpdateProfileRequest(AuthUpdateProfileRequest req, CancellationToken ct)
         {
             _logger.LogInformation("Updating profile for user ID: {UserID}", req.userID);
