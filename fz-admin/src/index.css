@@ -4,19 +4,37 @@
 
 html,
 body,
-#root,
-.app,
-.content {
+#root {
   height: 100%;
   width: 100%;
   font-family: "Source Sans Pro", sans-serif;
+  margin: 0;
+  padding: 0;
 }
 
 .app {
   display: flex;
   position: relative;
+  height: 100vh;
+  overflow: hidden;
 }
 
+/* Content area - margin-left để không bị sidebar che */
+.content {
+  flex-grow: 1;
+  margin-left: 270px; /* Width của sidebar khi expanded */
+  transition: margin-left 0.3s ease;
+  overflow-y: auto;
+  overflow-x: hidden;
+  height: 100vh;
+}
+
+/* Khi sidebar collapsed */
+.app.sidebar-collapsed .content {
+  margin-left: 80px; /* Width của sidebar khi collapsed */
+}
+
+/* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 10px;
 }
@@ -29,6 +47,7 @@ body,
 /* Handle */
 ::-webkit-scrollbar-thumb {
   background: #888;
+  border-radius: 5px;
 }
 
 /* Handle on hover */

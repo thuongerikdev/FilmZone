@@ -74,10 +74,10 @@ function Topbar() {
                     borderRadius: "3px"
                 }}
             >
-                <InputBase sx={{ ml: 2, flex: 1 }} placeholder='Search'></InputBase>
+                {/* <InputBase sx={{ ml: 2, flex: 1 }} placeholder='Search'></InputBase>
                 <IconButton type="button" sx={{ p: 1 }}>
                     <SearchIcon />
-                </IconButton>
+                </IconButton> */}
             </Box>
             
             <Box display="flex">
@@ -88,12 +88,12 @@ function Topbar() {
                         <LightModeOutlinedIcon />
                     )}
                 </IconButton>
-                <IconButton>
+                {/* <IconButton>
                     <NotificationsOutlinedIcon />
-                </IconButton>
-                <IconButton>
+                </IconButton> */}
+                {/* <IconButton>
                     <SettingsOutlinedIcon />
-                </IconButton>
+                </IconButton> */}
                 <IconButton
                     onClick={handleClick}
                     aria-controls={open ? 'user-menu' : undefined}

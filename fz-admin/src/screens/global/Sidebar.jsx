@@ -9,6 +9,8 @@ import PeopleOutlinedIcon from "@mui/icons-material/PeopleOutlined";
 import ContactsOutlinedIcon from "@mui/icons-material/ContactsOutlined";
 import ReceiptOutlinedIcon from "@mui/icons-material/ReceiptOutlined";
 import PersonOutlinedIcon from "@mui/icons-material/PersonOutlined";
+import MovieOutlinedIcon from "@mui/icons-material/MovieOutlined";
+import PeopleAltOutlinedIcon from "@mui/icons-material/PeopleAltOutlined";
 import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
 import HelpOutlineOutlinedIcon from "@mui/icons-material/HelpOutlineOutlined";
 import BarChartOutlinedIcon from "@mui/icons-material/BarChartOutlined";
@@ -35,15 +37,28 @@ const Item = ({ title, to, icon, selected, setSelected }) => {
   );
 };
 
-const Sidebar = () => {
+const Sidebar = ({ onCollapsedChange }) => {
   const theme = useTheme();
   const colors = tokens(theme.palette.mode);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [selected, setSelected] = useState("Bảng Điều Khiển");
 
+  const handleCollapse = () => {
+    const newCollapsedState = !isCollapsed;
+    setIsCollapsed(newCollapsedState);
+    if (onCollapsedChange) {
+      onCollapsedChange(newCollapsedState);
+    }
+  };
+
   return (
     <Box
       sx={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        height: "100vh",
+        zIndex: 999,
         "& .pro-sidebar-inner": {
           background: `${colors.primary[400]} !important`,
         },
@@ -65,7 +80,7 @@ const Sidebar = () => {
         <Menu iconShape="square">
           {/* LOGO AND MENU ICON */}
           <MenuItem
-            onClick={() => setIsCollapsed(!isCollapsed)}
+            onClick={handleCollapse}
             icon={isCollapsed ? <MenuOutlinedIcon /> : undefined}
             style={{
               margin: "10px 0 20px 0",
@@ -80,15 +95,16 @@ const Sidebar = () => {
                 ml="15px"
               >
                 <Typography variant="h3" color={colors.grey[100]}>
-                  ADMINIS
+                  FilmZone Admin
                 </Typography>
-                <IconButton onClick={() => setIsCollapsed(!isCollapsed)}>
+                <IconButton onClick={handleCollapse}>
                   <MenuOutlinedIcon />
                 </IconButton>
               </Box>
             )}
           </MenuItem>
 
+          {/* USER INFO */}
           {!isCollapsed && (
             <Box mb="25px">
               <Box display="flex" justifyContent="center" alignItems="center">
@@ -107,15 +123,16 @@ const Sidebar = () => {
                   fontWeight="bold"
                   sx={{ m: "10px 0 0 0" }}
                 >
-                  Ed Roh
+                  Admin
                 </Typography>
                 <Typography variant="h5" color={colors.greenAccent[500]}>
-                  VP Quản Trị Ảo
+                  VP Fancy Admin
                 </Typography>
               </Box>
             </Box>
           )}
 
+          {/* MENU ITEMS */}
           <Box paddingLeft={isCollapsed ? undefined : "10%"}>
             <Item
               title="Bảng Điều Khiển"
@@ -130,24 +147,31 @@ const Sidebar = () => {
               color={colors.grey[300]}
               sx={{ m: "15px 0 5px 20px" }}
             >
-              Dữ Liệu
+              Quản Lý
             </Typography>
             <Item
-              title="Quản Lý Đội Ngũ"
-              to="/team"
+              title="Quản Lý Users"
+              to="/users"
               icon={<PeopleOutlinedIcon />}
               selected={selected}
               setSelected={setSelected}
             />
             <Item
-              title="Thông Tin Liên Hệ"
-              to="/contacts"
-              icon={<ContactsOutlinedIcon />}
+              title="Quản Lý Phim"
+              to="/movies"
+              icon={<MovieOutlinedIcon />}
               selected={selected}
               setSelected={setSelected}
             />
             <Item
-              title="Số Dư Hóa Đơn"
+              title="Quản Lý Diễn Viên"
+              to="/persons"
+              icon={<PeopleAltOutlinedIcon />}
+              selected={selected}
+              setSelected={setSelected}
+            />
+            <Item
+              title="Hóa Đơn"
               to="/invoices"
               icon={<ReceiptOutlinedIcon />}
               selected={selected}
@@ -176,7 +200,7 @@ const Sidebar = () => {
               setSelected={setSelected}
             />
             <Item
-              title="Trang Câu Hỏi Thường Gặp"
+              title="FAQ"
               to="/faq"
               icon={<HelpOutlineOutlinedIcon />}
               selected={selected}

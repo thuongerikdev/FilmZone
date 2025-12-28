@@ -42,7 +42,7 @@ export const updateComment = (data) => api.put('/api/Comment/UpdateComment', dat
 export const deleteComment = (id) => api.delete(`/api/Comment/DeleteComment/${id}`);
 export const getCommentById = (id) => api.get(`/api/Comment/GetCommentByID/${id}`);
 export const getCommentsByUserId = (userID) => api.get(`/api/Comment/GetCommentsByUserID/${userID}`);
-export const getCommentsByMovieId = (movieID) => api.get(`/api/Comment/GetCommentsByMovieID/${movieID}`);
+export const getCommentsByMovieId = (movieID) => api.get(`/api/Comment/GetCommentsByMovieID/${movieID}`, { params: { movieID } });
 
 // Episode APIs
 export const createEpisode = (data) => api.post('/api/Episode/CreateEpisode', data);
