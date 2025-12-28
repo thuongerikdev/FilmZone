@@ -231,14 +231,18 @@ const MovieEdit = () => {
 
       const data = await response.json();
 
-      if (data.errorCode === 200 || response.status === 200) {
-        setSuccess("Cập nhật phim thành công!");
-        setTimeout(() => {
-          navigate("/movies");
-        }, 2000);
-      } else {
-        setError(data.errorMessage || "Cập nhật phim thất bại");
-      }
+     if (data.errorCode === 200) {
+        setSuccess("Cập nhật phim thành công!");
+        setTimeout(() => {
+          navigate("/movies");
+        }, 2000);
+      } else {
+        // Trường hợp lỗi (errorCode 500, 400,...)
+        console.error("Backend Error:", data);
+        setError(data.errorMessage || data.title || "Cập nhật phim thất bại");
+        // Scroll lên đầu để user thấy lỗi
+        window.scrollTo(0,0);
+      }
     } catch (err) {
       console.error("Error updating movie:", err);
       setError(err.message || "Có lỗi xảy ra khi cập nhật phim");
