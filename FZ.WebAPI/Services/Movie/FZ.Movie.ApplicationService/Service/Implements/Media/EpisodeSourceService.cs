@@ -169,7 +169,7 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media
                 }
                 await _unitOfWork.ExecuteInTransactionAsync(async (cancellationToken) =>
                 {
-                    await _episodeSourceRepository.RemoveAsync(existingSource.episodeID);
+                    await _episodeSourceRepository.RemoveAsync(existingSource.episodeSourceID);
                     return true;
                 }, ct: ct);
                 _logger.LogInformation("Episode source deleted successfully with ID: {EpisodeSourceID}", episodeSourceID);

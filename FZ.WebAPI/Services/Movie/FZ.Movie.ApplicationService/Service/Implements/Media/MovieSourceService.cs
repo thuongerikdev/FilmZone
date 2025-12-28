@@ -168,7 +168,7 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media
                 }
                 await _unitOfWork.ExecuteInTransactionAsync(async (cancellationToken) =>
                 {
-                    await _movieSourceRepository.RemoveAsync(existingMovieSource.movieID);
+                    await _movieSourceRepository.RemoveAsync(existingMovieSource.movieSourceID);
                     return true;
                 }, ct: ct);
                 _logger.LogInformation("Movie source with ID: {MovieSourceID} deleted successfully", movieSourceID);
