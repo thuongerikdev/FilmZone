@@ -51,6 +51,7 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Catalog
             _movieTagRepository = movieTagRepository;
             _moviePersonRepository = movieperson;
             _movieImageRepository = movieImageRepository;
+            _movieIndexService = movieIndexService;
         }
         public async Task<ResponseDto<MovieCreatedDto>> CreateMovie(CreateMoviesRequest request, CancellationToken ct)
         {
@@ -205,6 +206,7 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Catalog
 
             try
             {
+                // 1. Load Movie từ Database
                 var movie = await _movieRepository.GetTrackedAsync(request.movieID, ct);
                 if (movie is null)
                 {
@@ -212,17 +214,18 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Catalog
                     return ResponseConst.Error<Movies>(404, "Movie not found");
                 }
 
-                // Lưu poster cũ để xóa sau khi commit
+                // Lưu đường dẫn ảnh cũ để xóa sau khi commit (nếu có đổi ảnh)
                 var oldPoster = movie.image;
 
-                // === Poster (ảnh chính) ===
+                // 2. Xử lý Poster (Ảnh chính)
+                // Nếu Frontend gửi null (không chọn ảnh mới) -> Giữ nguyên ảnh cũ
                 if (request.image != null)
                 {
                     var newPosterUrl = await _cloudinaryService.UploadImageAsync(request.image);
                     movie.image = newPosterUrl;
                 }
 
-                // === Map fields cơ bản ===
+                // 3. Map các trường thông tin cơ bản
                 movie.title = request.title;
                 movie.slug = request.slug;
                 movie.description = request.description;
@@ -239,14 +242,16 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Catalog
                 movie.regionID = request.regionID;
                 movie.updatedAt = DateTime.UtcNow;
 
+                // 4. Bắt đầu Transaction
                 await _unitOfWork.ExecuteInTransactionAsync(async (cancellationToken) =>
                 {
-                    // --- Movie ---
+                    // A. Update bảng Movie
                     await _movieRepository.UpdateAsync(movie);
 
-                    // --- TAGs ---
+                    // B. Update Tags
                     {
                         var reqTagIds = new HashSet<int>((request.tagIDs ?? Enumerable.Empty<int>()).Distinct());
+
                         var existingTags = await _movieTagRepository.GetByMovieIDsync(movie.movieID, cancellationToken)
                                            ?? new List<MovieTag>();
                         var existingTagIds = new HashSet<int>(existingTags.Select(t => t.tagID));
@@ -260,54 +265,70 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Catalog
                             await _movieTagRepository.AddAsync(new MovieTag { movieID = movie.movieID, tagID = newTagId }, cancellationToken);
                     }
 
-                    // --- PERSONs ---
+                    // C. Update Persons (SỬA LỖI QUAN TRỌNG TẠI ĐÂY)
                     {
-                        var reqPersons = request.person ;
-                        var reqPersonMap = reqPersons.ToDictionary(p => p.personID, p => p);
+                        // Null Coalescing để tránh lỗi nếu FE không gửi person
+                        var reqPersons = request.person ?? new List<CreateMoviePerson>();
+
+                        // Map để tra cứu nhanh khi update
+                        // Lưu ý: FE phải đảm bảo không gửi trùng PersonID, nếu trùng ToDictionary sẽ lỗi.
+                        // Ở đây dùng GroupBy để an toàn hơn: lấy người đầu tiên nếu trùng ID.
+                        var reqPersonMap = reqPersons.GroupBy(p => p.personID)
+                                                     .ToDictionary(g => g.Key, g => g.First());
 
                         var existingPersons = await _moviePersonRepository.GetMoviePersonByMovieID(movie.movieID, cancellationToken)
-                                             ?? new List<MoviePerson>();
-                        var existingIds = new HashSet<int>(existingPersons.Select(p => p.personID));
+                                              ?? new List<MoviePerson>();
+
                         var requestedIds = new HashSet<int>(reqPersons.Select(p => p.personID));
 
-                        // Xóa person cũ
+                        // --- XÓA (DELETE) ---
                         foreach (var old in existingPersons.Where(p => !requestedIds.Contains(p.personID)))
-                            await _moviePersonRepository.RemoveAsync(old.moviePersonID);
-
-                        // Cập nhật person giữ lại
-                        foreach (var keep in existingPersons.Where(p => requestedIds.Contains(p.personID)))
                         {
-                            var src = reqPersonMap[keep.personID];
-                            keep.role = src.role;
-                            keep.characterName = src.characterName;
-                            keep.creditOrder = src.creditOrder;
-                            await _moviePersonRepository.UpdateAsync(keep, cancellationToken);
+                            // FIX: Sử dụng hàm Remove(entity) thay vì RemoveAsync(id)
+                            // Vì bảng này có Composite Key (MovieID, PersonID, Role), 
+                            // xóa bằng ID sẽ tạo object giả thiếu Role -> Gây lỗi 500.
+                            _moviePersonRepository.Remove(old);
                         }
 
-                        // Thêm person mới
+                        // --- CẬP NHẬT (UPDATE) ---
+                        foreach (var keep in existingPersons.Where(p => requestedIds.Contains(p.personID)))
+                        {
+                            if (reqPersonMap.TryGetValue(keep.personID, out var src))
+                            {
+                                keep.role = src.role; // Cập nhật role
+                                keep.characterName = src.characterName;
+                                keep.creditOrder = src.creditOrder;
+                                await _moviePersonRepository.UpdateAsync(keep, cancellationToken);
+                            }
+                        }
+
+                        // --- THÊM MỚI (ADD) ---
+                        var existingIds = new HashSet<int>(existingPersons.Select(p => p.personID));
                         foreach (var add in reqPersons.Where(p => !existingIds.Contains(p.personID)))
                         {
                             await _moviePersonRepository.AddAsync(new MoviePerson
                             {
                                 movieID = movie.movieID,
                                 personID = add.personID,
-                                role = add.role,
+                                role = add.role ?? "cast", // Fallback an toàn
                                 characterName = add.characterName,
                                 creditOrder = add.creditOrder
                             }, cancellationToken);
                         }
                     }
 
-                    // --- MovieImages ---
+                    // D. Update Movie Images (Ảnh phụ)
                     {
+                        var requestImages = request.MovieImage ?? new List<UpdateMovieImage>();
                         var existingImages = await _movieImageRepository.GetByMovieID(movie.movieID, cancellationToken)
+                                             ?? new List<MovieImage>();
 
-                                              ?? new List<MovieImage>();
-                        var requestImages = request.MovieImage;
-                        var requestedIds = new HashSet<int>(requestImages.Where(x => x.movieImageID > 0)
-                                                                         .Select(x => x.movieImageID));
+                        // Lấy danh sách ID các ảnh được giữ lại (ID > 0)
+                        var requestedIds = new HashSet<int>(requestImages
+                                                            .Where(x => x.movieImageID > 0)
+                                                            .Select(x => x.movieImageID));
 
-                        // Xóa ảnh cũ không còn trong request
+                        // Xóa ảnh cũ
                         foreach (var old in existingImages.Where(e => !requestedIds.Contains(e.movieImageID)))
                         {
                             if (!string.IsNullOrWhiteSpace(old.ImageUrl))
@@ -316,7 +337,7 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Catalog
                             await _movieImageRepository.RemoveAsync(old.movieImageID);
                         }
 
-                        // Cập nhật ảnh giữ lại (nếu có file mới thì replace)
+                        // Cập nhật ảnh giữ lại (nếu người dùng thay thế ảnh tại vị trí đó)
                         foreach (var keep in requestImages.Where(x => x.movieImageID > 0))
                         {
                             var ex = existingImages.FirstOrDefault(e => e.movieImageID == keep.movieImageID);
@@ -324,15 +345,17 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Catalog
 
                             if (keep.image != null)
                             {
+                                // Xóa ảnh cũ trên Cloud
                                 if (!string.IsNullOrWhiteSpace(ex.ImageUrl))
                                     await _cloudinaryService.DeleteImageAsync(ex.ImageUrl);
 
+                                // Upload ảnh mới và cập nhật URL
                                 ex.ImageUrl = await _cloudinaryService.UploadImageAsync(keep.image);
                                 await _movieImageRepository.AddMovieImageAsync(ex, cancellationToken);
                             }
                         }
 
-                        // Thêm ảnh mới
+                        // Thêm ảnh mới hoàn toàn (ID = 0)
                         foreach (var add in requestImages.Where(x => x.movieImageID == 0 && x.image != null))
                         {
                             var newUrl = await _cloudinaryService.UploadImageAsync(add.image!);
@@ -344,17 +367,21 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Catalog
                         }
                     }
 
-                    // Commit 1 lần
+                    // Commit Transaction
                     await _unitOfWork.SaveChangesAsync(cancellationToken);
                     return true;
+
                 }, ct: ct);
 
-                // Xóa poster cũ (nếu có upload poster mới)
-                if (request.image is not null && !string.IsNullOrWhiteSpace(oldPoster))
+                // 5. Cleanup: Xóa poster cũ trên Cloudinary nếu đã thay ảnh mới thành công
+                if (request.image != null && !string.IsNullOrWhiteSpace(oldPoster))
                 {
                     await _cloudinaryService.DeleteImageAsync(oldPoster);
                 }
-                await _movieIndexService.IndexByIdAsync(created!.movieID, ct);
+
+                // 6. Index lại phim vào ElasticSearch/Algolia
+                // FIX: Dùng biến 'movie.movieID' thay vì 'created.movieID' (biến created không tồn tại)
+                await _movieIndexService.IndexByIdAsync(movie.movieID, ct);
 
                 _logger.LogInformation("Successfully updated movie with ID: {MovieID}", request.movieID);
                 return ResponseConst.Success("Successfully updated the movie", movie);
@@ -362,10 +389,10 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Catalog
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred while updating movie with ID: {MovieID}", request.movieID);
-                return ResponseConst.Error<Movies>(500, "Error occurred while updating the movie");
+                // Trả về message lỗi chi tiết để dễ debug ở FE
+                return ResponseConst.Error<Movies>(500, $"Error occurred: {ex.Message}");
             }
         }
-
         public async Task<ResponseDto<bool>> DeleteMovie(int movieID, CancellationToken ct)
         {
             _logger.LogInformation("Deleting movie with ID: {MovieID}", movieID);

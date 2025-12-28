@@ -160,5 +160,20 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Catalog
                 return ResponseConst.Error<List<Episode>>(500, "An error occurred while retrieving all episodes");
             }
         }
+        public async Task<ResponseDto<List<Episode>>> GetEpisodeByMovieID(int movieID, CancellationToken ct)
+        {
+            _logger.LogInformation("Retrieving episodes for movie ID: {MovieID}", movieID);
+            try
+            {
+                var episodes = await _episodeRepository.GetEpisodesByMovieIdAsync(movieID, ct);
+                _logger.LogInformation("Episodes for movie ID: {MovieID} retrieved successfully, count: {Count}", movieID, episodes.Count);
+                return ResponseConst.Success("Episodes retrieved successfully", episodes);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while retrieving episodes for movie ID: {MovieID}", movieID);
+                return ResponseConst.Error<List<Episode>>(500, "An error occurred while retrieving the episodes");
+            }
+        }
     }
 }

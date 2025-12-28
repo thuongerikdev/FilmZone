@@ -81,15 +81,18 @@ namespace FZ.Movie.Dtos.Request
 
 
 
-    public class UpdateMoviesRequest 
+    public class UpdateMoviesRequest
     {
         public string slug { get; set; }
         public string title { get; set; }
-        public IFormFile image { get; set; }
+
+        // SỬA: Thêm ? để cho phép null (không bắt buộc upload ảnh mới)
+        public IFormFile? image { get; set; }
+
         public string? originalTitle { get; set; }
         public string? description { get; set; }
-        public string movieType { get; set; }     // movie | series
-        public string status { get; set; }        // ongoing | completed | coming_soon
+        public string movieType { get; set; }
+        public string status { get; set; }
         public DateTime? releaseDate { get; set; }
         public int? durationSeconds { get; set; }
         public int? totalSeasons { get; set; }
@@ -104,8 +107,9 @@ namespace FZ.Movie.Dtos.Request
         public List<CreateMoviePerson>? person { get; set; }
 
         public int movieID { get; set; }
-        public List<UpdateMovieImage> MovieImage { get; set; }
 
+        // SỬA: Thêm ? để cho phép null (không bắt buộc có ảnh phụ)
+        public List<UpdateMovieImage>? MovieImage { get; set; }
     }
 
     public class CreateEpisodeRequest

@@ -28,6 +28,7 @@ namespace FZ.Movie.Infrastructure.Repository.People
         Task<MoviePerson> GetByMovieIDAndPersonID(int movieID, int personID, CancellationToken ct);
 
         Task<List<MoviePerson>> GetMoviePersonByMovieID(int movieID, CancellationToken ct);
+        void Remove(MoviePerson entity);
 
 
 
@@ -40,6 +41,10 @@ namespace FZ.Movie.Infrastructure.Repository.People
         {
             ArgumentNullException.ThrowIfNull(moviePerson);
             return _context.MoviePersons.AddAsync(moviePerson, ct).AsTask();
+        }
+        public void Remove(MoviePerson entity)
+        {
+            _context.MoviePersons.Remove(entity);
         }
         public Task<Domain.People.MoviePerson?> GetByIdAsync(int moviePersonID, CancellationToken ct)
             => _context.MoviePersons.AsNoTracking()

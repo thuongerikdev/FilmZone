@@ -116,7 +116,28 @@ namespace FZ.WebAPI.Controllers.Movie
                 return StatusCode(500, new { message = "An error occurred while processing your request.", details = ex.Message });
             }
         }
+        [HttpGet("getbyMovie/{movieId}")]
+        public async Task<IActionResult> GetEpisodesByMovieId(int movieId, CancellationToken ct)
+        {
+            if (movieId <= 0)
+            {
+                return BadRequest("Invalid movie ID.");
+            }
+            try
+            {
+                var result = await _episodeService.GetEpisodeByMovieID(movieId, ct);
+                if (result.ErrorCode != 200)
+                {
+                    BadRequest(ResponseConst.Error<string>(500, result.ErrorMessage));
+                }
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while processing your request.", details = ex.Message });
+            }
 
 
+        }
     }
 }

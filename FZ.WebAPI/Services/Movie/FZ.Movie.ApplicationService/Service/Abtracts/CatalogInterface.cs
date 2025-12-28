@@ -29,6 +29,7 @@ namespace FZ.Movie.ApplicationService.Service.Abtracts
         Task<ResponseDto<bool>> DeleteEpisode (int episodeID, CancellationToken ct);
         Task<ResponseDto<Episode>> GetEpisodeByID (int episodeID, CancellationToken ct);
         Task<ResponseDto<List<Episode>>> GetAllEpisode (CancellationToken ct);
+        Task<ResponseDto<List<Episode>>> GetEpisodeByMovieID(int movieID, CancellationToken ct);
     }
 
 
