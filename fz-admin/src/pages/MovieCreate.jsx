@@ -19,12 +19,14 @@ import {
   TableHead,
   TableRow,
   Paper,
+  Stack,
 } from "@mui/material";
 import { tokens } from "../theme";
 import Header from "../components/Header";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import CloseIcon from "@mui/icons-material/Close";
 import { createMovie } from "../services/api";
 
 const MovieCreate = () => {
@@ -35,7 +37,8 @@ const MovieCreate = () => {
   // Form states
   const [slug, setSlug] = useState("");
   const [title, setTitle] = useState("");
-  const [image, setImage] = useState(null); // poster
+  const [image, setImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState("");
   const [originalTitle, setOriginalTitle] = useState("");
   const [description, setDescription] = useState("");
   const [movieType, setMovieType] = useState("movie");
@@ -53,6 +56,7 @@ const MovieCreate = () => {
     { personID: "", role: "cast", characterName: "", creditOrder: "" },
   ]);
   const [movieImages, setMovieImages] = useState([]);
+  const [movieImagesPreviews, setMovieImagesPreviews] = useState([]);
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -67,6 +71,41 @@ const MovieCreate = () => {
       .map((n) => Number(n))
       .filter((n) => !Number.isNaN(n));
   }, [tagIDsInput]);
+
+  const handlePosterChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleMovieImagesChange = (e) => {
+    const files = Array.from(e.target.files || []);
+    setMovieImages(files);
+    
+    // Create previews
+    const previews = [];
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        previews.push(reader.result);
+        if (previews.length === files.length) {
+          setMovieImagesPreviews([...previews]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeMovieImage = (index) => {
+    setMovieImages((prev) => prev.filter((_, i) => i !== index));
+    setMovieImagesPreviews((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const updatePerson = (index, key, value) => {
     setPeople((prev) =>
@@ -209,44 +248,40 @@ const MovieCreate = () => {
             <Typography variant="h5" color={colors.grey[100]} fontWeight="600" mb={3}>
               Thông tin cơ bản
             </Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  variant="filled"
-                  label="Slug"
-                  value={slug}
-                  onChange={(e) => setSlug(e.target.value)}
-                  required
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  variant="filled"
-                  label="Tên phim"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  required
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  variant="filled"
-                  label="Tên gốc"
-                  value={originalTitle}
-                  onChange={(e) => setOriginalTitle(e.target.value)}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
+            <Stack spacing={2}>
+              <TextField
+                fullWidth
+                variant="filled"
+                label="Slug"
+                value={slug}
+                onChange={(e) => setSlug(e.target.value)}
+                required
+              />
+              <TextField
+                fullWidth
+                variant="filled"
+                label="Tên phim"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
+              />
+              <TextField
+                fullWidth
+                variant="filled"
+                label="Tên gốc"
+                value={originalTitle}
+                onChange={(e) => setOriginalTitle(e.target.value)}
+              />
+              
+              {/* Poster Image */}
+              <Box>
                 <Typography variant="body2" color={colors.grey[300]} mb={1}>
                   Poster Image *
                 </Typography>
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={(e) => setImage(e.target.files?.[0] || null)}
+                  onChange={handlePosterChange}
                   style={{
                     width: "100%",
                     padding: "10px",
@@ -257,19 +292,32 @@ const MovieCreate = () => {
                   }}
                   required
                 />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  variant="filled"
-                  label="Mô tả"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  multiline
-                  rows={4}
-                />
-              </Grid>
-            </Grid>
+                {imagePreview && (
+                  <Box mt={2} display="flex" justifyContent="center">
+                    <img
+                      src={imagePreview}
+                      alt="Poster preview"
+                      style={{
+                        maxWidth: "200px",
+                        maxHeight: "300px",
+                        borderRadius: "8px",
+                        border: `2px solid ${colors.grey[700]}`,
+                      }}
+                    />
+                  </Box>
+                )}
+              </Box>
+
+              <TextField
+                fullWidth
+                variant="filled"
+                label="Mô tả"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                multiline
+                rows={4}
+              />
+            </Stack>
           </CardContent>
         </Card>
 
@@ -279,126 +327,112 @@ const MovieCreate = () => {
             <Typography variant="h5" color={colors.grey[100]} fontWeight="600" mb={3}>
               Thông tin phim
             </Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  variant="filled"
-                  select
-                  label="Loại phim"
-                  value={movieType}
-                  onChange={(e) => setMovieType(e.target.value)}
-                >
-                  <MenuItem value="movie">Phim lẻ</MenuItem>
-                  <MenuItem value="series">Phim bộ</MenuItem>
-                </TextField>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  variant="filled"
-                  select
-                  label="Trạng thái"
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                >
-                  <MenuItem value="ongoing">Đang chiếu</MenuItem>
-                  <MenuItem value="completed">Hoàn thành</MenuItem>
-                  <MenuItem value="coming_soon">Sắp ra mắt</MenuItem>
-                </TextField>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  variant="filled"
-                  type="date"
-                  label="Ngày phát hành"
-                  value={releaseDate}
-                  onChange={(e) => setReleaseDate(e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
+            <Stack spacing={2}>
+              <TextField
+                fullWidth
+                variant="filled"
+                select
+                label="Loại phim"
+                value={movieType}
+                onChange={(e) => setMovieType(e.target.value)}
+              >
+                <MenuItem value="movie">Phim lẻ</MenuItem>
+                <MenuItem value="series">Phim bộ</MenuItem>
+              </TextField>
+
+              <TextField
+                fullWidth
+                variant="filled"
+                select
+                label="Trạng thái"
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+              >
+                <MenuItem value="ongoing">Đang chiếu</MenuItem>
+                <MenuItem value="completed">Hoàn thành</MenuItem>
+                <MenuItem value="coming_soon">Sắp ra mắt</MenuItem>
+              </TextField>
+
+              <TextField
+                fullWidth
+                variant="filled"
+                type="date"
+                label="Ngày phát hành"
+                value={releaseDate}
+                onChange={(e) => setReleaseDate(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+              />
 
               {movieType === "movie" && (
-                <Grid item xs={12} md={4}>
-                  <TextField
-                    fullWidth
-                    variant="filled"
-                    type="number"
-                    label="Thời lượng (giây)"
-                    value={durationSeconds}
-                    onChange={(e) => setDurationSeconds(e.target.value)}
-                  />
-                </Grid>
+                <TextField
+                  fullWidth
+                  variant="filled"
+                  type="number"
+                  label="Thời lượng (giây)"
+                  value={durationSeconds}
+                  onChange={(e) => setDurationSeconds(e.target.value)}
+                />
               )}
 
               {movieType === "series" && (
                 <>
-                  <Grid item xs={12} md={4}>
-                    <TextField
-                      fullWidth
-                      variant="filled"
-                      type="number"
-                      label="Số mùa"
-                      value={totalSeasons}
-                      onChange={(e) => setTotalSeasons(e.target.value)}
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={4}>
-                    <TextField
-                      fullWidth
-                      variant="filled"
-                      type="number"
-                      label="Số tập"
-                      value={totalEpisodes}
-                      onChange={(e) => setTotalEpisodes(e.target.value)}
-                    />
-                  </Grid>
+                  <TextField
+                    fullWidth
+                    variant="filled"
+                    type="number"
+                    label="Số mùa"
+                    value={totalSeasons}
+                    onChange={(e) => setTotalSeasons(e.target.value)}
+                  />
+                  <TextField
+                    fullWidth
+                    variant="filled"
+                    type="number"
+                    label="Số tập"
+                    value={totalEpisodes}
+                    onChange={(e) => setTotalEpisodes(e.target.value)}
+                  />
                 </>
               )}
 
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  variant="filled"
-                  type="number"
-                  label="Năm"
-                  value={year}
-                  onChange={(e) => setYear(e.target.value)}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  variant="filled"
-                  label="Rated"
-                  value={rated}
-                  onChange={(e) => setRated(e.target.value)}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  variant="filled"
-                  type="number"
-                  label="Region ID *"
-                  value={regionID}
-                  onChange={(e) => setRegionID(e.target.value)}
-                  required
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  variant="filled"
-                  type="number"
-                  label="Độ phổ biến"
-                  value={popularity}
-                  onChange={(e) => setPopularity(e.target.value)}
-                  inputProps={{ step: "0.1" }}
-                />
-              </Grid>
-              <Grid item xs={12}>
+              <TextField
+                fullWidth
+                variant="filled"
+                type="number"
+                label="Năm"
+                value={year}
+                onChange={(e) => setYear(e.target.value)}
+              />
+
+              <TextField
+                fullWidth
+                variant="filled"
+                label="Rated"
+                value={rated}
+                onChange={(e) => setRated(e.target.value)}
+              />
+
+              <TextField
+                fullWidth
+                variant="filled"
+                type="number"
+                label="Region ID *"
+                value={regionID}
+                onChange={(e) => setRegionID(e.target.value)}
+                required
+              />
+
+              <TextField
+                fullWidth
+                variant="filled"
+                type="number"
+                label="Độ phổ biến"
+                value={popularity}
+                onChange={(e) => setPopularity(e.target.value)}
+                inputProps={{ step: "0.1" }}
+              />
+
+              <Box>
                 <TextField
                   fullWidth
                   variant="filled"
@@ -408,12 +442,12 @@ const MovieCreate = () => {
                   placeholder="VD: 1,2,3"
                 />
                 {parsedTagIDs.length > 0 && (
-                  <Typography variant="caption" color={colors.grey[400]} mt={1}>
+                  <Typography variant="caption" color={colors.grey[400]} mt={1} display="block">
                     Parsed: [{parsedTagIDs.join(", ")}]
                   </Typography>
                 )}
-              </Grid>
-            </Grid>
+              </Box>
+            </Stack>
           </CardContent>
         </Card>
 
@@ -534,7 +568,7 @@ const MovieCreate = () => {
               type="file"
               accept="image/*"
               multiple
-              onChange={(e) => setMovieImages(Array.from(e.target.files || []))}
+              onChange={handleMovieImagesChange}
               style={{
                 width: "100%",
                 padding: "10px",
@@ -546,9 +580,58 @@ const MovieCreate = () => {
               required
             />
             {movieImages.length > 0 && (
-              <Typography variant="caption" color={colors.grey[400]} mt={1}>
+              <Typography variant="caption" color={colors.grey[400]} mt={1} display="block">
                 Đã chọn: {movieImages.length} file(s)
               </Typography>
+            )}
+            
+            {/* Image Previews */}
+            {movieImagesPreviews.length > 0 && (
+              <Box mt={3}>
+                <Typography variant="body2" color={colors.grey[300]} mb={2}>
+                  Xem trước ảnh:
+                </Typography>
+                <Grid container spacing={2}>
+                  {movieImagesPreviews.map((preview, index) => (
+                    <Grid item xs={12} sm={6} md={4} key={index}>
+                      <Box
+                        position="relative"
+                        sx={{
+                          border: `2px solid ${colors.grey[700]}`,
+                          borderRadius: "8px",
+                          overflow: "hidden",
+                        }}
+                      >
+                        <img
+                          src={preview}
+                          alt={`Preview ${index + 1}`}
+                          style={{
+                            width: "100%",
+                            height: "200px",
+                            objectFit: "cover",
+                          }}
+                        />
+                        <IconButton
+                          onClick={() => removeMovieImage(index)}
+                          sx={{
+                            position: "absolute",
+                            top: 5,
+                            right: 5,
+                            backgroundColor: "rgba(0,0,0,0.6)",
+                            color: colors.redAccent[500],
+                            "&:hover": {
+                              backgroundColor: "rgba(0,0,0,0.8)",
+                            },
+                          }}
+                          size="small"
+                        >
+                          <CloseIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
             )}
           </CardContent>
         </Card>

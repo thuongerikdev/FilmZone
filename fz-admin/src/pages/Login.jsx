@@ -116,7 +116,7 @@ const Login = () => {
           textAlign="center"
           mb={4}
         >
-          Chào mừng trở lại FilmZone
+          Chào mừng trở lại! Vui lòng nhập thông tin của bạn.
         </Typography>
 
         {error && (
@@ -182,7 +182,7 @@ const Login = () => {
             {loading ? "Đang đăng nhập..." : "Đăng Nhập"}
           </Button>
 
-          <Button
+          {/* <Button
             fullWidth
             variant="outlined"
             startIcon={<Google />}
@@ -199,9 +199,9 @@ const Login = () => {
             }}
           >
             Đăng nhập bằng Google
-          </Button>
+          </Button> */}
 
-          <Box display="flex" justifyContent="center" mt={2}>
+          {/* <Box display="flex" justifyContent="center" mt={2}>
             <Typography variant="body1" color={colors.grey[300]}>
               Chưa có tài khoản?{" "}
               <Typography
@@ -219,7 +219,7 @@ const Login = () => {
                 Đăng ký ngay
               </Typography>
             </Typography>
-          </Box>
+          </Box> */}
         </Box>
       </Box>
     </Box>

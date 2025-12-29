@@ -1,27 +1,154 @@
 import { Box, Button, IconButton, Typography, useTheme } from "@mui/material";
 import { tokens } from "../../theme";
-import { mockTransactions } from "../../data/mockData";
+import { useState, useEffect } from "react";
 import DownloadOutlinedIcon from "@mui/icons-material/DownloadOutlined";
-import EmailIcon from "@mui/icons-material/Email";
-import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
+import MovieIcon from "@mui/icons-material/Movie";
+import PlayCircleOutlineIcon from "@mui/icons-material/PlayCircleOutline";
 import PersonAddIcon from "@mui/icons-material/PersonAdd";
-import TrafficIcon from "@mui/icons-material/Traffic";
+import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import Header from "../../components/Header";
-import LineChart from "../../components/LineChart";
-import GeographyChart from "../../components/GeographyChart";
+import RevenueLineChart from "../../components/RevenueLineChart";
 import BarChart from "../../components/BarChart";
 import StatBox from "../../components/StatBox";
 import ProgressCircle from "../../components/ProgressCircle";
+import { getAllMovies, getAllPersons, getAllPlans, getAllUsers } from "../../services/api";
+import axios from "axios";
 
 const Dashboard = () => {
   const theme = useTheme();
   const colors = tokens(theme.palette.mode);
 
+  const [stats, setStats] = useState({
+    totalMovies: 0,
+    totalPersons: 0,
+    totalOrders: 0,
+    totalRevenue: 0,
+    movieGrowth: "+0%",
+    personGrowth: "+0%",
+    orderGrowth: "+0%",
+    revenueGrowth: "+0%",
+  });
+
+  const [recentOrders, setRecentOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [userStats, setUserStats] = useState({
+    totalUsers: 0,
+    vipUsers: 0,
+    regularUsers: 0,
+    vipPercentage: 0,
+  });
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      // Fetch movies
+      const moviesResponse = await getAllMovies();
+      const totalMovies = moviesResponse.data.errorCode === 200 
+        ? moviesResponse.data.data.length 
+        : 0;
+
+      // Fetch persons
+      const personsResponse = await getAllPersons();
+      const totalPersons = personsResponse.data.errorCode === 200 
+        ? personsResponse.data.data.length 
+        : 0;
+
+      // Fetch users for customer statistics
+      const usersResponse = await getAllUsers();
+      let totalUsers = 0;
+      let vipUsers = 0;
+      let regularUsers = 0;
+      let vipPercentage = 0;
+
+      if (usersResponse.data.errorCode === 200) {
+        const users = usersResponse.data.data;
+        totalUsers = users.length;
+        
+        // Count VIP users
+        vipUsers = users.filter(user => 
+          user.roles && user.roles.some(role => role.toLowerCase().includes('vip'))
+        ).length;
+        
+        regularUsers = totalUsers - vipUsers;
+        vipPercentage = totalUsers > 0 ? (vipUsers / totalUsers) : 0;
+      }
+
+      setUserStats({
+        totalUsers,
+        vipUsers,
+        regularUsers,
+        vipPercentage,
+      });
+
+      // Fetch orders
+      const ordersResponse = await axios.get(
+        'https://filmzone-api.koyeb.app/api/payment/order/all',
+        {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      );
+
+      let totalOrders = 0;
+      let totalRevenue = 0;
+      let recentOrdersList = [];
+
+      if (ordersResponse.data.errorCode === 200) {
+        const orders = ordersResponse.data.data;
+        totalOrders = orders.length;
+        
+        // Calculate total revenue from paid orders
+        totalRevenue = orders
+          .filter(order => order.status === 'paid')
+          .reduce((sum, order) => sum + order.amount, 0);
+
+        // Get 5 most recent orders
+        recentOrdersList = orders
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          .slice(0, 5)
+          .map(order => ({
+            txId: `#${order.orderID}`,
+            user: `User ${order.userID}`,
+            date: new Date(order.createdAt).toLocaleDateString('vi-VN'),
+            cost: new Intl.NumberFormat('vi-VN').format(order.amount),
+          }));
+      }
+
+      setStats({
+        totalMovies,
+        totalPersons,
+        totalOrders,
+        totalRevenue,
+        movieGrowth: "+12%",
+        personGrowth: "+8%",
+        orderGrowth: "+23%",
+        revenueGrowth: "+31%",
+      });
+
+      setRecentOrders(recentOrdersList);
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND',
+    }).format(amount);
+  };
+
   return (
     <Box m="20px">
       {/* HEADER */}
       <Box display="flex" justifyContent="space-between" alignItems="center">
-        <Header title="BẢNG ĐIỀU KHIỂN" subtitle="Chào mừng đến với bảng điều khiển của bạn" />
+        <Header title="BẢNG ĐIỀU KHIỂN" subtitle="Chào mừng đến với hệ thống quản lý phim trực tuyến" />
 
         <Box>
           <Button
@@ -46,7 +173,7 @@ const Dashboard = () => {
         gridAutoRows="140px"
         gap="20px"
       >
-        {/* ROW 1 */}
+        {/* ROW 1 - Statistics */}
         <Box
           gridColumn="span 3"
           backgroundColor={colors.primary[400]}
@@ -55,12 +182,12 @@ const Dashboard = () => {
           justifyContent="center"
         >
           <StatBox
-            title="12,361"
-            subtitle="Email đã gửi"
-            progress="0.75"
-            increase="+14%"
+            title={stats.totalMovies.toLocaleString()}
+            subtitle="Tổng số phim"
+            progress="0.85"
+            increase={stats.movieGrowth}
             icon={
-              <EmailIcon
+              <MovieIcon
                 sx={{ color: colors.greenAccent[600], fontSize: "26px" }}
               />
             }
@@ -74,29 +201,10 @@ const Dashboard = () => {
           justifyContent="center"
         >
           <StatBox
-            title="431,225"
-            subtitle="Doanh số đạt được"
-            progress="0.50"
-            increase="+21%"
-            icon={
-              <PointOfSaleIcon
-                sx={{ color: colors.greenAccent[600], fontSize: "26px" }}
-              />
-            }
-          />
-        </Box>
-        <Box
-          gridColumn="span 3"
-          backgroundColor={colors.primary[400]}
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-        >
-          <StatBox
-            title="32,441"
-            subtitle="Khách hàng mới"
-            progress="0.30"
-            increase="+5%"
+            title={stats.totalPersons.toLocaleString()}
+            subtitle="Diễn viên & Đạo diễn"
+            progress="0.72"
+            increase={stats.personGrowth}
             icon={
               <PersonAddIcon
                 sx={{ color: colors.greenAccent[600], fontSize: "26px" }}
@@ -112,12 +220,31 @@ const Dashboard = () => {
           justifyContent="center"
         >
           <StatBox
-            title="1,325,134"
-            subtitle="Lưu lượng truy cập nhận được"
-            progress="0.80"
-            increase="+43%"
+            title={stats.totalOrders.toLocaleString()}
+            subtitle="Tổng lượt mua"
+            progress="0.55"
+            increase={stats.orderGrowth}
             icon={
-              <TrafficIcon
+              <PlayCircleOutlineIcon
+                sx={{ color: colors.greenAccent[600], fontSize: "26px" }}
+              />
+            }
+          />
+        </Box>
+        <Box
+          gridColumn="span 3"
+          backgroundColor={colors.primary[400]}
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+        >
+          <StatBox
+            title={formatCurrency(stats.totalRevenue)}
+            subtitle="Tổng doanh thu"
+            progress="0.88"
+            increase={stats.revenueGrowth}
+            icon={
+              <AttachMoneyIcon
                 sx={{ color: colors.greenAccent[600], fontSize: "26px" }}
               />
             }
@@ -143,14 +270,14 @@ const Dashboard = () => {
                 fontWeight="600"
                 color={colors.grey[100]}
               >
-                Doanh thu tạo ra
+                Doanh thu theo thời gian
               </Typography>
               <Typography
                 variant="h3"
                 fontWeight="bold"
                 color={colors.greenAccent[500]}
               >
-                $59,342.32
+                {formatCurrency(stats.totalRevenue)}
               </Typography>
             </Box>
             <Box>
@@ -162,7 +289,7 @@ const Dashboard = () => {
             </Box>
           </Box>
           <Box height="250px" m="-20px 0 0 0">
-            <LineChart isDashboard={true} />
+            <RevenueLineChart isDashboard={true} />
           </Box>
         </Box>
         <Box
@@ -180,51 +307,61 @@ const Dashboard = () => {
             p="15px"
           >
             <Typography color={colors.grey[100]} variant="h5" fontWeight="600">
-              Giao dịch gần đây
+              Đơn hàng gần đây
             </Typography>
           </Box>
-          {mockTransactions.map((transaction, i) => (
-            <Box
-              key={`${transaction.txId}-${i}`}
-              display="flex"
-              justifyContent="space-between"
-              alignItems="center"
-              borderBottom={`4px solid ${colors.primary[500]}`}
-              p="15px"
-            >
-              <Box>
-                <Typography
-                  color={colors.greenAccent[500]}
-                  variant="h5"
-                  fontWeight="600"
-                >
-                  {transaction.txId}
-                </Typography>
-                <Typography color={colors.grey[100]}>
-                  {transaction.user}
-                </Typography>
-              </Box>
-              <Box color={colors.grey[100]}>{transaction.date}</Box>
-              <Box
-                backgroundColor={colors.greenAccent[500]}
-                p="5px 10px"
-                borderRadius="4px"
-              >
-                ${transaction.cost}
-              </Box>
+          {loading ? (
+            <Box p="15px" textAlign="center">
+              <Typography color={colors.grey[100]}>Đang tải...</Typography>
             </Box>
-          ))}
+          ) : recentOrders.length === 0 ? (
+            <Box p="15px" textAlign="center">
+              <Typography color={colors.grey[100]}>Chưa có đơn hàng</Typography>
+            </Box>
+          ) : (
+            recentOrders.map((order, i) => (
+              <Box
+                key={`${order.txId}-${i}`}
+                display="flex"
+                justifyContent="space-between"
+                alignItems="center"
+                borderBottom={`4px solid ${colors.primary[500]}`}
+                p="15px"
+              >
+                <Box>
+                  <Typography
+                    color={colors.greenAccent[500]}
+                    variant="h5"
+                    fontWeight="600"
+                  >
+                    {order.txId}
+                  </Typography>
+                  <Typography color={colors.grey[100]}>
+                    {order.user}
+                  </Typography>
+                </Box>
+                <Box color={colors.grey[100]}>{order.date}</Box>
+                <Box
+                  backgroundColor={colors.greenAccent[500]}
+                  p="5px 10px"
+                  borderRadius="4px"
+                >
+                  {order.cost}₫
+                </Box>
+              </Box>
+            ))
+          )}
         </Box>
 
         {/* ROW 3 */}
         <Box
-          gridColumn="span 4"
+          gridColumn="span 6"
           gridRow="span 2"
           backgroundColor={colors.primary[400]}
           p="30px"
         >
-          <Typography variant="h5" fontWeight="600">
-            Chiến dịch
+          <Typography variant="h5" fontWeight="600" mb={2}>
+            Phân loại khách hàng
           </Typography>
           <Box
             display="flex"
@@ -232,19 +369,36 @@ const Dashboard = () => {
             alignItems="center"
             mt="25px"
           >
-            <ProgressCircle size="125" />
+            <ProgressCircle size="125" progress={userStats.vipPercentage.toFixed(2)} />
             <Typography
               variant="h5"
               color={colors.greenAccent[500]}
               sx={{ mt: "15px" }}
             >
-              $48,352 doanh thu tạo ra
+              {(userStats.vipPercentage * 100).toFixed(1)}% khách hàng VIP
             </Typography>
-            <Typography>Bao gồm chi phí và khoản chi tiêu linh tinh bổ sung</Typography>
+            <Box display="flex" gap={3} mt={3}>
+              <Box textAlign="center">
+                <Typography variant="h4" color={colors.greenAccent[500]} fontWeight="600">
+                  {userStats.vipUsers.toLocaleString()}
+                </Typography>
+                <Typography variant="body2" color={colors.grey[400]}>
+                  Khách VIP
+                </Typography>
+              </Box>
+              <Box textAlign="center">
+                <Typography variant="h4" color={colors.blueAccent[500]} fontWeight="600">
+                  {userStats.regularUsers.toLocaleString()}
+                </Typography>
+                <Typography variant="body2" color={colors.grey[400]}>
+                  Khách thường
+                </Typography>
+              </Box>
+            </Box>
           </Box>
         </Box>
-        <Box
-          gridColumn="span 4"
+        {/* <Box
+          gridColumn="span 6"
           gridRow="span 2"
           backgroundColor={colors.primary[400]}
         >
@@ -253,29 +407,12 @@ const Dashboard = () => {
             fontWeight="600"
             sx={{ padding: "30px 30px 0 30px" }}
           >
-            Số lượng bán hàng
+            Lượt xem theo thể loại
           </Typography>
           <Box height="250px" mt="-20px">
             <BarChart isDashboard={true} />
           </Box>
-        </Box>
-        <Box
-          gridColumn="span 4"
-          gridRow="span 2"
-          backgroundColor={colors.primary[400]}
-          padding="30px"
-        >
-          <Typography
-            variant="h5"
-            fontWeight="600"
-            sx={{ marginBottom: "15px" }}
-          >
-            Lưu lượng truy cập dựa trên địa lý
-          </Typography>
-          <Box height="200px">
-            <GeographyChart isDashboard={true} />
-          </Box>
-        </Box>
+        </Box> */}
       </Box>
     </Box>
   );
