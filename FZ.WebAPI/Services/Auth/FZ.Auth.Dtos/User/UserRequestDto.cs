@@ -9,6 +9,16 @@ using System.Threading.Tasks;
 
 namespace FZ.Auth.Dtos.User
 {
+
+    public class SimpleCreateUserRequest
+    {
+        public string userName { get; set; } = default!;
+        public string email { get; set; } = default!;
+        public string password { get; set; } = default!;
+        public bool autoVerifyEmail { get; set; } = true; // Mặc định là True để user dùng được ngay
+        public string scope { get; set; } = "staff"; // phạm vi của user
+    }
+
     public class RegisterRequest
     {
         public string userName { get; set; }

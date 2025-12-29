@@ -25,6 +25,7 @@ namespace FZ.Auth.Dtos.User
         public string? mfaTicket { get; set; }
         public bool? requiresMfa { get; set; }
         public string deviceId { get; set; }
+        public List<string> permissions { get; set; }
         public DateTime tokenExpiration { get; set; }
         public DateTime refreshTokenExpiration { get; set; }
     }

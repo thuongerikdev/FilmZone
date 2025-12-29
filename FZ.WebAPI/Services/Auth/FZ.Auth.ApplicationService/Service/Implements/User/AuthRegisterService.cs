@@ -88,7 +88,8 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.User
                 status = "Active",
                 tokenVersion = 1,
                 createdAt = DateTime.UtcNow,
-                updatedAt = DateTime.UtcNow
+                updatedAt = DateTime.UtcNow,
+                scope = "user"
             };
 
             await _users.AddAsync(user, ct);
@@ -195,7 +196,78 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.User
             }, IsolationLevel.ReadCommitted, ct);
         }
 
-       
-       
+        public Task<ResponseDto<RegisterResponse>> CreateSimpleUserAsync(SimpleCreateUserRequest req, CancellationToken ct)
+        {
+            return _uow.ExecuteInTransactionAsync(async _ =>
+            {
+                // 1. Validate
+                if (string.IsNullOrWhiteSpace(req.userName) ||
+                    string.IsNullOrWhiteSpace(req.email) ||
+                    string.IsNullOrWhiteSpace(req.password))
+                {
+                    return ResponseConst.Error<RegisterResponse>(400, "Thiếu thông tin đăng nhập (username, email, password)");
+                }
+
+                var userName = req.userName.Trim();
+                var email = req.email.Trim().ToLowerInvariant();
+
+                // 2. Check trùng
+                if (await _users.ExistsByUserNameAsync(userName, ct))
+                    return ResponseConst.Error<RegisterResponse>(409, "UserName đã tồn tại");
+                if (await _users.ExistsByEmailAsync(email, ct))
+                    return ResponseConst.Error<RegisterResponse>(409, "Email đã tồn tại");
+
+                // 3. Tạo User Entity (Không tạo Profile, Không tạo Email Token)
+                var user = new AuthUser
+                {
+                    userName = userName,
+                    email = email,
+                    passwordHash = _hasher.Hash(req.password),
+                    // Nếu admin tạo thì thường cho active luôn, bỏ qua bước verify email
+                    isEmailVerified = req.autoVerifyEmail,
+                    status = "Active",
+                    tokenVersion = 1,
+                    createdAt = DateTime.UtcNow,
+                    updatedAt = DateTime.UtcNow,
+                    scope = req.scope
+                };
+
+                await _users.AddAsync(user, ct);
+                await _uow.SaveChangesAsync(ct); // Save để lấy ID
+
+                // 4. Gán Role mặc định (Bắt buộc phải có role để login được)
+                var defaultRole = await _roleRepository.GetDefaultRoleAsync(ct);
+                if (defaultRole != null)
+                {
+                    var userRole = new AuthUserRole
+                    {
+                        roleID = defaultRole.roleID,
+                        userID = user.userID,
+                        assignedAt = DateTime.UtcNow
+                    };
+                    await _userRoleRepository.AddUserRoleAsync(userRole, ct);
+                }
+                else
+                {
+                    // Tùy nghiệp vụ: Có thể return lỗi hoặc cho phép tạo user không role
+                    _logger.LogWarning("System has no default role configured.");
+                }
+
+                // 5. Commit
+                await _uow.SaveChangesAsync(ct);
+
+                return ResponseConst.Success("Tạo user thành công", new RegisterResponse
+                {
+                    userID = user.userID,
+                    userName = user.userName,
+                    email = user.email,
+                    isEmailVerified = user.isEmailVerified
+                });
+
+            }, ct: ct);
+        }
+
+
+
     }
 }

@@ -64,6 +64,15 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
             => _db.authUserRoles.Where(x => x.userID == userID && x.roleID == roleID).ExecuteDeleteAsync(ct);
         public Task<List<AuthUserRole>> GetUserRolesByUserIdAsync(int userId, CancellationToken ct)
             => _db.authUserRoles.Where(x => x.userID == userId).ToListAsync(ct);
+
+        public Task AddRangeUserRoleAsync(List<AuthUserRole> userRoles, CancellationToken ct)
+            => _db.authUserRoles.AddRangeAsync(userRoles, ct);
+
+        public Task RemoveRangeUserRoleAsync(List<AuthUserRole> userRoles, CancellationToken ct)
+        {
+            _db.authUserRoles.RemoveRange(userRoles);
+            return Task.CompletedTask;
+        }
     }
 
 

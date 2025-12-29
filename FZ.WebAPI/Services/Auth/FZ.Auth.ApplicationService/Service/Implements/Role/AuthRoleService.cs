@@ -27,6 +27,7 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.Role
             {
                 roleName = r.roleName,
                 roleDescription = r.roleDescription,
+                scope = r.scope,
                 isDefault = r.isDefault
             }).ToList();
             return ResponseConst.Success("Lấy danh sách thành công", rolesDto);
@@ -53,6 +54,7 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.Role
             existingRole.roleName = req.roleName;
             existingRole.roleDescription = req.roleDescription;
             existingRole.isDefault = req.isDefault;
+            existingRole.scope = req.scope;
             await _roleRepository.UpdateRoleAsync(existingRole, ct);
             await _uow.SaveChangesAsync(ct);
             var roleDto = new RoleResponse
@@ -119,7 +121,8 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.Role
                 roleName = addRole.roleName,
                 isDefault = addRole.isDefault,
                 roleDescription = addRole.roleDescription,
-                
+                scope = addRole.scope
+
 
             };
             await _roleRepository.AddRoleAsync(newRole, ct);
@@ -128,7 +131,8 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.Role
             {
                 roleName = newRole.roleName,
                 roleDescription = newRole.roleDescription,
-                isDefault = newRole.isDefault
+                isDefault = newRole.isDefault,
+                scope = newRole.scope
             };
             return ResponseConst.Success("Thêm vai trò thành công", roleDto);
         }

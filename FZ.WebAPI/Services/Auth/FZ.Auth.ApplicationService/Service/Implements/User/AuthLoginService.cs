@@ -79,7 +79,6 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.User
                     return ResponseConst.Error<LoginResponse>(400, "Thiếu thông tin đăng nhập");
 
                 var identifier = req.userName.Trim();
-                _logger.LogInformation("LoginAsync started for {Identifier}", identifier);
 
                 return await _uow.ExecuteInTransactionAsync<ResponseDto<LoginResponse>>(async innerCt =>
                 {
@@ -89,64 +88,24 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.User
                     var user = await _userRepository.FindByEmailAsync(identifier, innerCt)
                                ?? await _userRepository.FindByUserNameAsync(identifier, innerCt);
 
-                    if (user is null)
-                    {
-                        await _audit.LogAsync(new AuthAuditLog { action = "Login", result = "UserNotFound", detail = $"identifier={identifier}", ip = ip ?? "", userAgent = ua ?? "", createdAt = DateTime.UtcNow }, innerCt);
-                        return ResponseConst.Error<LoginResponse>(401, "Sai tài khoản hoặc mật khẩu");
-                    }
+                    if (user is null) return ResponseConst.Error<LoginResponse>(401, "Sai tài khoản hoặc mật khẩu");
+                    if (!string.Equals(user.status, "Active", StringComparison.OrdinalIgnoreCase)) return ResponseConst.Error<LoginResponse>(403, "Tài khoản bị khóa");
+                    if (!_hasher.Verify(req.password, user.passwordHash)) return ResponseConst.Error<LoginResponse>(401, "Sai tài khoản hoặc mật khẩu");
+                    if (!user.isEmailVerified) return ResponseConst.Error<LoginResponse>(409, "Email chưa xác thực");
 
-                    if (!string.Equals(user.status, "Active", StringComparison.OrdinalIgnoreCase))
-                    {
-                        await _audit.LogAsync(new AuthAuditLog { userID = user.userID, action = "Login", result = "Blocked_Inactive", detail = $"status={user.status}", ip = ip ?? "", userAgent = ua ?? "", createdAt = DateTime.UtcNow }, innerCt);
-                        return ResponseConst.Error<LoginResponse>(403, "Tài khoản đang bị khóa hoặc không hoạt động");
-                    }
-
-                    if (!_hasher.Verify(req.password, user.passwordHash))
-                    {
-                        await _audit.LogAsync(new AuthAuditLog { userID = user.userID, action = "Login", result = "BadPassword", detail = "Incorrect password", ip = ip ?? "", userAgent = ua ?? "", createdAt = DateTime.UtcNow }, innerCt);
-                        return ResponseConst.Error<LoginResponse>(401, "Sai tài khoản hoặc mật khẩu");
-                    }
-
-                    if (!user.isEmailVerified)
-                    {
-                        await _audit.LogAsync(new AuthAuditLog { userID = user.userID, action = "Login", result = "EmailNotVerified", detail = "Email not verified", ip = ip ?? "", userAgent = ua ?? "", createdAt = DateTime.UtcNow }, innerCt);
-                        return ResponseConst.Error<LoginResponse>(409, "Email chưa được xác thực");
-                    }
-
-                    // --- MFA bật: trả ticket, KHÔNG phát token ---
+                    // 1. Check MFA
                     var mfaEnabled = await _mfa.CheckEnabledMFAAsync(user.userID, innerCt);
                     if (mfaEnabled)
                     {
                         var ticket = Guid.NewGuid().ToString("N");
-                        // Lưu userId vào Redis với TTL ngắn (ví dụ 5 phút)
                         await _redis.StringSetAsync(MfaLoginKey(ticket), user.userID.ToString(), TimeSpan.FromMinutes(5));
-
-                        await _audit.LogAsync(new AuthAuditLog
-                        {
-                            userID = user.userID,
-                            action = "Login",
-                            result = "MFA_Ticket_Issued",
-                            detail = "MFA enabled — ticket issued",
-                            ip = ip ?? "",
-                            userAgent = ua ?? "",
-                            createdAt = DateTime.UtcNow
-                        }, innerCt);
-
-                        var payload = new LoginResponse
-                        {
-                            userID = user.userID,
-                            userName = user.userName,
-                            email = user.email,
-                            isEmailVerified = user.isEmailVerified,
-                            requiresMfa = true,
-                            mfaTicket = ticket
-                        };
-
-                        // 200 với requiresMfa=true để FE chuyển sang màn hình nhập code
-                        return ResponseConst.Success("MFA required", payload);
+                        return ResponseConst.Success("MFA required", new LoginResponse { requiresMfa = true, mfaTicket = ticket });
                     }
 
-                    // --- Không bật MFA: đăng nhập như cũ ---
+                    // 2. Login thành công -> Lấy Permissions
+                    var permissions = await _userRepository.GetPermissionsByUserIdAsync(user.userID, innerCt);
+
+                    // 3. Tạo Session
                     var deviceId = _deviceId.GetOrCreate();
                     var session = new AuthUserSession
                     {
@@ -161,43 +120,40 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.User
                     await _sessions.AddSessionAsync(session, innerCt);
                     await _uow.SaveChangesAsync(innerCt);
 
+                    // 4. Phát Token (Truyền permission vào để nhúng vô Token)
                     var pair = await _tokenGenerate.IssuePairAsync(
                         user: user,
                         sessionId: session.sessionID,
                         createdByIp: ip,
                         accessTtl: TimeSpan.FromMinutes(30),
-                        refreshTtl: TimeSpan.FromDays(7)
+                        refreshTtl: TimeSpan.FromDays(7),
+                        permissions: permissions // <--- QUAN TRỌNG
                     );
 
-                    await _audit.LogAsync(new AuthAuditLog { userID = user.userID, action = "Login", result = "OK", detail = $"sessionID={session.sessionID}", ip = ip ?? "", userAgent = ua ?? "", createdAt = DateTime.UtcNow }, innerCt);
+                    await _audit.LogAsync(new AuthAuditLog { userID = user.userID, action = "Login", result = "OK", detail = $"sessionID={session.sessionID}", ip = ip ?? "", createdAt = DateTime.UtcNow }, innerCt);
 
                     var res = new LoginResponse
                     {
                         userID = user.userID,
                         userName = user.userName,
                         email = user.email,
-                        isEmailVerified = user.isEmailVerified,
                         token = pair.accessToken,
                         tokenExpiration = DateTime.UtcNow.AddMinutes(30),
                         refreshToken = pair.refreshToken.Token,
                         refreshTokenExpiration = pair.refreshToken.Expires,
                         sessionId = session.sessionID,
-                        deviceId = deviceId
+                        deviceId = deviceId,
+                        permissions = permissions // Trả về để Mobile/Web dùng ngay
                     };
 
                     return ResponseConst.Success("Đăng nhập thành công", res);
 
                 }, System.Data.IsolationLevel.ReadCommitted, ct);
             }
-            catch (OperationCanceledException)
-            {
-                _logger.LogWarning("LoginAsync cancelled");
-                return ResponseConst.Error<LoginResponse>(499, "Yêu cầu đã bị hủy");
-            }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in LoginAsync for {User}", req?.userName);
-                return ResponseConst.Error<LoginResponse>(500, "Có lỗi xảy ra. Vui lòng thử lại sau");
+                _logger.LogError(ex, "LoginAsync error");
+                return ResponseConst.Error<LoginResponse>(500, "Lỗi hệ thống");
             }
         }
 
@@ -234,6 +190,7 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.User
                         await _audit.LogAsync(new AuthAuditLog { userID = user.userID, action = "LoginMFA", result = "BadCode", detail = "Wrong TOTP", ip = _tokenGenerate.GetClientIp() ?? "", userAgent = _tokenGenerate.GetUserAgent() ?? "", createdAt = DateTime.UtcNow }, innerCt);
                         return ResponseConst.Error<LoginResponse>(401, "Mã MFA không đúng");
                     }
+                    var permissions = await _userRepository.GetPermissionsByUserIdAsync(user.userID, innerCt);
 
                     // Tạo session + phát token (như login thường)
                     var ip = _tokenGenerate.GetClientIp();
@@ -258,7 +215,8 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.User
                         sessionId: session.sessionID,
                         createdByIp: ip,
                         accessTtl: TimeSpan.FromMinutes(30),
-                        refreshTtl: TimeSpan.FromDays(7)
+                        refreshTtl: TimeSpan.FromDays(7),
+                        permissions: permissions
                     );
 
                     await _audit.LogAsync(new AuthAuditLog { userID = user.userID, action = "LoginMFA", result = "OK", detail = $"sessionID={session.sessionID}", ip = ip ?? "", userAgent = ua ?? "", createdAt = DateTime.UtcNow }, innerCt);
@@ -277,7 +235,8 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.User
                         refreshToken = pair.refreshToken.Token,
                         refreshTokenExpiration = pair.refreshToken.Expires,
                         sessionId = session.sessionID,
-                        deviceId = deviceId
+                        deviceId = deviceId,
+                        permissions = permissions
                     };
 
                     return ResponseConst.Success("Đăng nhập MFA thành công", res);
@@ -387,6 +346,7 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.User
                                 isEmailVerified = true,
                                 status = "Active",
                                 tokenVersion = 1,
+                                scope = "user",
                                 createdAt = DateTime.UtcNow,
                                 updatedAt = DateTime.UtcNow
                             };
@@ -447,6 +407,7 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.User
                         };
                         return ResponseConst.Success("MFA required", payload);
                     }
+                    var permissions = await _userRepository.GetPermissionsByUserIdAsync(user.userID, innerCt);
 
                     // 3) Chưa bật MFA ⇒ tạo session + phát token như thường
                     var deviceId = _deviceId.GetOrCreate();
@@ -468,7 +429,8 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.User
                         sessionId: session.sessionID,
                         createdByIp: ip,
                         accessTtl: TimeSpan.FromMinutes(30),
-                        refreshTtl: TimeSpan.FromDays(7)
+                        refreshTtl: TimeSpan.FromDays(7),
+                        permissions: permissions
                     );
 
                     await _audit.LogAsync(new AuthAuditLog
@@ -493,7 +455,8 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.User
                         refreshToken = pair.refreshToken.Token,
                         refreshTokenExpiration = pair.refreshToken.Expires,
                         sessionId = session.sessionID,
-                        deviceId = deviceId
+                        deviceId = deviceId,
+                        permissions = permissions
                     };
                     return ResponseConst.Success("Đăng nhập Google thành công", res);
 

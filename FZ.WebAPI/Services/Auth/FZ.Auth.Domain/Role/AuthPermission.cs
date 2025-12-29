@@ -19,6 +19,8 @@ namespace FZ.Auth.Domain.Role
         public string permissionName { get; set; }
         [MaxLength(255)]
         public string permissionDescription { get; set; }
+        public string code { get; set; }
+        public string? scope { get; set; }
 
         public virtual ICollection<AuthRolePermission> rolePermissions { get; set; }
     }

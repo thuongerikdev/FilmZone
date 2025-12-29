@@ -15,7 +15,8 @@ namespace FZ.Auth.ApplicationService.MFAService.Abtracts
     {
         Task<ResponseDto<RegisterResponse>> RegisterAsync(RegisterRequest req, CancellationToken ct);
         Task<ResponseDto<bool>> VerifyEmailAsync(VerifyEmailRequest req, CancellationToken ct);
-        
+        Task<ResponseDto<RegisterResponse>> CreateSimpleUserAsync(SimpleCreateUserRequest req, CancellationToken ct);
+
     }
     public interface IPasswordService
     {

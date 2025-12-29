@@ -28,6 +28,7 @@ namespace FZ.Auth.Domain.User
         [Required]
         public string passwordHash { get; set; }
         public string? googleSub { get; set; }
+        public string? scope { get; set; }
 
         public bool isEmailVerified { get; set; }
         //public bool isPhoneVerified { get; set; }

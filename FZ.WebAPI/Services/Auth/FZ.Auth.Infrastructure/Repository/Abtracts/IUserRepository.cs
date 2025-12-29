@@ -34,6 +34,7 @@ namespace FZ.Auth.Infrastructure.Repository.Abtracts
         Task<GetUserResponseDto?> GetUserByIDAsync(int userID, CancellationToken ct);
 
         Task AddAsync(AuthUser user, CancellationToken ct);
+        Task<List<string>> GetPermissionsByUserIdAsync(int userId, CancellationToken ct);
     }
     public interface IProfileRepository
     {

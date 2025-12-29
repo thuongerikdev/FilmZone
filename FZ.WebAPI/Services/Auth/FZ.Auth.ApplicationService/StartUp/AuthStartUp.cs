@@ -6,6 +6,7 @@ using FZ.Auth.ApplicationService.MFAService.Implements;
 using FZ.Auth.ApplicationService.MFAService.Implements.Account;
 using FZ.Auth.ApplicationService.MFAService.Implements.Role;
 using FZ.Auth.ApplicationService.MFAService.Implements.User;
+using FZ.Auth.ApplicationService.Service.Implements.Role;
 using FZ.Auth.Infrastructure;
 using FZ.Auth.Infrastructure.Repository.Abtracts;
 using FZ.Auth.Infrastructure.Repository.Billing;
@@ -247,6 +248,8 @@ namespace FZ.Auth.ApplicationService.StartUp
             builder.Services.AddScoped<IUserSubscriptionRepository, UserSubscriptionRepository>();
             builder.Services.AddScoped<IPlanRepository, PlanRepository>();
             builder.Services.AddScoped<IPriceRepository, PriceRepository>();
+            builder.Services.AddScoped<IRolePermissionRepository, RolePermissionRepository>();
+            builder.Services.AddScoped<IPermissionRepository, PermissionRepository>();
 
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
             builder.Services.AddScoped<IAuthRegisterService, AuthRegisterService>();
@@ -264,6 +267,10 @@ namespace FZ.Auth.ApplicationService.StartUp
 
             builder.Services.AddScoped<IPlanService, PlanService>();
             builder.Services.AddScoped<IPriceService, PriceService>();
+
+            builder.Services.AddScoped<IAuthPermissionService, AuthPermissionService>();
+            builder.Services.AddScoped<IAuthRolePermissionService, AuthRolePermissionService>();
+            builder.Services.AddScoped<IAuthUserRoleService, AuthUserRoleService>();
 
             // === Authentication (JWT + Cookies + Google) ===
             var secretKey = builder.Configuration["Jwt:SecretKey"] ?? "A_very_long_and_secure_secret_key_1234567890";

@@ -38,25 +38,33 @@ namespace FZ.WebAPI.Controllers.Auth
         public async Task<IActionResult> UserLogin([FromBody] LoginRequest loginRequest, CancellationToken ct)
         {
             var result = await _authLoginService.LoginAsync(loginRequest, ct);
-            if (result is null)
-                return BadRequest(ResponseConst.Error<string>(400, "Thông tin xác thực không chính xác"));
 
             if (result.ErrorCode != 200 || result.Data is null)
                 return StatusCode(result.ErrorCode, result);
 
-            // Nếu service trả requiresMfa thì không set cookie, FE chuyển qua bước MFA
-            if (TryGetBoolProp(result.Data, "requiresMfa") == true &&
-                !string.IsNullOrWhiteSpace(TryGetStringProp(result.Data, "mfaTicket")))
+            // MFA Required -> FE tự chuyển hướng
+            if (TryGetBoolProp(result.Data, "requiresMfa") == true) return Ok(result);
+
+            if (TryExtractTokens(result.Data, out var access, out var refresh, out var accessExp, out var refreshExp))
             {
-                return Ok(result); // FE sẽ điều hướng đến màn MFA
+                // 1. Set JWT & Refresh Cookie (HttpOnly - Bảo mật)
+                SetAuthCookies(access!, refresh!, accessExp, refreshExp);
+
+                // 2. Set Permission Cookie (Not HttpOnly - Cho UI Logic ẩn hiện nút)
+                // Lấy permissions từ LoginResponse
+                var perms = TryGetPermissions(result.Data);
+                if (perms != null)
+                {
+                    Response.Cookies.Append("fz.permissions", JsonSerializer.Serialize(perms), new CookieOptions
+                    {
+                        HttpOnly = false, // JS đọc được
+                        Secure = true,
+                        SameSite = SameSiteMode.None,
+                        Expires = accessExp
+                    });
+                }
             }
 
-            if (!TryExtractTokens(result.Data, out var access, out var refresh, out var accessExp, out var refreshExp))
-                return StatusCode(500, ResponseConst.Error < string>(500, "Không lấy được token"));
-
-            SetAuthCookies(access!, refresh!, accessExp, refreshExp);
-
-            // Không trả token nữa
             return Ok(result);
         }
 
@@ -67,20 +75,18 @@ namespace FZ.WebAPI.Controllers.Auth
             var result = await _authLoginService.LoginAsync(req, ct);
             if (result.ErrorCode != 200 || result.Data is null) return StatusCode(result.ErrorCode, result);
 
-            // Nếu bật MFA thì trả requiresMfa + ticket cho app chuyển màn hình nhập code
-            if (TryGetBoolProp(result.Data, "requiresMfa") == true)
-                return Ok(result);
+            if (TryGetBoolProp(result.Data, "requiresMfa") == true) return Ok(result);
 
             if (!TryExtractTokens(result.Data, out var access, out var refresh, out var accessExp, out var refreshExp))
-                return StatusCode(500, ResponseConst.Error<string>(500, "Không lấy được token"));
+                return StatusCode(500, ResponseConst.Error<string>(500, "Token error"));
 
-            // ✅ Trả token qua JSON cho mobile — KHÔNG set cookie
+            // Mobile: Trả hết trong JSON
             return Ok(new
             {
                 accessToken = access,
-                accessTokenExpiresAt = accessExp,
                 refreshToken = refresh,
-                refreshTokenExpiresAt = refreshExp
+                permissions = TryGetPermissions(result.Data), // Mobile dev lấy list này lưu local storage
+                user = new { id = TryGetStringProp(result.Data, "userID"), name = TryGetStringProp(result.Data, "userName") }
             });
         }
 
@@ -420,7 +426,16 @@ namespace FZ.WebAPI.Controllers.Auth
 
 
         // ====================== helpers ======================
-
+        private static List<string>? TryGetPermissions(object data)
+        {
+            try
+            {
+                // Giả sử LoginResponse có field public List<string> permissions { get; set; }
+                if (data is LoginResponse lr) return lr.permissions;
+                return null;
+            }
+            catch { return null; }
+        }
         private void SetAuthCookies(
             string access, string refresh,
             DateTimeOffset accessExp, DateTimeOffset refreshExp,

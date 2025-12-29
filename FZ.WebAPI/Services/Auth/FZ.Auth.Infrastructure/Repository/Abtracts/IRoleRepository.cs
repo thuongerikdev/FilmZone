@@ -26,5 +26,12 @@ namespace FZ.Auth.Infrastructure.Repository.Abtracts
         Task RemoveUserRoleAsync(int userID, int roleID, CancellationToken ct);
         Task<List<AuthUserRole>> GetUserRolesByUserIdAsync(int userId, CancellationToken ct);
         //Task<bool> UserHasRoleAsync(int userID, string roleName, CancellationToken ct);
+
+        Task AddRangeUserRoleAsync(List<AuthUserRole> userRoles, CancellationToken ct);
+
+        Task RemoveRangeUserRoleAsync(List<AuthUserRole> userRoles, CancellationToken ct);
     }
+
+
+
 }

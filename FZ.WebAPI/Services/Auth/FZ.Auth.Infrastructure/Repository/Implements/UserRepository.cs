@@ -1,4 +1,5 @@
-﻿using FZ.Auth.Domain.User;
+﻿using FZ.Auth.Domain.Role;
+using FZ.Auth.Domain.User;
 using FZ.Auth.Dtos.User;
 using FZ.Auth.Infrastructure.Repository.Abtracts;
 using Microsoft.EntityFrameworkCore;
@@ -13,6 +14,19 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
 
         public Task<AuthUser?> Login(string username, string password, CancellationToken ct)
             => _db.authUsers.FirstOrDefaultAsync(x => (x.userName == username || x.email == username) && x.passwordHash == password, ct);
+
+        public async Task<List<string>> GetPermissionsByUserIdAsync(int userId, CancellationToken ct)
+        {
+            var query = from ur in _db.Set<AuthUserRole>()
+                        join rp in _db.Set<AuthRolePermission>() on ur.roleID equals rp.roleID
+                        join p in _db.Set<AuthPermission>() on rp.permissionID equals p.permissionID
+                        where ur.userID == userId
+                        && !string.IsNullOrEmpty(p.code)
+                        // 👇 SỬA Ở ĐÂY: Chỉ lấy Code nguyên bản
+                        select p.code;
+
+            return await query.Distinct().ToListAsync(ct);
+        }
 
         public Task UpdateUserName(string newUserName, int userId, CancellationToken ct)
         {

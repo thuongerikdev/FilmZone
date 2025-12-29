@@ -12,10 +12,20 @@ namespace FZ.Auth.Dtos.Role
         public string roleName { get; set; }
         public string roleDescription { get; set; }
         public bool isDefault { get; set; } = false; // Vai trò mặc định khi tạo user mới
-   }
+        public string? scope { get; set; }
+    }
     public class UpdateRoleRequest : AddRoleRequest
     {
         public int roleID { get; set; }
     
+    }
+
+    public class  UserRoleRequestDto
+    {
+        [Required]
+        public int userID { get; set; }
+        [Required]
+        public List<int> roleIDs { get; set; }
+
     }
 }

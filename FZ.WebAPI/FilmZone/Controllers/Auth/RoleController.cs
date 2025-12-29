@@ -1,5 +1,6 @@
 ﻿using FZ.Auth.ApplicationService.MFAService.Abtracts;
 using FZ.Auth.Dtos.Role;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FZ.WebAPI.Controllers.Auth
@@ -99,6 +100,41 @@ namespace FZ.WebAPI.Controllers.Auth
                 return BadRequest(new { ErrorCode = 400, ex.Message });
             }
         }
+
+        //[ApiController]
+        //[Route("api/users")]
+        //public class UserController : ControllerBase
+        //{
+        //    // Cách 1: Dùng Policy (đã định nghĩa trong AuthStartUp)
+        //    // Startup: options.AddPolicy("UserCreate", p => p.RequireClaim("permission", "USER_CREATE"));
+        //    [HttpPost]
+        //    [Authorize(Policy = "UserCreate")]
+        //    public IActionResult CreateUser()
+        //    {
+        //        return Ok("Created");
+        //    }
+
+        //    // Cách 2: Chặn cứng Role (Không khuyến khích bằng Permission)
+        //    [HttpDelete("{id}")]
+        //    [Authorize(Roles = "Admin,SuperAdmin")]
+        //    public IActionResult DeleteUser(int id)
+        //    {
+        //        return Ok("Deleted");
+        //    }
+
+        //    // Cách 3: Kiểm tra thủ công trong code (nếu logic phức tạp)
+        //    [HttpGet("complex-check")]
+        //    [Authorize]
+        //    public IActionResult ComplexCheck()
+        //    {
+        //        // User.HasClaim check trực tiếp trong ClaimsPrincipal (được bung ra từ Token)
+        //        if (!User.HasClaim(c => c.Type == "permission" && c.Value == "SPECIAL_REPORT"))
+        //        {
+        //            return Forbid();
+        //        }
+        //        return Ok("Report Data");
+        //    }
+        //}
 
 
     }
