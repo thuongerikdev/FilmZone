@@ -208,11 +208,11 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media
             try
             {
                 var episodeSources = await _episodeSourceRepository.GetAllByEpisodeIDAsync(episodeID, ct);
-                if (episodeSources == null || !episodeSources.Any())
-                {
-                    _logger.LogWarning("No episode sources found for episodeID: {EpisodeID}", episodeID);
-                    return ResponseConst.Error<List<EpisodeSource>>(404, "No episode sources found for the specified episode");
-                }
+                //if (episodeSources == null || !episodeSources.Any())
+                //{
+                //    _logger.LogWarning("No episode sources found for episodeID: {EpisodeID}", episodeID);
+                //    return ResponseConst.Error<List<EpisodeSource>>(404, "No episode sources found for the specified episode");
+                //}
                 _logger.LogInformation("Successfully retrieved {Count} episode sources for episodeID: {EpisodeID}", episodeSources.Count, episodeID);
                 return ResponseConst.Success("Successfully retrieved episode sources", episodeSources);
             }

@@ -126,10 +126,10 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media
             _logger.LogInformation("Updating movie source");
             try
             {
-                var existingMovieSource = await _movieSourceRepository.GetByIdAsync(request.sourceID, ct);
+                var existingMovieSource = await _movieSourceRepository.GetByIdAsync(request.ID, ct);
                 if (existingMovieSource == null)
                 {
-                    _logger.LogWarning("Movie source with ID: {MovieSourceID} not found", request.sourceID);
+                    _logger.LogWarning("Movie source with ID: {MovieSourceID} not found", request.ID);
                     return ResponseConst.Error<MovieSource>(404, "Movie source not found");
                 }
                 existingMovieSource.sourceName = request.sourceName;
@@ -151,7 +151,7 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while updating movie source with ID: {MovieSourceID}", request.sourceID);
+                _logger.LogError(ex, "Error occurred while updating movie source with ID: {MovieSourceID}", request.ID);
                 return ResponseConst.Error<MovieSource>(500, "An error occurred while updating the movie source");
             }
         }

@@ -40,7 +40,7 @@ namespace FZ.Movie.Dtos.Request
     }
     public class UpdateMovieSourceRequest : CreateMovieSourceRequest
     {
-        public int sourceID { get; set; }
+        public int ID { get; set; }
     }
 
     public class CreateImageSourceRequest
