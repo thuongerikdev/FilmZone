@@ -7,6 +7,7 @@ const api = axios.create({
     baseURL: API_BASE_URL,
     headers: {
         "Content-Type": "application/json",
+        "credentials": "include",
     },
 })
 
@@ -56,7 +57,7 @@ export const deleteComment = id =>
     api.delete(`/api/Comment/DeleteComment/${id}`)
 export const getCommentById = id => api.get(`/api/Comment/GetCommentByID/${id}`)
 export const getCommentsByUserId = userID =>
-    api.get(`/api/Comment/GetCommentsByUserID/${userID}`)
+    api.get(`/api/Comment/GetCommentsByUserID/${userID}?userID=${userID}`)
 export const getCommentsByMovieId = movieID =>
     api.get(`/api/Comment/GetCommentsByMovieID/${movieID}`, {
         params: { movieID },
@@ -260,6 +261,7 @@ export const getAllTags = () => api.get("/movie/Tag/GetAllTags/getALlTags")
 
 // User APIs
 export const getAllUsers = () => api.get("/user/getAllUsers")
+export const getUserByID = userID => api.get(`/user/getUserByID/${userID}`)
 export const deleteUser = params => api.delete("/user/deleteUser", { params })
 export const getMe = () => api.get("/user/me")
 
