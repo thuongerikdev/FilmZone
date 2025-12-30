@@ -201,10 +201,15 @@ namespace FZ.WebAPI.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
 
+                    b.Property<int>("roleID")
+                        .HasColumnType("integer");
+
                     b.HasKey("planID");
 
                     b.HasIndex("code")
                         .IsUnique();
+
+                    b.HasIndex("roleID");
 
                     b.ToTable("Plan", "auth");
 
@@ -215,7 +220,8 @@ namespace FZ.WebAPI.Migrations
                             code = "VIP",
                             description = "Quyền lợi VIP",
                             isActive = true,
-                            name = "Gói VIP"
+                            name = "Gói VIP",
+                            roleID = 11
                         });
                 });
 
@@ -911,6 +917,17 @@ namespace FZ.WebAPI.Migrations
                     b.Navigation("invoice");
                 });
 
+            modelBuilder.Entity("FZ.Auth.Domain.Billing.Plan", b =>
+                {
+                    b.HasOne("FZ.Auth.Domain.Role.AuthRole", "role")
+                        .WithMany("plans")
+                        .HasForeignKey("roleID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("role");
+                });
+
             modelBuilder.Entity("FZ.Auth.Domain.Billing.Price", b =>
                 {
                     b.HasOne("FZ.Auth.Domain.Billing.Plan", "plan")
@@ -1108,6 +1125,8 @@ namespace FZ.WebAPI.Migrations
 
             modelBuilder.Entity("FZ.Auth.Domain.Role.AuthRole", b =>
                 {
+                    b.Navigation("plans");
+
                     b.Navigation("rolePermissions");
 
                     b.Navigation("userRoles");

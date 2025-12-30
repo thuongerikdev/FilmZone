@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using FZ.Auth.Domain.Role;
 using FZ.Auth.Domain.User;
 
 namespace FZ.Auth.Domain.Billing
@@ -15,6 +16,7 @@ namespace FZ.Auth.Domain.Billing
 
         [Required, MaxLength(64)]
         public string code { get; set; } = default!;
+        public int roleID { get; set; } // gán role khi user đăng ký plan này
 
         [Required, MaxLength(128)]
         public string name { get; set; } = default!;
@@ -26,6 +28,7 @@ namespace FZ.Auth.Domain.Billing
 
         public virtual ICollection<Price> prices { get; set; } = new List<Price>();
         public virtual ICollection<Order> orders { get; set; } = new List<Order>(); // inverse cho Order.plan
+        public virtual AuthRole role { get; set; } = default!;
     }
 
     [Table(nameof(Price), Schema = Constant.Database.DbSchema.Auth)]

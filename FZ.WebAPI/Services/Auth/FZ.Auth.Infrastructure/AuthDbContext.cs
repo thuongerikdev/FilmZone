@@ -46,6 +46,7 @@ namespace FZ.Auth.Infrastructure
             modelBuilder.Entity<AuthUserSession>().HasMany(s => s.refreshTokens).WithOne(rt => rt.session).HasForeignKey(rt => rt.sessionID).OnDelete(DeleteBehavior.Cascade);
             modelBuilder.Entity<AuthRole>().HasMany(r => r.userRoles).WithOne(ur => ur.role).HasForeignKey(ur => ur.roleID);
             modelBuilder.Entity<AuthRole>().HasMany(r => r.rolePermissions).WithOne(rp => rp.role).HasForeignKey(rp => rp.roleID);
+            modelBuilder.Entity<AuthRole>().HasMany(p => p.plans).WithOne(rp => rp.role).HasForeignKey(rp => rp.roleID);
 
             modelBuilder.Entity<AuthUserRole>(b =>
             {
@@ -109,7 +110,7 @@ namespace FZ.Auth.Infrastructure
             // =========================================================
 
             // Seed Plans & Prices
-            modelBuilder.Entity<Plan>().HasData(new Plan { planID = 1, code = "VIP", name = "Gói VIP", description = "Quyền lợi VIP", isActive = true });
+            modelBuilder.Entity<Plan>().HasData(new Plan { planID = 1, code = "VIP", name = "Gói VIP", description = "Quyền lợi VIP", isActive = true, roleID = 11 });
             modelBuilder.Entity<Price>().HasData(
                 new Price { priceID = 101, planID = 1, currency = "VND", amount = 99000m, intervalUnit = "month", intervalCount = 1, isActive = true },
                 new Price { priceID = 102, planID = 1, currency = "VND", amount = 249000m, intervalUnit = "month", intervalCount = 3, isActive = true },

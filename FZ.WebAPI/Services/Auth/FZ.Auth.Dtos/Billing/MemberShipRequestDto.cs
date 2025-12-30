@@ -17,6 +17,7 @@ namespace FZ.Auth.Dtos.Billing
         public string? description { get; set; }
 
         public bool isActive { get; set; } = true;
+        public int roleID { get; set; }
     }
     public class UpdatePlanRequestDto : CreatePlanRequestDto
     {

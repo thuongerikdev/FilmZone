@@ -42,7 +42,8 @@ namespace FZ.Auth.ApplicationService.Billing
                     code = plan.code,
                     name = plan.name,
                     description = plan.description,
-                    isActive = plan.isActive
+                    isActive = plan.isActive,
+                    roleID = plan.roleID
                 };
 
                 var createdPlan = await _uow.ExecuteInTransactionAsync(async t =>
@@ -79,7 +80,8 @@ namespace FZ.Auth.ApplicationService.Billing
                     code = plan.code,
                     name = plan.name,
                     description = plan.description,
-                    isActive = plan.isActive
+                    isActive = plan.isActive,
+                    roleID = plan.roleID
                 };
 
                 var updatedPlan = await _uow.ExecuteInTransactionAsync(async t =>

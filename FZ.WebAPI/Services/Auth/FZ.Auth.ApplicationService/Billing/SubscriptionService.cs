@@ -26,12 +26,11 @@ namespace FZ.Auth.ApplicationService.Billing
 
         public async Task ActivateVipAsync(int userId, int priceId, bool autoRenew, CancellationToken ct)
         {
-            // 1) Lấy price & validate
+            // 1) Lấy price & validate (Include Plan để lấy RoleID)
             var price = await _db.prices
                 .Include(p => p.plan)
                 .FirstOrDefaultAsync(p => p.priceID == priceId && p.isActive, ct)
                 ?? throw new InvalidOperationException("Price không tồn tại");
-
 
             var now = DateTime.UtcNow;
             var activeStatuses = new[] { "active", "trialing", "grace" };
@@ -67,68 +66,84 @@ namespace FZ.Auth.ApplicationService.Billing
                 sub.currentPeriodEnd = baseDate.AddMonths(months);
                 sub.priceID = price.priceID;
                 sub.autoRenew = sub.autoRenew || autoRenew;
+                // sub.status = "active"; // Nếu đang grace/trial thì active lại
                 _db.userSubscriptions.Update(sub);
             }
 
-            // 3) Lưu riêng phần subscription trước (để không bị rollback vì lỗi role)
+            // 3) Lưu Sub trước
             await _db.SaveChangesAsync(ct);
 
-            // 4) Gán role (giữ logic AnyAsync như cũ)
-            await GrantRoleIfMissingAsync(userId, "customer-vip", ct);
-            await GrantRoleIfMissingAsync(userId, "customer", ct);
+            // 4) Gán Role DYNAMIC dựa trên Plan
+            // Nếu Plan có gắn RoleID (> 0) thì cấp quyền đó cho user
+            if (price.plan.roleID > 0)
+            {
+                await GrantRoleByIdIfMissingAsync(userId, price.plan.roleID, ct);
+            }
 
-            // 5) Save lần 2 – bắt 23505 nếu trùng (race)
+            // 5) Save lần 2 – bắt lỗi trùng lặp Role (Idempotent)
             try
             {
                 await _db.SaveChangesAsync(ct);
             }
             catch (DbUpdateException ex) when (IsAuthUserRoleDuplicate(ex))
             {
-                // Một request khác đã gán role song song -> coi như thành công
+                // Ignore lỗi trùng khóa chính (User đã có role này rồi)
             }
         }
 
         public async Task ExpireIfDueAsync(CancellationToken ct)
         {
-            // 1. Lấy Role VIP để lát nữa gỡ khỏi user
-            var vipRole = await _db.authRoles
-                .FirstOrDefaultAsync(r => r.roleName == "customer-vip", ct);
+            var now = DateTime.UtcNow;
 
-            if (vipRole == null) return; // Chưa seed role thì không cần làm gì
-
-            // 2. Tìm các subscription đang active nhưng đã quá hạn (currentPeriodEnd <= UtcNow)
-            // Lưu ý: Chỉ xử lý những cái không autoRenew hoặc logic gia hạn thất bại (ở đây làm đơn giản: cứ quá hạn là cắt)
+            // 1. Tìm các subscription cần hết hạn (kèm thông tin Plan)
             var expiredSubs = await _db.userSubscriptions
-                .Where(s => (s.status == "active" || s.status == "trialing")
-                         && s.currentPeriodEnd <= DateTime.UtcNow)
+                .Include(s => s.plan) // <--- Quan trọng: Join bảng Plan để biết Role nào cần gỡ
+                .Where(s => (s.status == "active" || s.status == "trialing" || s.status == "grace")
+                         && s.currentPeriodEnd <= now)
                 .ToListAsync(ct);
 
             if (!expiredSubs.Any()) return;
 
-            // 3. Xử lý từng sub
             foreach (var sub in expiredSubs)
             {
-                // a. Đổi trạng thái sang canceled
-                sub.status = "canceled";
+                // a. Đổi trạng thái
+                sub.status = "expired";
                 sub.autoRenew = false;
 
-                // b. Tìm UserRole tương ứng để xoá
-                var userRole = await _db.authUserRoles
-                    .FirstOrDefaultAsync(ur => ur.userID == sub.userID && ur.roleID == vipRole.roleID, ct);
+                // b. Xử lý gỡ Role DYNAMIC
+                var roleIdToRemove = sub.plan?.roleID ?? 0;
 
-                if (userRole != null)
+                // Chỉ xử lý nếu Plan đó thực sự có Role
+                if (roleIdToRemove > 0)
                 {
-                    _db.authUserRoles.Remove(userRole);
+                    // c. Kiểm tra an toàn: User còn gói nào KHÁC cũng cung cấp RoleID này không?
+                    // (Ví dụ: Mua gói VIP 1 tháng và VIP 1 năm chồng nhau)
+                    var hasOtherActiveSubWithSameRole = await _db.userSubscriptions
+                        .Include(x => x.plan)
+                        .AnyAsync(x => x.userID == sub.userID
+                                    && x.subscriptionID != sub.subscriptionID // Không phải gói đang xét
+                                    && x.plan.roleID == roleIdToRemove        // Cùng Role
+                                    && (x.status == "active" || x.status == "trialing" || x.status == "grace")
+                                    && x.currentPeriodEnd > now, ct);
+
+                    // Nếu không còn gói nào bảo kê Role này -> Gỡ Role
+                    if (!hasOtherActiveSubWithSameRole)
+                    {
+                        var userRole = await _db.authUserRoles
+                            .FirstOrDefaultAsync(ur => ur.userID == sub.userID && ur.roleID == roleIdToRemove, ct);
+
+                        if (userRole != null)
+                        {
+                            _db.authUserRoles.Remove(userRole);
+                        }
+                    }
                 }
             }
 
-            // 4. Lưu thay đổi
             await _db.SaveChangesAsync(ct);
         }
-
         public async Task<ResponseDto<bool>> CancelSubscriptionAsync(int userId, CancellationToken ct)
         {
-            // 1. Tìm subscription đang chạy của user
             var sub = await _db.userSubscriptions
                 .FirstOrDefaultAsync(s => s.userID == userId
                                        && (s.status == "active" || s.status == "trialing"), ct);
@@ -138,9 +153,6 @@ namespace FZ.Auth.ApplicationService.Billing
                 return ResponseConst.Error<bool>(404, "Bạn không có gói đăng ký nào đang hoạt động.");
             }
 
-            // 2. Logic Huỷ:
-            // Cách 1 (Chuẩn SaaS): Tắt gia hạn tự động, khách vẫn dùng được đến hết ngày hết hạn.
-            // Khi chạy ExpireIfDueAsync, hệ thống sẽ tự cắt role khi đến ngày.
             if (sub.autoRenew == false)
             {
                 return ResponseConst.Error<bool>(400, "Gói đăng ký này đã được huỷ gia hạn trước đó.");
@@ -148,32 +160,23 @@ namespace FZ.Auth.ApplicationService.Billing
 
             sub.autoRenew = false;
             _db.userSubscriptions.Update(sub);
-
-            /* Cách 2 (Huỷ ngay lập tức - nếu nghiệp vụ yêu cầu):
-               sub.status = "canceled";
-               sub.currentPeriodEnd = DateTime.UtcNow; // Kết thúc ngay
-               // Gọi logic gỡ Role ngay lập tức ở đây hoặc để ExpireIfDueAsync quét sau
-            */
-
             await _db.SaveChangesAsync(ct);
 
-            return ResponseConst.Success("Đã huỷ gia hạn gói thành công. Bạn vẫn có thể sử dụng quyền VIP đến hết chu kỳ hiện tại.", true);
+            return ResponseConst.Success("Đã huỷ gia hạn gói thành công.", true);
         }
 
-        private async Task GrantRoleIfMissingAsync(int userId, string roleName, CancellationToken ct)
+        private async Task GrantRoleByIdIfMissingAsync(int userId, int roleId, CancellationToken ct)
         {
-            var role = await _db.authRoles.FirstOrDefaultAsync(r => r.roleName == roleName, ct)
-                       ?? throw new InvalidOperationException($"Role '{roleName}' chưa seed");
-
+            // Kiểm tra xem User đã có RoleID này chưa
             var has = await _db.authUserRoles
-                .AnyAsync(ur => ur.userID == userId && ur.roleID == role.roleID, ct);
+                .AnyAsync(ur => ur.userID == userId && ur.roleID == roleId, ct);
 
             if (!has)
             {
                 _db.authUserRoles.Add(new AuthUserRole
                 {
                     userID = userId,
-                    roleID = role.roleID,
+                    roleID = roleId,
                     assignedAt = DateTime.UtcNow
                 });
             }
@@ -182,13 +185,14 @@ namespace FZ.Auth.ApplicationService.Billing
         // Helper: nhận diện lỗi trùng key ở bảng AuthUserRole
         private static bool IsAuthUserRoleDuplicate(DbUpdateException ex)
         {
-            if (ex.InnerException is PostgresException pg &&
-                pg.SqlState == "23505" &&
-                // tuỳ environment, ConstraintName có thể là "PK_AuthUserRole" hoặc index unique khác
-                (string.Equals(pg.ConstraintName, "PK_AuthUserRole", StringComparison.OrdinalIgnoreCase)
-                 || string.Equals(pg.TableName, "AuthUserRole", StringComparison.OrdinalIgnoreCase)))
+            if (ex.InnerException is PostgresException pg && pg.SqlState == "23505")
             {
-                return true;
+                // Kiểm tra tên bảng hoặc constraint name
+                if (pg.TableName?.Contains("AuthUserRole", StringComparison.OrdinalIgnoreCase) == true ||
+                    pg.ConstraintName?.Contains("AuthUserRole", StringComparison.OrdinalIgnoreCase) == true)
+                {
+                    return true;
+                }
             }
             return false;
         }

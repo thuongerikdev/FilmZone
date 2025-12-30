@@ -1,4 +1,4 @@
-﻿using FilmZone.Middlewares;
+﻿//using FilmZone.Middlewares;
 using FZ.Auth.ApplicationService.StartUp;
 using FZ.Movie.ApplicationService.Search;
 using FZ.Movie.ApplicationService.StartUp;
@@ -196,7 +196,7 @@ namespace FZ.WebAPI
             // app.UseHttpsRedirection(); // prod có thể bật, dev có thể tắt
             app.UseRouting();
             app.UseCors("FE");                  // policy "FE" phải được AddCors trước đó
-            app.UseMiddleware<CookieJwtMiddleware>();
+            //app.UseMiddleware<CookieJwtMiddleware>();
             app.UseAuthentication();
             app.UseAuthorization();
 

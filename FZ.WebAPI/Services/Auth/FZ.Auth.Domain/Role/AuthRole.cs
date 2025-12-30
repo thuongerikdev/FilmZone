@@ -20,6 +20,7 @@ namespace FZ.Auth.Domain.Role
 
         public virtual ICollection<AuthUserRole> userRoles { get; set; }
         public virtual ICollection<AuthRolePermission> rolePermissions { get; set; }
+        public virtual ICollection<FZ.Auth.Domain.Billing.Plan> plans { get; set; }
     }
 
    
