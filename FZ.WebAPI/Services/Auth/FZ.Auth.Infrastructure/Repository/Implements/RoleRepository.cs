@@ -52,6 +52,13 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
 
         public Task<AuthRole?> GetDefaultRoleAsync(CancellationToken ct)
             => _db.authRoles.FirstOrDefaultAsync(x => x.isDefault, ct);
+        public async Task<List<AuthRole>> GetRolesByIdsAsync(IEnumerable<int> roleIds, CancellationToken ct)
+        {
+            // Dùng Contains để tạo câu lệnh SQL: WHERE roleID IN (...)
+            return await _db.authRoles
+                .Where(r => roleIds.Contains(r.roleID))
+                .ToListAsync(ct);
+        }
     }
 
     public class UserRoleRepository : IUserRoleRepository
@@ -73,13 +80,7 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
             _db.authUserRoles.RemoveRange(userRoles);
             return Task.CompletedTask;
         }
-        public async Task<List<AuthRole>> GetRolesByIdsAsync(IEnumerable<int> roleIds, CancellationToken ct)
-        {
-            // Dùng Contains để tạo câu lệnh SQL: WHERE roleID IN (...)
-            return await _db.authRoles
-                .Where(r => roleIds.Contains(r.roleID))
-                .ToListAsync(ct);
-        }
+       
     }
 
 
