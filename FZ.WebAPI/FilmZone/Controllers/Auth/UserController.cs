@@ -58,7 +58,7 @@ namespace FZ.WebAPI.Controllers.Auth
 
         [HttpGet("getUserById")]
         [Authorize(Policy = "UserReadDetails")]
-        public async Task<IActionResult> GetUserById([FromQuery] int userId, CancellationToken ct)
+        public async Task<IActionResult> GetUserById( int userId, CancellationToken ct)
         {
             var result = await _userService.GetUserByIDAsync(userId, ct);
             if (result.ErrorCode != 200)
@@ -70,7 +70,7 @@ namespace FZ.WebAPI.Controllers.Auth
         }
         [HttpGet("GetUserSlimById{userID}")]
         [Authorize(Policy = "UserReadDetails")]
-        public async Task<IActionResult> GetUserSlimById([FromQuery] int userID,  CancellationToken ct)
+        public async Task<IActionResult> GetUserSlimById( int userID,  CancellationToken ct)
         {
             var result =  await _userService.GetSlimUserByID(userID, ct);
             if (result.ErrorCode != 200)
