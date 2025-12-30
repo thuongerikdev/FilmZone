@@ -428,5 +428,33 @@ namespace FZ.Auth.ApplicationService.StartUp
                 opts.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
             });
         }
+        public static async Task SeedAuthDataAsync(this WebApplication app)
+        {
+            using (var scope = app.Services.CreateScope())
+            {
+                var services = scope.ServiceProvider;
+                var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger("AuthSeeder");
+
+                try
+                {
+                    var context = services.GetRequiredService<AuthDbContext>();
+
+                    // 1. (Tuỳ chọn) Tự động chạy Migration nếu chưa update database
+                    // logger.LogInformation("Applying migrations...");
+                    await context.Database.MigrateAsync();
+
+                    // 2. Chạy Seeder
+                    logger.LogInformation("Starting Permission Seeding...");
+                    await AuthDataSeeder.SeedPermissionsAsync(context);
+                    logger.LogInformation("Seeding completed successfully.");
+                    logger.LogInformation("Seeding Admin User...");
+                    await AuthDataSeeder.SeedAdminUserAsync(context, services);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "An error occurred while seeding the database.");
+                }
+            }
+        }
     }
 }

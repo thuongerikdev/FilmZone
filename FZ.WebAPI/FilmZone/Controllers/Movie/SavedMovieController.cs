@@ -1,6 +1,7 @@
 ﻿using FZ.Constant;
 using FZ.Movie.ApplicationService.Service.Abtracts;
 using FZ.Movie.Dtos.Request;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FZ.WebAPI.Controllers.Movie
@@ -15,6 +16,7 @@ namespace FZ.WebAPI.Controllers.Movie
             _savedMovieService = savedMovieService;
         }
         [HttpPost]
+        [Authorize(Policy = "SavedMovieManage")]
         public async Task<IActionResult> CreateSavedMovie([FromBody] CreateSavedMovieRequest request, CancellationToken ct)
         {
             if (!ModelState.IsValid)
@@ -36,6 +38,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpPut]
+        [Authorize(Policy = "SavedMovieManage")]
         public async Task<IActionResult> UpdateSavedMovie([FromBody] UpdateSavedMovieRequest request, CancellationToken ct)
         {
             if (!ModelState.IsValid)
@@ -58,6 +61,7 @@ namespace FZ.WebAPI.Controllers.Movie
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Policy = "SavedMovieManage")]
         public async Task<IActionResult> DeleteSavedMovie(int id, CancellationToken ct)
         {
             try
@@ -75,6 +79,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("{id}")]
+        [Authorize(Policy = "SavedMovieRead")]
         public async Task<IActionResult> GetSavedMovieByID(int id, CancellationToken ct)
         {
             try
@@ -92,6 +97,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("user/{userId}")]
+        [Authorize(Policy = "SavedMovieRead")]
         public async Task<IActionResult> GetSavedMoviesByUserID(int userId, CancellationToken ct)
         {
             try
@@ -109,6 +115,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("movie/{movieId}")]
+        [Authorize(Policy = "SavedMovieRead")]
         public async Task<IActionResult> GetSavedMoviesByMovieID(int movieId, CancellationToken ct)
         {
             try

@@ -1,6 +1,7 @@
 ﻿using FZ.Constant;
 using FZ.Movie.ApplicationService.Service.Abtracts;
 using FZ.Movie.Dtos.Request;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FZ.WebAPI.Controllers.Movie
@@ -16,6 +17,7 @@ namespace FZ.WebAPI.Controllers.Movie
         }
         // Define your endpoints here, for example:
         [HttpPost]
+        [Authorize(Policy = "MovieManage")]
         [RequestFormLimits(MultipartBodyLengthLimit = 268_435_456)] // 256MB
         public async Task<IActionResult> CreateMovie([FromForm] CreateMoviesRequest request, CancellationToken ct)
         {
@@ -39,6 +41,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpPut]
+        [Authorize(Policy = "MovieManage")]
         public async Task<IActionResult> UpdateMovie([FromForm] UpdateMoviesRequest request, CancellationToken ct)
         {
             if (!ModelState.IsValid)
@@ -61,6 +64,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpDelete("{id}")]
+        [Authorize(Policy = "MovieManage")]
         public async Task<IActionResult> DeleteMovie(int id, CancellationToken ct)
         {
             try
@@ -79,6 +83,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("{id}")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetMovieById(int id, CancellationToken ct)
         {
             try
@@ -97,6 +102,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("gellAll")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetAllMovies(CancellationToken ct)
         {
             try
@@ -116,6 +122,7 @@ namespace FZ.WebAPI.Controllers.Movie
         }
 
         [HttpGet("mainScreen")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetAllMoviesMainScreen(CancellationToken ct)
         {
             try
@@ -134,6 +141,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("newReleaseMainScreen")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetAllMoviesNewReleaseMainScreen(CancellationToken ct)
         {
             try
@@ -152,6 +160,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("watchNow/{id}")]
+        [Authorize(Policy = "MovieWatchStream")]
         public async Task<IActionResult> GetWatchNowMovieByID(int id, CancellationToken ct)
         {
             try

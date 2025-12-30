@@ -19,6 +19,7 @@ namespace FZ.Auth.Infrastructure.Repository.Abtracts
         Task<AuthRole?> GetDefaultRoleAsync(CancellationToken ct);
 
         Task<List<AuthRole>> GetRoleByUserID(int userID, CancellationToken ct);
+        Task<List<AuthRole>> GetRolesByIdsAsync(IEnumerable<int> roleIds, CancellationToken ct);
     }
     public interface IUserRoleRepository
     {

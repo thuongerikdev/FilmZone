@@ -1,6 +1,7 @@
 ﻿using FZ.Movie.ApplicationService.Service.Abtracts;
 using FZ.Movie.ApplicationService.Service.Implements.Media.Source;
 using FZ.Movie.Dtos;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.IO;
 using System.Threading.Channels;
@@ -9,6 +10,7 @@ namespace FZ.WebAPI.Controllers.Source
 {
     [ApiController]
     [Route("api/upload/archive")]
+    [Authorize(Policy = "UploadYoutube")]
     public class ArchiveUploadController : ControllerBase
     {
         private readonly ChannelWriter<UploadWorkItem> _writer;

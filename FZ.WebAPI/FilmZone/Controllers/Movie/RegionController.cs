@@ -1,5 +1,6 @@
 ﻿using FZ.Movie.ApplicationService.Service.Abtracts;
 using FZ.Movie.Dtos.Request;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FZ.WebAPI.Controllers.Movie
@@ -14,6 +15,7 @@ namespace FZ.WebAPI.Controllers.Movie
               _regionService = regionService;
         }
         [HttpPost]
+        [Authorize(Policy = "RegionManage")]
         public async Task<IActionResult> CreateRegion( CreateRegionRequest createRegionRequest, CancellationToken ct)
         {
             if (string.IsNullOrWhiteSpace(createRegionRequest.name))
@@ -35,6 +37,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpPut]
+        [Authorize(Policy = "RegionManage")]
         public async Task<IActionResult> UpdateRegion(UpdateRegionRequest updateRegionRequest, CancellationToken ct)
         {
             if (string.IsNullOrWhiteSpace(updateRegionRequest.name))
@@ -56,6 +59,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpDelete("{id}")]
+        [Authorize(Policy = "RegionManage")]
         public async Task<IActionResult> DeleteRegion(int id, CancellationToken ct)
         {
             try
@@ -73,6 +77,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("{ID}")]
+        [Authorize(Policy = "RegionRead")]
         public async Task<IActionResult> GetRegionByID(int ID, CancellationToken ct)
         {
             try
@@ -90,6 +95,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("getAll")]
+        [Authorize(Policy = "RegionRead")]
         public async Task<IActionResult> GetAllRegions(CancellationToken ct)
         {
             try
@@ -107,6 +113,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("getMovieByRegionID/{regionID}")]
+        [Authorize(Policy = "RegionRead")]
         public async Task<IActionResult> GetMovieByRegionID(int regionID, CancellationToken ct)
         {
             try
@@ -124,6 +131,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("getPersonByRegionID/{regionID}")]
+        [Authorize(Policy = "RegionRead")]
         public async Task<IActionResult> GetPersonByRegionID(int regionID, CancellationToken ct)
         {
             try

@@ -15,6 +15,7 @@ namespace FZ.WebAPI.Controllers.Auth
             _roleService = roleService;
         }
         [HttpGet("getall")]
+        [Authorize(Policy = "RoleRead")]
         public async Task<IActionResult> GetAllRoles(CancellationToken ct)
         {
             var result = await _roleService.GetAllRolesAsync(ct);
@@ -25,6 +26,7 @@ namespace FZ.WebAPI.Controllers.Auth
             return Ok(result);
         }
         [HttpPost("addRole")]
+        [Authorize(Policy = "RoleManage")]
         public async Task<IActionResult> AddRoleAsync(AddRoleRequest req, CancellationToken ct)
         {
             if (!ModelState.IsValid)
@@ -46,6 +48,7 @@ namespace FZ.WebAPI.Controllers.Auth
             }
         }
         [HttpPut("updateRole")]
+        [Authorize(Policy = "RoleManage")]
         public async Task<IActionResult> UpdateRoleAsync(UpdateRoleRequest req, CancellationToken ct)
         {
             if (!ModelState.IsValid)
@@ -67,6 +70,7 @@ namespace FZ.WebAPI.Controllers.Auth
             }
         }
         [HttpDelete("deleteRole/{roleID}")]
+        [Authorize(Policy = "RoleManage")]
         public async Task<IActionResult> DeleteRoleAsync(int roleID, CancellationToken ct)
         {
             try
@@ -84,6 +88,7 @@ namespace FZ.WebAPI.Controllers.Auth
             }
         }
         [HttpGet("getRoleByUserID/{userID}")]
+        [Authorize(Policy = "RoleRead")]
         public async Task<IActionResult> GetRoleByUserID(int userID, CancellationToken ct)
         {
             try

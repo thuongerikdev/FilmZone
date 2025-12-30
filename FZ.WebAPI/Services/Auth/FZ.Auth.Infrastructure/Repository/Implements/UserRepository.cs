@@ -12,6 +12,7 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
         private readonly AuthDbContext _db;
         public UserRepository(AuthDbContext db) => _db = db;
 
+
         public Task<AuthUser?> Login(string username, string password, CancellationToken ct)
             => _db.authUsers.FirstOrDefaultAsync(x => (x.userName == username || x.email == username) && x.passwordHash == password, ct);
 
@@ -147,6 +148,120 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
                 ))
                 .ToListAsync(ct);
         }
+        public async Task<UserSlimDto?> GetSlimUserByID ( int userID, CancellationToken ct)
+        {
+            var now = DateTime.UtcNow;
+
+            return await _db.authUsers
+                .AsNoTracking()
+                .AsSplitQuery() // <--- QUAN TRỌNG: Ngăn chặn bùng nổ dữ liệu (Cartesian Explosion)
+                .Where(x => x.userID == userID)
+                .Select(u => new UserSlimDto(
+                    u.userID,
+                    u.userName,
+                    u.email,
+                    u.status,
+                    u.isEmailVerified,
+
+                    // --- Profile ---
+                    u.profile == null ? null : new ProfileDto(
+                        u.profile.firstName,
+                        u.profile.lastName,
+                        u.profile.avatar,
+                        u.profile.gender,
+                        u.profile.dateOfBirth
+                    ),
+
+                    // --- MFA ---
+                    u.mfaSecret == null ? null : new MfaSecretDto(
+                        u.mfaSecret.type,
+                        u.mfaSecret.isEnabled,
+                        u.mfaSecret.updatedAt
+                    ),
+
+                    // --- Sessions (Top 5) ---
+                    u.sessions
+                        .OrderByDescending(s => s.createdAt)
+                        .Take(5)
+                        .Select(s => new SessionDto(
+                            s.sessionID,
+                            s.deviceId,
+                            s.ip,
+                            s.userAgent,
+                            s.createdAt,
+                            s.lastSeenAt,
+                            s.isRevoked
+                        ))
+                        .ToList(),
+
+                    // --- Audit Logs (Top 50) ---
+                    u.auditLogs
+                        .OrderByDescending(a => a.createdAt)
+                        .Take(50)
+                        .Select(a => new AuditLogDto(
+                            a.auditID,
+                            a.action,
+                            a.result,
+                            a.ip,
+                            a.userAgent,
+                            a.createdAt,
+                            a.detail
+                        ))
+                        .ToList(),
+
+                    // --- Email Verifications ---
+                    u.emailVerifications
+                        .OrderByDescending(ev => ev.createdAt)
+                        .Select(ev => new EmailVerificationDto(
+                            ev.emailVerificationID,
+                            ev.createdAt,
+                            ev.expiresAt,
+                            ev.consumedAt
+                        ))
+                        .ToList(),
+
+                    // --- Password Resets (Top 3) ---
+                    u.passwordResets
+                        .OrderByDescending(pr => pr.createdAt)
+                        .Take(3)
+                        .Select(pr => new PasswordResetDto(
+                            pr.passwordResetID,
+                            pr.createdAt,
+                            pr.expiresAt,
+                            pr.consumedAt
+                        ))
+                        .ToList(),
+
+                    // --- Refresh Tokens (Top 20) ---
+                    u.refreshTokens
+                        .OrderByDescending(rt => rt.Created)
+                        .Take(20)
+                        .Select(rt => new RefreshTokenDto(
+                            rt.refreshTokenID,
+                            rt.sessionID,
+                            rt.Created,
+                            rt.Expires,
+                            rt.Revoked,
+                            rt.ReplacedByToken,
+                            rt.Revoked == null && rt.Expires > now // IsActive logic
+                        ))
+                        .ToList(),
+
+                    // --- Roles ---
+                    u.userRoles
+                        .Select(ur => ur.role.roleName)
+                        .Distinct() // Tránh trùng lặp nếu data lỗi
+                        .ToList(),
+
+                    // --- Permissions ---
+                    u.userRoles
+                        .SelectMany(ur => ur.role.rolePermissions)
+                        .Select(rp => rp.permission.permissionName)
+                        .Distinct() // Quan trọng: 1 user có nhiều role, các role có thể trùng permission
+                        .ToList()
+                ))
+                .FirstOrDefaultAsync(ct);
+        }
 
         public async Task<GetUserResponseDto?> GetUserByIDAsync(int userID, CancellationToken ct)
         {
@@ -169,6 +284,28 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
                     }
                 })
                 .FirstOrDefaultAsync(ct);
+            return user;
+        }
+        public async Task<List<GetUserResponseDto?>> GetAllUserAsync(CancellationToken ct)
+        {
+            var user = await _db.authUsers
+                .Select(u => new GetUserResponseDto
+                {
+                    userID = u.userID,
+                    userName = u.userName,
+                    email = u.email,
+                    status = u.status,
+                    isEmailVerified = u.isEmailVerified,
+                    profile = u.profile == null ? null : new ProfileResponseDto
+                    {
+                        firstName = u.profile.firstName,
+                        lastName = u.profile.lastName,
+                        avatar = u.profile.avatar,
+                        gender = u.profile.gender,
+                        dateOfBirth = u.profile.dateOfBirth
+                    }
+                })
+                .ToListAsync(ct);
             return user;
         }
 

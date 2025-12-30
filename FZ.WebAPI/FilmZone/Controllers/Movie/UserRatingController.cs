@@ -1,5 +1,6 @@
 ﻿using FZ.Movie.ApplicationService.Service.Abtracts;
 using FZ.Movie.Dtos.Request;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FZ.WebAPI.Controllers.Movie
@@ -14,6 +15,7 @@ namespace FZ.WebAPI.Controllers.Movie
             _userRatingService = userRatingService;
         }
         [HttpPost]
+        [Authorize(Policy = "RatingCreate")]
         public async Task<IActionResult> CreateUserRating([FromBody] CreateUserRatingRequest userRatingRequest, CancellationToken ct)
         {
             if (!ModelState.IsValid)
@@ -35,6 +37,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpPut]
+        [Authorize(Policy = "RatingUpdate")]
         public async Task<IActionResult> UpdateUserRating([FromBody] UpdateUserRatingRequest userRatingRequest, CancellationToken ct)
         {
             if (!ModelState.IsValid)
@@ -56,6 +59,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpDelete("{id}")]
+        [Authorize(Policy = "RatingDelete")]
         public async Task<IActionResult> DeleteUserRating(int id, CancellationToken ct)
         {
             try
@@ -73,6 +77,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("{ID}")]
+        [Authorize(Policy = "RatingRead")]
         public async Task<IActionResult> GetUserRatingById(int ID, CancellationToken ct)
         {
             try
@@ -90,6 +95,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("{userID}")]
+        [Authorize(Policy = "RatingRead")]
         public async Task<IActionResult> GetAllUserRatingsByUserId(int userID, CancellationToken ct)
         {
             try
@@ -107,6 +113,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("{movieID}")]
+        [Authorize(Policy = "RatingRead")]
         public async Task<IActionResult> GetAllUserRatingsByMovieId(int movieID, CancellationToken ct)
         {
             try

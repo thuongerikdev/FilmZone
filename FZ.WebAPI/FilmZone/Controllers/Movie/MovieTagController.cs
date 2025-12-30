@@ -1,5 +1,6 @@
 ﻿using FZ.Movie.ApplicationService.Service.Abtracts;
 using FZ.Movie.Dtos.Request;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FZ.WebAPI.Controllers.Movie
@@ -14,6 +15,7 @@ namespace FZ.WebAPI.Controllers.Movie
             _movieTagService = movieTagService;
         }
         [HttpPost]
+        [Authorize(Policy = "MovieTagManage")]
         public async Task<IActionResult> AddTagToMovie(CreateMoiveTagRequest createMoiveTagRequest , CancellationToken ct)
         {
             try
@@ -31,6 +33,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpPut]
+        [Authorize(Policy = "MovieTagManage")]
         public async Task<IActionResult> UpdateMovieTag(UpdateMoiveTagRequest updateMovieTagRequest, CancellationToken ct)
         {
             try
@@ -48,6 +51,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpDelete("{id}")]
+        [Authorize(Policy = "MovieTagManage")]
         public async Task<IActionResult> DeleteMovieTag(int id, CancellationToken ct)
         {
             try
@@ -65,6 +69,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("{tagID}")]
+        [Authorize(Policy = "MovieTagRead")]
         public async Task<IActionResult> GetMoviesByTag(int tagID, CancellationToken ct)
         {
             try
@@ -82,6 +87,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("{movieID}")]
+        [Authorize(Policy = "MovieTagRead")]
         public async Task<IActionResult> GetTagsByMovie(int movieID, CancellationToken ct)
         {
             try
@@ -99,6 +105,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("getMovieByTagID")]
+        [Authorize(Policy = "MovieTagRead")]
         public async Task<IActionResult> GetMoviesByTagIDs ( [FromQuery] List<int> tagID ,CancellationToken ct)
         {
             try

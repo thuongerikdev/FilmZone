@@ -121,6 +121,8 @@ namespace FZ.WebAPI
 
             var app = builder.Build();
 
+            await app.SeedAuthDataAsync();
+
 
             app.UseSwagger();
             app.UseSwaggerUI();

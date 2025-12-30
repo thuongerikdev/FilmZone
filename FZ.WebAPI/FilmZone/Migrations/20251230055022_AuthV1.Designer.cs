@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FZ.WebAPI.Migrations
 {
     [DbContext(typeof(AuthDbContext))]
-    [Migration("20251005100530_AuthV2")]
-    partial class AuthV2
+    [Migration("20251230055022_AuthV1")]
+    partial class AuthV1
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -216,7 +216,7 @@ namespace FZ.WebAPI.Migrations
                         {
                             planID = 1,
                             code = "VIP",
-                            description = "Quyền lợi VIP (không quảng cáo, chất lượng cao...)",
+                            description = "Quyền lợi VIP",
                             isActive = true,
                             name = "Gói VIP"
                         });
@@ -501,6 +501,10 @@ namespace FZ.WebAPI.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("permissionID"));
 
+                    b.Property<string>("code")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("permissionDescription")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -510,6 +514,9 @@ namespace FZ.WebAPI.Migrations
                         .IsRequired()
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)");
+
+                    b.Property<string>("scope")
+                        .HasColumnType("text");
 
                     b.HasKey("permissionID");
 
@@ -537,6 +544,9 @@ namespace FZ.WebAPI.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<string>("scope")
+                        .HasColumnType("text");
+
                     b.HasKey("roleID");
 
                     b.HasIndex("roleName")
@@ -547,17 +557,51 @@ namespace FZ.WebAPI.Migrations
                     b.HasData(
                         new
                         {
+                            roleID = 1,
+                            isDefault = false,
+                            roleDescription = "Quản trị viên",
+                            roleName = "admin",
+                            scope = "staff"
+                        },
+                        new
+                        {
+                            roleID = 2,
+                            isDefault = false,
+                            roleDescription = "Quản lý nội dung",
+                            roleName = "content_manager",
+                            scope = "staff"
+                        },
+                        new
+                        {
+                            roleID = 3,
+                            isDefault = false,
+                            roleDescription = "Quản lý người dùng",
+                            roleName = "user_manager",
+                            scope = "staff"
+                        },
+                        new
+                        {
+                            roleID = 4,
+                            isDefault = false,
+                            roleDescription = "Quản lý tài chính",
+                            roleName = "finance_manager",
+                            scope = "staff"
+                        },
+                        new
+                        {
                             roleID = 10,
                             isDefault = true,
-                            roleDescription = "Khách hàng tiêu chuẩn",
-                            roleName = "customer"
+                            roleDescription = "Khách hàng",
+                            roleName = "customer",
+                            scope = "user"
                         },
                         new
                         {
                             roleID = 11,
                             isDefault = false,
-                            roleDescription = "Khách hàng VIP (đồng bộ với gói VIP)",
-                            roleName = "customer-vip"
+                            roleDescription = "Khách hàng VIP",
+                            roleName = "customer-vip",
+                            scope = "user"
                         });
                 });
 
@@ -782,6 +826,9 @@ namespace FZ.WebAPI.Migrations
                     b.Property<string>("phoneNumber")
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
+
+                    b.Property<string>("scope")
+                        .HasColumnType("text");
 
                     b.Property<string>("status")
                         .IsRequired()

@@ -1,6 +1,7 @@
 ﻿using FZ.Constant;
 using FZ.Movie.ApplicationService.Service.Abtracts;
 using FZ.Movie.Dtos.Request;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FZ.WebAPI.Controllers.Movie
@@ -16,6 +17,7 @@ namespace FZ.WebAPI.Controllers.Movie
 
         }
         [HttpPost]
+        [Authorize(Policy = "CommentCreate")]
         public async Task<IActionResult> CreateComment([FromBody] CreateCommentRequest request, CancellationToken ct)
         {
             if (!ModelState.IsValid)
@@ -41,6 +43,7 @@ namespace FZ.WebAPI.Controllers.Movie
 
         }
         [HttpPut]
+        [Authorize(Policy = "CommentUpdateOwn")]
         public async Task<IActionResult> UpdateComment([FromBody] UpdateCommentRequest request, CancellationToken ct)
         {
             if (!ModelState.IsValid)
@@ -62,6 +65,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpDelete("{id}")]
+        [Authorize(Policy = "CommentDeleteOwn")]
         public async Task<IActionResult> DeleteComment(int id, CancellationToken ct)
         {
             try
@@ -79,6 +83,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("{id}")]
+        [Authorize(Policy = "CommentRead")]
         public async Task<IActionResult> GetCommentByID(int id, CancellationToken ct)
         {
             try
@@ -96,7 +101,8 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("{userID}")]
-        public async Task<IActionResult> GetCommentsByUserID([FromQuery] int userID, CancellationToken ct)
+        [Authorize(Policy = "CommentRead")]
+        public async Task<IActionResult> GetCommentsByUserID( int userID, CancellationToken ct)
         {
             try
             {
@@ -113,7 +119,8 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("{movieID}")]
-        public async Task<IActionResult> GetCommentsByMovieID([FromQuery] int movieID, CancellationToken ct)
+        [Authorize(Policy = "CommentRead")]
+        public async Task<IActionResult> GetCommentsByMovieID(int movieID, CancellationToken ct)
         {
             try
             {

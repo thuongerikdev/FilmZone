@@ -11,7 +11,7 @@ namespace FZ.WebAPI.Controllers.Auth
 {
     [ApiController]
     [Route("account")]
-    [Authorize] // yêu cầu user đăng nhập (JWT)
+    //[Authorize] // yêu cầu user đăng nhập (JWT)
     public sealed class AccountController : ControllerBase
     {
         private readonly IMfaService _mfa;
@@ -32,6 +32,7 @@ namespace FZ.WebAPI.Controllers.Auth
         // ===== MFA (TOTP) =====
 
         [HttpPost("mfa/totp/start")]
+        [Authorize(Policy = "AccountMfaSetup")]
         public async Task<IActionResult> StartTotp(CancellationToken ct)
         {
             var uid = CurrentUserId();
@@ -60,6 +61,7 @@ namespace FZ.WebAPI.Controllers.Auth
         }
 
         [HttpPost("mfa/totp/confirm")]
+        [Authorize(Policy = "AccountMfaSetup")]
         public async Task<IActionResult> ConfirmTotp([FromBody] ConfirmTotpRequest req, CancellationToken ct)
         {
             var uid = CurrentUserId();
@@ -70,6 +72,7 @@ namespace FZ.WebAPI.Controllers.Auth
         }
 
         [HttpPost("mfa/totp/disable")]
+        [Authorize(Policy = "AccountMfaSetup")]
         public async Task<IActionResult> DisableTotp([FromBody] DisableMfaRequest req, CancellationToken ct)
         {
             var uid = CurrentUserId();
@@ -81,8 +84,9 @@ namespace FZ.WebAPI.Controllers.Auth
 
         // ===== Password change via EMAIL =====
 
-        [AllowAnonymous]
+
         [HttpPost("password/change/email/start")]
+        [Authorize(Policy = "AccountChangePassword")]
         public async Task<IActionResult> StartChangeByEmail([FromBody] StartChangeByEmailRequest req, CancellationToken ct)
         {
             var res = await _pwd.StartChangeByEmailAsync(req.email, ct);
@@ -90,8 +94,9 @@ namespace FZ.WebAPI.Controllers.Auth
             return Ok(res);
         }
 
-        [AllowAnonymous]
+
         [HttpPost("password/change/email/verify")]
+        [Authorize(Policy = "AccountChangePassword")]
         public async Task<IActionResult> VerifyEmailCode([FromBody] VerifyEmailCodeRequest req, CancellationToken ct)
         {
             var res = await _pwd.VerifyEmailCodeAsync(req.email, req.code, ct);
@@ -101,6 +106,7 @@ namespace FZ.WebAPI.Controllers.Auth
         // ===== Password change via MFA (TOTP) =====
 
         [HttpPost("password/change/mfa/verify")]
+        [Authorize(Policy = "AccountChangePassword")]
         public async Task<IActionResult> VerifyMfa([FromBody] VerifyMfaCodeRequest req, CancellationToken ct)
         {
             var uid = CurrentUserId();
@@ -111,6 +117,7 @@ namespace FZ.WebAPI.Controllers.Auth
 
         // ===== Commit change (common) =====
         [HttpPost("password/change/commit")]
+        [Authorize(Policy = "AccountChangePassword")]
         public async Task<IActionResult> CommitChange([FromBody] CommitPasswordChangeRequest req, CancellationToken ct)
         {
             var uid = CurrentUserId();

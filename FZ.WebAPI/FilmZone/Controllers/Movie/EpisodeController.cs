@@ -1,6 +1,7 @@
 ﻿using FZ.Constant;
 using FZ.Movie.ApplicationService.Service.Abtracts;
 using FZ.Movie.Dtos.Request;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FZ.WebAPI.Controllers.Movie
@@ -15,6 +16,7 @@ namespace FZ.WebAPI.Controllers.Movie
             _episodeService = episodeService;
         }
         [HttpPost]
+        [Authorize(Policy = "EpisodeManage")]
         public async Task<IActionResult> CreateEpisode([FromBody] CreateEpisodeRequest request, CancellationToken ct)
         {
             if (!ModelState.IsValid)
@@ -36,6 +38,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpPut]
+        [Authorize(Policy = "EpisodeManage")]
         public async Task<IActionResult> UpdateEpisode([FromBody] UpdateEpisodeRequest request, CancellationToken ct)
         {
             if (!ModelState.IsValid)
@@ -58,6 +61,7 @@ namespace FZ.WebAPI.Controllers.Movie
 
         }
         [HttpDelete("{id}")]
+        [Authorize(Policy = "EpisodeManage")]
         public async Task<IActionResult> DeleteEpisode(int id, CancellationToken ct)
         {
             if (id <= 0)
@@ -79,6 +83,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("{id}")]
+        [Authorize(Policy = "EpisodeRead")]
         public async Task<IActionResult> GetEpisodeById(int id, CancellationToken ct)
         {
             if (id <= 0)
@@ -100,6 +105,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("getAll")]
+        [Authorize(Policy = "EpisodeRead")]
         public async Task<IActionResult> GetAllEpisodes(CancellationToken ct)
         {
             try
@@ -117,6 +123,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("getbyMovie/{movieId}")]
+        [Authorize(Policy = "EpisodeRead")]
         public async Task<IActionResult> GetEpisodesByMovieId(int movieId, CancellationToken ct)
         {
             if (movieId <= 0)

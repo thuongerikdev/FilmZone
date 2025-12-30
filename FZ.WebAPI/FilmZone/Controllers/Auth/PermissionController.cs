@@ -1,5 +1,6 @@
 ﻿using FZ.Auth.ApplicationService.Service.Implements.Role;
 using FZ.Auth.Dtos.Role;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FZ.WebAPI.Controllers.Auth
@@ -14,6 +15,7 @@ namespace FZ.WebAPI.Controllers.Auth
             _permissionService = permissionService;
         }
         [HttpGet("getall")]
+        [Authorize(Policy = "PermissionRead")]
         public async Task<IActionResult> GetAllPermissions(CancellationToken ct)
         {
             var result = await _permissionService.GetAllPermissionsAsync(ct);
@@ -24,6 +26,7 @@ namespace FZ.WebAPI.Controllers.Auth
             return Ok(result);
         }
         [HttpPost("addPermission")]
+        [Authorize(Policy = "PermissionManage")]
         public async Task<IActionResult> AddPermissionAsync(CreatePermissionRequestDto req, CancellationToken ct)
         {
             if (!ModelState.IsValid)
@@ -46,6 +49,7 @@ namespace FZ.WebAPI.Controllers.Auth
             }
         }
         [HttpPut("updatePermission")]
+        [Authorize(Policy = "PermissionManage")]
         public async Task<IActionResult> UpdatePermissionAsync(UpdatePermissionRequestDto req, CancellationToken ct)
         {
             if (!ModelState.IsValid)
@@ -67,6 +71,7 @@ namespace FZ.WebAPI.Controllers.Auth
             }
         }
         [HttpDelete("delate")]
+        [Authorize(Policy = "PermissionManage")]
         public async Task<IActionResult> DeletePermissionAsync([FromQuery] int permissionId, CancellationToken ct)
         {
             try
@@ -84,6 +89,7 @@ namespace FZ.WebAPI.Controllers.Auth
             }
         }
         [HttpGet("getbyid")]
+        [Authorize(Policy = "PermissionRead")]
         public async Task<IActionResult> GetPermissionByIdAsync([FromQuery] int permissionId, CancellationToken ct)
         {
             var result = await _permissionService.GetPermissionByIdAsync(permissionId, ct);
@@ -94,6 +100,7 @@ namespace FZ.WebAPI.Controllers.Auth
             return Ok(result);
         }
         [HttpGet("getbyUserID/{ID}")]
+        [Authorize(Policy = "PermissionRead")]
         public async Task<IActionResult> GetPermissionByCodeAsync(int ID, CancellationToken ct)
         {
             var result = await _permissionService.GetPermissionsByUserIdAsync(ID, ct);
@@ -104,6 +111,7 @@ namespace FZ.WebAPI.Controllers.Auth
             return Ok(result);
         }
         [HttpGet("getbyRoleID/{ID}")]
+        [Authorize(Policy = "PermissionRead")]
         public async Task<IActionResult> GetPermissionByRoleIdAsync(int ID, CancellationToken ct)
         {
             var result = await _permissionService.GetPermissionByRoleIdAsync(ID, ct);
@@ -114,6 +122,8 @@ namespace FZ.WebAPI.Controllers.Auth
             return Ok(result);
         }
         [HttpPost("BulkCreate")]
+        [Authorize(Policy = "PermissionManage")]
+
         public async Task<IActionResult> BulkCreatePermissionsAsync(List<CreatePermissionRequestDto> reqs, CancellationToken ct)
         {
             if (!ModelState.IsValid)

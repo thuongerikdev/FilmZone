@@ -1,5 +1,6 @@
 ﻿using FZ.Auth.ApplicationService.Service.Implements.Role;
 using FZ.Auth.Dtos.Role;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FZ.WebAPI.Controllers.Auth
@@ -14,6 +15,7 @@ namespace FZ.WebAPI.Controllers.Auth
             _authUserRoleService = authUserRoleService;
         }
         [HttpPost("assign-roles")]
+        [Authorize(Policy = "RoleAssign")]
         public async Task<IActionResult> AssignRolesToUser([FromBody] UserRoleRequestDto req, CancellationToken ct)
         {
             if (!ModelState.IsValid)

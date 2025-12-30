@@ -1,6 +1,7 @@
 ﻿using FZ.Constant;
 using FZ.Movie.ApplicationService.Service.Abtracts;
 using FZ.Movie.Dtos.Request;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FZ.WebAPI.Controllers.Movie
@@ -15,6 +16,7 @@ namespace FZ.WebAPI.Controllers.Movie
             _episodeWatchProgressService = episodeWatchProgressService;
         }
         [HttpPost]
+        [Authorize(Policy = "ProgressTrack")]
         public async Task<IActionResult> CreateEpisodeWatchProgress([FromBody] CreateEpisodeWatchProgressRequest request, CancellationToken ct)
         {
             if (!ModelState.IsValid)
@@ -36,6 +38,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpPut]
+        [Authorize(Policy = "ProgressTrack")]
         public async Task<IActionResult> UpdateEpisodeWatchProgress([FromBody] UpdateEpisodeWatchProgressRequest request, CancellationToken ct)
         {
             if (!ModelState.IsValid)
@@ -57,6 +60,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpDelete("{id}")]
+        [Authorize(Policy = "ProgressTrack")]
         public async Task<IActionResult> DeleteEpisodeWatchProgress(int id, CancellationToken ct)
         {
             try
@@ -74,6 +78,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("{id}")]
+        [Authorize(Policy = "ProgressRead")]
         public async Task<IActionResult> GetEpisodeWatchProgressByID(int id, CancellationToken ct)
         {
             try
@@ -90,7 +95,8 @@ namespace FZ.WebAPI.Controllers.Movie
                 return StatusCode(500, new { message = "An error occurred while processing your request.", details = ex.Message });
             }
         }
-        [HttpGet("user/{userId}")] 
+        [HttpGet("user/{userId}")]
+        [Authorize(Policy = "ProgressRead")]
         public async Task<IActionResult> GetEpisodeWatchProgressByUserID(int userId, CancellationToken ct)
         {
             try
@@ -108,6 +114,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("episode/{episodeId}")]
+        [Authorize(Policy = "ProgressRead")]
         public async Task<IActionResult> GetEpisodeWatchProgressByEpisodeID(int episodeId, CancellationToken ct)
         {
             try

@@ -1,5 +1,6 @@
 ﻿using FZ.Movie.ApplicationService.Service.Abtracts;
 using FZ.Movie.Dtos.Request;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FZ.WebAPI.Controllers.Movie
@@ -14,6 +15,7 @@ namespace FZ.WebAPI.Controllers.Movie
             _episodeSourceService = episodeSourceService;
         }
         [HttpPost]
+        [Authorize(Policy = "SourceManage")]
         public async Task<IActionResult> CreateEpisodeSource( [FromBody] CreateEpisodeSourceRequest createEpisodeSourceRequest,   CancellationToken ct)
         {
             if (!ModelState.IsValid)
@@ -35,6 +37,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpPut]
+        [Authorize(Policy = "SourceManage")]
         public async Task<IActionResult> UpdateEpisodeSource( [FromBody] UpdateEpisodeSourceRequest updateEpisodeSourceRequest,   CancellationToken ct)
         {
             if (!ModelState.IsValid)
@@ -56,6 +59,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpDelete("{id}")]
+        [Authorize(Policy = "SourceManage")]
         public async Task<IActionResult> DeleteEpisodeSource(int id, CancellationToken ct)
         {
             try
@@ -73,6 +77,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("{id}")]
+        [Authorize(Policy = "SourceRead")]
         public async Task<IActionResult> GetEpisodeSourceById(int id, CancellationToken ct)
         {
             try
@@ -89,7 +94,8 @@ namespace FZ.WebAPI.Controllers.Movie
                 return StatusCode(500, new { message = "An error occurred while processing your request.", details = ex.Message });
             }
         }
-        [HttpGet("{episodeId}")] 
+        [HttpGet("{episodeId}")]
+        [Authorize(Policy = "SourceRead")]
         public async Task<IActionResult> GetEpisodeSourcesByEpisodeId(int episodeId, CancellationToken ct)
         {
             try

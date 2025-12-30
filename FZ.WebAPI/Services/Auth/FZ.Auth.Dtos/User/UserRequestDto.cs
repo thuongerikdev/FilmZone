@@ -15,8 +15,19 @@ namespace FZ.Auth.Dtos.User
         public string userName { get; set; } = default!;
         public string email { get; set; } = default!;
         public string password { get; set; } = default!;
-        public bool autoVerifyEmail { get; set; } = true; // Mặc định là True để user dùng được ngay
-        public string scope { get; set; } = "staff"; // phạm vi của user
+        public bool autoVerifyEmail { get; set; } = true;
+        public string scope { get; set; } = "staff";
+
+        // --- THAY ĐỔI Ở ĐÂY ---
+        // Nhận vào danh sách ID (ví dụ: [1, 2, 4])
+        // Nếu null hoặc rỗng -> Sẽ lấy Role mặc định
+        public List<int>? roleIds { get; set; }
+
+        public string? firstName { get; set; }
+        public string? lastName { get; set; }
+        public string? gender { get; set; }
+        public DateTime? dateOfBirth { get; set; }
+        public string? avatar { get; set; }
     }
 
     public class RegisterRequest

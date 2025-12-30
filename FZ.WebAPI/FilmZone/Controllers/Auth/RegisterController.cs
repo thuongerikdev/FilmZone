@@ -1,5 +1,6 @@
 ﻿using FZ.Auth.ApplicationService.MFAService.Abtracts;
 using FZ.Auth.Dtos.User;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FZ.WebAPI.Controllers.Auth
@@ -28,6 +29,17 @@ namespace FZ.WebAPI.Controllers.Auth
         public async Task<IActionResult> VerifyRegisterEmail(VerifyEmailRequest verifyEmailRequest, CancellationToken ct)
         {
             var result = await _authRegisterService.VerifyEmailAsync(verifyEmailRequest, ct);
+            if (result.ErrorCode != 200)
+            {
+                return BadRequest(result);
+            }
+            return Ok(result);
+        }
+        [HttpPost("createUser")]
+        [Authorize(Policy = "RoleManage")]
+        public async Task<IActionResult> CreateUser(SimpleCreateUserRequest createUserRequest, CancellationToken ct)
+        {
+            var result = await _authRegisterService.CreateSimpleUserAsync(createUserRequest, ct);
             if (result.ErrorCode != 200)
             {
                 return BadRequest(result);

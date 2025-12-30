@@ -1,5 +1,6 @@
 ﻿using FZ.Movie.ApplicationService.Service.Abtracts;
 using FZ.Movie.Dtos.Request;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FZ.WebAPI.Controllers.Movie
@@ -14,6 +15,7 @@ namespace FZ.WebAPI.Controllers.Movie
             _watchProgressService = watchProgressService;
         }
         [HttpPost]
+        [Authorize(Policy = "ProgressTrack")]
         public async Task<IActionResult> CreateWatchProgress([FromBody] CreateWatchProgressRequest createWatchProgressRequest, CancellationToken ct)
         {
             if (!ModelState.IsValid)
@@ -35,6 +37,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpPut]
+        [Authorize(Policy = "ProgressTrack")]
         public async Task<IActionResult> UpdateWatchProgress([FromBody] UpdateWatchProgressRequest updateWatchProgressRequest, CancellationToken ct)
         {
             if (!ModelState.IsValid)
@@ -56,6 +59,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpDelete("{id}")]
+        [Authorize(Policy = "ProgressTrack")]
         public async Task<IActionResult> DeleteWatchProgress(int id, CancellationToken ct)
         {
             try
@@ -73,6 +77,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("{userId}")]
+        [Authorize(Policy = "ProgressRead")]
         public async Task<IActionResult> GetWatchProgressByUserId(int userId, CancellationToken ct)
         {
             try
@@ -90,6 +95,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("{ID}")]
+        [Authorize(Policy = "ProgressRead")]
         public async Task<IActionResult> GetWatchProgressByID(int ID, CancellationToken ct)
         {
             try
@@ -107,6 +113,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("{movieId}")]
+        [Authorize(Policy = "ProgressRead")]
         public async Task<IActionResult> GetWatchProgressByMovieId(int movieId, CancellationToken ct)
         {
             try

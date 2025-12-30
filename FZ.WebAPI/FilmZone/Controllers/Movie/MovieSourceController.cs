@@ -15,6 +15,7 @@ namespace FZ.WebAPI.Controllers.Movie
             _movieSourceService = movieSourceService;
         }
         [HttpPost]
+        [Authorize(Policy = "SourceManage")]
         public async Task<IActionResult> CreateMovieSource(CreateMovieSourceRequest createMovieSourceRequest, CancellationToken ct)
         {
             if (!ModelState.IsValid)
@@ -36,6 +37,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpPut]
+        [Authorize(Policy = "SourceManage")]
         public async Task<IActionResult> UpdateMovieSource(UpdateMovieSourceRequest updateMovieSourceRequest, CancellationToken ct)
         {
             if (!ModelState.IsValid)
@@ -57,6 +59,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpDelete("{id}")]
+        [Authorize(Policy = "SourceManage")]
         public async Task<IActionResult> DeleteMovieSource(int id, CancellationToken ct)
         {
             try
@@ -93,6 +96,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("{id}")]
+        [Authorize(Policy = "SourceRead")]
         public async Task<IActionResult> GetMovieSourceById(int id, CancellationToken ct)
         {
             try
@@ -111,6 +115,7 @@ namespace FZ.WebAPI.Controllers.Movie
         }
 
         [HttpGet("getByMovieId/{movieId}")]
+        [Authorize(Policy = "SourceRead")]
         public async Task<IActionResult> GetMovieSourcesByMovieIdPublic(int movieId, CancellationToken ct)
         {
             try

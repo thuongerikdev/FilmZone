@@ -1,5 +1,6 @@
 ﻿using FZ.Movie.ApplicationService.Service.Abtracts;
 using FZ.Movie.Dtos.Request;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FZ.WebAPI.Controllers.Movie
@@ -14,6 +15,7 @@ namespace FZ.WebAPI.Controllers.Movie
             _tagService = tagService;
         }
         [HttpPost]
+        [Authorize(Policy = "TagManage")]
         public async Task<IActionResult> CreateTag([FromBody] CreateTagRequest createTagRequest, CancellationToken ct)
         {
             if (string.IsNullOrWhiteSpace(createTagRequest.tagName))
@@ -35,6 +37,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpPut]
+        [Authorize(Policy = "TagManage")]
         public async Task<IActionResult> UpdateTag([FromBody] UpdateTagRequest updateTagRequest, CancellationToken ct)
         {
             if (string.IsNullOrWhiteSpace(updateTagRequest.tagName))
@@ -56,6 +59,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpDelete("{id}")]
+        [Authorize(Policy = "TagManage")]
         public async Task<IActionResult> DeleteTag(int id, CancellationToken ct)
         {
             if (id <= 0)
@@ -77,6 +81,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("{TagID}")]
+        [Authorize(Policy = "TagRead")]
         public async Task<IActionResult> GetTagById(int TagID, CancellationToken ct)
         {
             if (TagID <= 0)
@@ -98,6 +103,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("getALlTags")]
+        [Authorize(Policy = "TagRead")]
         public async Task<IActionResult> GetAllTags(CancellationToken ct)
         {
             try

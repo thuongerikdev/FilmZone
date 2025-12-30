@@ -1,5 +1,6 @@
 ﻿using FZ.Movie.ApplicationService.Service.Abtracts;
 using FZ.Movie.Dtos.Request;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FZ.WebAPI.Controllers.Movie
@@ -14,6 +15,7 @@ namespace FZ.WebAPI.Controllers.Movie
             _imageSourceService = imageSourceService;
         }
         [HttpPost]
+        [Authorize(Policy = "ImageManage")]
         public async Task<IActionResult> CreateImageSource([FromForm] CreateImageSourceRequest createImageSourceRequest, CancellationToken ct)
         {
             if (!ModelState.IsValid)
@@ -35,6 +37,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpPut]
+        [Authorize(Policy = "ImageManage")]
         public async Task<IActionResult> UpdateImageSource([FromForm] UpdateImageSourceRequest updateImageSourceRequest, CancellationToken ct)
         {
             if (!ModelState.IsValid)
@@ -55,7 +58,8 @@ namespace FZ.WebAPI.Controllers.Movie
                 return StatusCode(500, new { message = "An error occurred while processing your request.", details = ex.Message });
             }
         }
-        [HttpDelete("{id}")] 
+        [HttpDelete("{id}")]
+        [Authorize(Policy = "ImageManage")]
         public async Task<IActionResult> DeleteImageSource(int id, CancellationToken ct)
         {
             try
@@ -73,6 +77,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("{Type}")]
+        [Authorize(Policy = "ImageRead")]
         public async Task<IActionResult> GetImageSourcesByType(string Type, CancellationToken ct)
         {
             try

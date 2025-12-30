@@ -1,4 +1,5 @@
 ﻿using FZ.Auth.ApplicationService.Billing;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FZ.WebAPI.Controllers.Payment
@@ -13,6 +14,7 @@ namespace FZ.WebAPI.Controllers.Payment
             _subscriptionService = subscriptionService;
         }
         [HttpGet("{subscriptionID}")]
+        [Authorize(Policy = "SubscriptionReadOwn")]
         public async Task<IActionResult> GetSubscriptionByID(int subscriptionID, CancellationToken ct)
         {
             var response = await _subscriptionService.GetSubscriptionByID(subscriptionID, ct);
@@ -27,6 +29,7 @@ namespace FZ.WebAPI.Controllers.Payment
 
         }
         [HttpGet("user/{userID}")]
+        [Authorize(Policy = "SubscriptionReadOwn")]
         public async Task<IActionResult> GetSubscriptionByUserID(int userID, CancellationToken ct)
         {
             var response = await _subscriptionService.GetSubscriptionByUserID(userID, ct);
@@ -41,6 +44,7 @@ namespace FZ.WebAPI.Controllers.Payment
             }
         }
         [HttpGet("all")]
+        [Authorize(Policy = "SubscriptionReadAll")]
         public async Task<IActionResult> GetAllSubscription()
         {
             var response = await _subscriptionService.GetAllSubscription();
@@ -55,6 +59,7 @@ namespace FZ.WebAPI.Controllers.Payment
 
         }
         [HttpPost("expire-due")]
+        [Authorize(Policy = "SubscriptionManage")]
         public async Task<IActionResult> ExpireIfDueAsync(CancellationToken ct)
         {
             await _subscriptionService.ExpireIfDueAsync(ct);
@@ -62,6 +67,7 @@ namespace FZ.WebAPI.Controllers.Payment
         }
 
         [HttpPost("cancel-subs")]
+        [Authorize(Policy = "SubscriptionCancel")]
         public async Task<IActionResult> CancelSubscriptionAsync(int userID, CancellationToken ct)
         {
             var response = await _subscriptionService.CancelSubscriptionAsync(userID, ct);

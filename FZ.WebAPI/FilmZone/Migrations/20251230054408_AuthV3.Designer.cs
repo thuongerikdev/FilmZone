@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FZ.WebAPI.Migrations
 {
     [DbContext(typeof(AuthDbContext))]
-    [Migration("20251229161830_AuthV3")]
+    [Migration("20251230054408_AuthV3")]
     partial class AuthV3
     {
         /// <inheritdoc />
@@ -216,7 +216,7 @@ namespace FZ.WebAPI.Migrations
                         {
                             planID = 1,
                             code = "VIP",
-                            description = "Quyền lợi VIP (không quảng cáo, chất lượng cao...)",
+                            description = "Quyền lợi VIP",
                             isActive = true,
                             name = "Gói VIP"
                         });
@@ -557,17 +557,51 @@ namespace FZ.WebAPI.Migrations
                     b.HasData(
                         new
                         {
+                            roleID = 1,
+                            isDefault = false,
+                            roleDescription = "Quản trị viên",
+                            roleName = "admin",
+                            scope = "staff"
+                        },
+                        new
+                        {
+                            roleID = 2,
+                            isDefault = false,
+                            roleDescription = "Quản lý nội dung",
+                            roleName = "content_manager",
+                            scope = "staff"
+                        },
+                        new
+                        {
+                            roleID = 3,
+                            isDefault = false,
+                            roleDescription = "Quản lý người dùng",
+                            roleName = "user_manager",
+                            scope = "staff"
+                        },
+                        new
+                        {
+                            roleID = 4,
+                            isDefault = false,
+                            roleDescription = "Quản lý tài chính",
+                            roleName = "finance_manager",
+                            scope = "staff"
+                        },
+                        new
+                        {
                             roleID = 10,
                             isDefault = true,
-                            roleDescription = "Khách hàng tiêu chuẩn",
-                            roleName = "customer"
+                            roleDescription = "Khách hàng",
+                            roleName = "customer",
+                            scope = "user"
                         },
                         new
                         {
                             roleID = 11,
                             isDefault = false,
-                            roleDescription = "Khách hàng VIP (đồng bộ với gói VIP)",
-                            roleName = "customer-vip"
+                            roleDescription = "Khách hàng VIP",
+                            roleName = "customer-vip",
+                            scope = "user"
                         });
                 });
 

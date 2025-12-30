@@ -1,11 +1,13 @@
 ﻿using FZ.Auth.ApplicationService.Billing;
 using FZ.Auth.Dtos.Billing;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FZ.WebAPI.Controllers.Payment
 {
     [ApiController]
     [Route("api/plans")]
+   
     public class PlanController : Controller
     {
        private readonly IPlanService _plans;
@@ -13,6 +15,7 @@ namespace FZ.WebAPI.Controllers.Payment
          {
               _plans = plans;
         }
+        [Authorize(Policy = "PlanManage")]
         [HttpPost("create")]
         public async Task<IActionResult> CreatePlan([FromBody] CreatePlanRequestDto dto, CancellationToken ct)
         {
@@ -32,6 +35,7 @@ namespace FZ.WebAPI.Controllers.Payment
              }
         }
         [HttpPut("update")]
+        [Authorize(Policy = "PlanManage")]
         public async Task<IActionResult> UpdatePlan([FromBody] UpdatePlanRequestDto dto, CancellationToken ct)
         {
           
@@ -50,6 +54,7 @@ namespace FZ.WebAPI.Controllers.Payment
              }
         }
         [HttpDelete("delete/{planID}")]
+        [Authorize(Policy = "PlanManage")]
         public async Task<IActionResult> DeletePlan([FromRoute] int planID, CancellationToken ct)
         {
              if (planID <= 0)
@@ -71,6 +76,7 @@ namespace FZ.WebAPI.Controllers.Payment
              }
         }
         [HttpGet("{planID}")]
+        [Authorize(Policy = "PlanRead")]
         public async Task<IActionResult> GetPlanByID([FromRoute] int planID, CancellationToken ct)
         {
              if (planID <= 0)
@@ -92,6 +98,7 @@ namespace FZ.WebAPI.Controllers.Payment
              }
         }
         [HttpGet("all")]
+        [Authorize(Policy = "PlanRead")]
         public async Task<IActionResult> GetAllPlans(CancellationToken ct)
         {
              try 

@@ -2,6 +2,7 @@
 using FZ.Movie.ApplicationService.Service.Implements.Media;
 using FZ.Movie.Dtos.Request;
 using FZ.Movie.Dtos.Respone;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FZ.WebAPI.Controllers.Movie
@@ -23,6 +24,7 @@ namespace FZ.WebAPI.Controllers.Movie
             _episodeSubTitleService = episodeSubTitleService;
         }
         [HttpPost("UploadMovieSubTitle")]
+        [Authorize(Policy = "SubtitleUpload")]
         [DisableRequestSizeLimit]
         [RequestFormLimits(
             MultipartBodyLengthLimit = long.MaxValue,
@@ -53,6 +55,7 @@ namespace FZ.WebAPI.Controllers.Movie
         // Bên thứ 3 (AI Service) sẽ gọi API này khi xử lý xong
         // Lưu ý: Dùng [FromBody] vì Service thường gửi JSON payload, không phải Form-Data
         [HttpPost("Callback/TranscribeResult")]
+        [AllowAnonymous]
         public async Task<IActionResult> ReceiveTranscribeCallback([FromBody] TranscribeCallbackRequest callbackRequest, CancellationToken ct)
         {
             try
@@ -75,6 +78,7 @@ namespace FZ.WebAPI.Controllers.Movie
         }
 
         [HttpPost("Translate/AutoFromSource")]
+        [Authorize(Policy = "SubtitleTranslate")]
         public async Task<IActionResult> TranslateFromSource([FromBody] TranslateSourceRawRequest request, CancellationToken ct)
         {
             try
@@ -103,6 +107,8 @@ namespace FZ.WebAPI.Controllers.Movie
         }
 
         [HttpGet("movie/GetAllSubTitlesBySourceID/{sourceID}")]
+        [Authorize(Policy = "SubtitleRead")]
+
         public async Task<IActionResult> GetAllSubTitlesByMovieId(int sourceID, CancellationToken ct)
         {
             try
@@ -120,6 +126,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("movie/GetAllSubTitles")]
+        [Authorize(Policy = "SubtitleRead")]
         public async Task<IActionResult> GetAllSubTitles(CancellationToken ct)
         {
             try
@@ -137,6 +144,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpPost("movie/createMovieSubTitle")]
+        [Authorize(Policy = "SubtitleManage")]
         public async Task<IActionResult> CreateMovieSubTitle([FromBody] CreateMovieSubTitleRequest request, CancellationToken ct)
         {
             try
@@ -154,6 +162,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpPut("movie/updateMovieSubTitle")]
+        [Authorize(Policy = "SubtitleManage")]
         public async Task<IActionResult> UpdateMovieSubTitle([FromBody] UpdateMovieSubTitleRequest request, CancellationToken ct)
         {
             try
@@ -171,6 +180,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpDelete("movie/deleteMovieSubTitle/{movieSubTitleID}")]
+        [Authorize(Policy = "SubtitleManage")]
         public async Task<IActionResult> DeleteMovieSubTitle(int movieSubTitleID, CancellationToken ct)
         {
             try
@@ -188,6 +198,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("movie/GetMovieSubTitleByID/{movieSubTitleID}")]
+        [Authorize(Policy = "SubtitleRead")]
         public async Task<IActionResult> GetMovieSubTitleByID(int movieSubTitleID, CancellationToken ct)
         {
             try
@@ -207,6 +218,7 @@ namespace FZ.WebAPI.Controllers.Movie
 
 
         [HttpPost("episode/createEpisodeSubTitle")]
+        [Authorize(Policy = "SubtitleManage")]
         public async Task<IActionResult> CreateEpisodeSubTitle([FromBody] CreateEpisodeSubTitleRequest request, CancellationToken ct)
         {
             try
@@ -224,6 +236,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpPut("episode/updateEpisodeSubTitle")]
+        [Authorize(Policy = "SubtitleManage")]
         public async Task<IActionResult> UpdateEpisodeSubTitle([FromBody] UpdateEpisodeSubTitleRequest request, CancellationToken ct)
         {
             try
@@ -241,6 +254,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpDelete("episode/deleteEpisodeSubTitle/{episodeSubTitleID}")]
+        [Authorize(Policy = "SubtitleManage")]
         public async Task<IActionResult> DeleteEpisodeSubTitle(int episodeSubTitleID, CancellationToken ct)
         {
             try
@@ -258,6 +272,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("episode/GetAllSubTitlesBySourceID/{sourceID}")]
+        [Authorize(Policy = "SubtitleRead")]
         public async Task<IActionResult> GetAllSubTitlesByEpisodeId(int sourceID, CancellationToken ct)
         {
             try
@@ -275,6 +290,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("episode/GetEpisodeSubTitleByID/{episodeSubTitleID}")]
+        [Authorize(Policy = "SubtitleRead")]
         public async Task<IActionResult> GetEpisodeSubTitleByID(int episodeSubTitleID, CancellationToken ct)
         {
             try
@@ -293,6 +309,7 @@ namespace FZ.WebAPI.Controllers.Movie
         }
       
         [HttpGet("episode/GetAllSubTitles")]
+        [Authorize(Policy = "SubtitleRead")]
         public async Task<IActionResult> GetAllEpisodeSubTitles(CancellationToken ct)
         {
             try

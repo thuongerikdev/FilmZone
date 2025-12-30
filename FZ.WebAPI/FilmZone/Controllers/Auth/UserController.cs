@@ -16,7 +16,8 @@ namespace FZ.WebAPI.Controllers.Auth
         {
             _userService = userService;
         }
-        [HttpGet("getAllUsers")]
+        [HttpGet("getAllUsersSlim")]
+        [Authorize(Policy = "UserReadList")]
         public async Task<IActionResult> GetAllUsers(CancellationToken ct)
         {
             var result = await _userService.GetAllSlimAsync(ct);
@@ -28,6 +29,7 @@ namespace FZ.WebAPI.Controllers.Auth
         }
 
         [HttpDelete("deleteUser")]
+        [Authorize(Policy = "UserDelete")]
         public async Task<IActionResult> DeleteUserAsync([FromQuery] int userId, CancellationToken ct)
         {
             var result = await _userService.DeleteUserAsync(userId, ct);
@@ -55,6 +57,7 @@ namespace FZ.WebAPI.Controllers.Auth
         }
 
         [HttpGet("getUserById")]
+        [Authorize(Policy = "UserReadDetails")]
         public async Task<IActionResult> GetUserById([FromQuery] int userId, CancellationToken ct)
         {
             var result = await _userService.GetUserByIDAsync(userId, ct);
@@ -65,8 +68,34 @@ namespace FZ.WebAPI.Controllers.Auth
             return Ok(result);
 
         }
+        [HttpGet("GetUserSlimById{userID}")]
+        [Authorize(Policy = "UserReadDetails")]
+        public async Task<IActionResult> GetUserSlimById([FromQuery] int userID,  CancellationToken ct)
+        {
+            var result =  await _userService.GetSlimUserByID(userID, ct);
+            if (result.ErrorCode != 200)
+            {
+                return BadRequest(result);
+            }
+            return Ok(result);
+        }
+
+        [HttpGet("getAllUsers")]
+        [Authorize(Policy = "UserReadDetails")]
+        public async Task<IActionResult> GetAllUsersFull(CancellationToken ct)
+        {
+            var result = await _userService.GetAllUserAsync(ct);
+            if (result.ErrorCode != 200)
+            {
+                return BadRequest(result);
+            }
+            return Ok(result);
+        }
+
+
 
         [HttpPut("update/profile")]
+        [Authorize(Policy = "UserUpdateProfile")]
         public async Task<IActionResult> UpdateProfile([FromForm] AuthUpdateProfileRequest req, CancellationToken ct)
         {
 
@@ -75,6 +104,7 @@ namespace FZ.WebAPI.Controllers.Auth
             return Ok(result);
         }
         [HttpPut("update/username")]
+        [Authorize(Policy = "UserUpdateProfile")]
         public async Task<IActionResult> UpdateUsername([FromQuery] int userId, [FromQuery] string newUsername, CancellationToken ct)
         {
             var result = await _userService.AuthUpdateUserName(userId, newUsername, ct);

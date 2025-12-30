@@ -200,7 +200,7 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.User
         {
             return _uow.ExecuteInTransactionAsync(async _ =>
             {
-                // 1. Validate
+                // 1. Validate input
                 if (string.IsNullOrWhiteSpace(req.userName) ||
                     string.IsNullOrWhiteSpace(req.email) ||
                     string.IsNullOrWhiteSpace(req.password))
@@ -217,13 +217,37 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.User
                 if (await _users.ExistsByEmailAsync(email, ct))
                     return ResponseConst.Error<RegisterResponse>(409, "Email đã tồn tại");
 
-                // 3. Tạo User Entity (Không tạo Profile, Không tạo Email Token)
+                // --- LOGIC LẤY DANH SÁCH ROLE ---
+                var rolesToAssign = new List<AuthRole>();
+
+                if (req.roleIds != null && req.roleIds.Any())
+                {
+                    // Tìm các role theo ID gửi lên
+                    rolesToAssign = await _roleRepository.GetRolesByIdsAsync(req.roleIds, ct);
+
+                    // (Tuỳ chọn) Kiểm tra xem có tìm thấy đủ số lượng không
+                    // Ví dụ: Gửi lên [1, 999] mà DB chỉ có 1 -> 999 là ID rác
+                    if (rolesToAssign.Count != req.roleIds.Distinct().Count())
+                    {
+                        return ResponseConst.Error<RegisterResponse>(404, "Một hoặc nhiều Role ID không tồn tại.");
+                    }
+                }
+                else
+                {
+                    // Nếu không gửi ID nào -> Lấy Default Role
+                    var defaultRole = await _roleRepository.GetDefaultRoleAsync(ct);
+                    if (defaultRole != null)
+                    {
+                        rolesToAssign.Add(defaultRole);
+                    }
+                }
+
+                // 3. Tạo User Entity
                 var user = new AuthUser
                 {
                     userName = userName,
                     email = email,
                     passwordHash = _hasher.Hash(req.password),
-                    // Nếu admin tạo thì thường cho active luôn, bỏ qua bước verify email
                     isEmailVerified = req.autoVerifyEmail,
                     status = "Active",
                     tokenVersion = 1,
@@ -233,30 +257,53 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.User
                 };
 
                 await _users.AddAsync(user, ct);
-                await _uow.SaveChangesAsync(ct); // Save để lấy ID
+                await _uow.SaveChangesAsync(ct); // Save để lấy UserID
 
-                // 4. Gán Role mặc định (Bắt buộc phải có role để login được)
-                var defaultRole = await _roleRepository.GetDefaultRoleAsync(ct);
-                if (defaultRole != null)
+                // 4. Tạo Profile
+                var profile = new AuthProfile
                 {
-                    var userRole = new AuthUserRole
+                    userID = user.userID,
+                    firstName = req.firstName ?? string.Empty,
+                    lastName = req.lastName ?? string.Empty,
+                    gender = req.gender,
+                    dateOfBirth = req.dateOfBirth,
+                    avatar = req.avatar
+                };
+                await _profiles.AddAsync(profile, ct);
+
+                // 5. Gán Role (Vòng lặp)
+                if (rolesToAssign.Any())
+                {
+                    var userRoles = new List<AuthUserRole>();
+                    foreach (var role in rolesToAssign)
                     {
-                        roleID = defaultRole.roleID,
-                        userID = user.userID,
-                        assignedAt = DateTime.UtcNow
-                    };
-                    await _userRoleRepository.AddUserRoleAsync(userRole, ct);
+                        userRoles.Add(new AuthUserRole
+                        {
+                            roleID = role.roleID,
+                            userID = user.userID,
+                            assignedAt = DateTime.UtcNow
+                        });
+                    }
+
+                    // Giả sử UserRoleRepository có hàm AddRange, nếu chưa có thì loop Add từng cái
+                    // Hoặc add thẳng vào context thông qua _uow nếu Repository không hỗ trợ AddRange
+                    foreach (var ur in userRoles)
+                    {
+                        await _userRoleRepository.AddUserRoleAsync(ur, ct);
+                    }
                 }
                 else
                 {
-                    // Tùy nghiệp vụ: Có thể return lỗi hoặc cho phép tạo user không role
-                    _logger.LogWarning("System has no default role configured.");
+                    _logger.LogWarning("User created without any role.");
                 }
 
-                // 5. Commit
+                // 6. Commit
                 await _uow.SaveChangesAsync(ct);
 
-                return ResponseConst.Success("Tạo user thành công", new RegisterResponse
+                // Tạo string danh sách role để trả về cho đẹp
+                var roleNames = string.Join(", ", rolesToAssign.Select(r => r.roleName));
+
+                return ResponseConst.Success($"Tạo user thành công. Roles: [{roleNames}]", new RegisterResponse
                 {
                     userID = user.userID,
                     userName = user.userName,

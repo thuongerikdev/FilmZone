@@ -1,4 +1,5 @@
 ﻿using FZ.Auth.ApplicationService.Billing;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FZ.WebAPI.Controllers.Payment
@@ -13,6 +14,8 @@ namespace FZ.WebAPI.Controllers.Payment
             _invoiceService = invoiceService;
         }
         [HttpGet("{orderID}")]
+        [Authorize(Policy = "InvoiceReadOwn")]
+
         public async Task<IActionResult> GetInvoiceByOrderID(int orderID, CancellationToken ct)
         {
             var response = await _invoiceService.GetInvoiceByOrderID(orderID, ct);
@@ -27,6 +30,7 @@ namespace FZ.WebAPI.Controllers.Payment
 
         }
         [HttpGet("all")]
+        [Authorize(Policy = "InvoiceReadAll")]
         public async Task<IActionResult> GetAllInvoices()
         {
             var response = await _invoiceService.GetAllInvoices();
@@ -39,7 +43,9 @@ namespace FZ.WebAPI.Controllers.Payment
                 return StatusCode(response.ErrorCode, response);
             }
         }
+
         [HttpGet("user/{userID}")]
+        [Authorize(Policy = "InvoiceReadOwn")]
         public async Task<IActionResult> GetByUserID(int userID, CancellationToken ct)
         {
             var response = await _invoiceService.GetByUserID(userID, ct);

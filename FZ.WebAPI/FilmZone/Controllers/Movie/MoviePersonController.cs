@@ -1,5 +1,6 @@
 ﻿using FZ.Movie.ApplicationService.Service.Abtracts;
 using FZ.Movie.Dtos.Request;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FZ.WebAPI.Controllers.Movie
@@ -14,6 +15,7 @@ namespace FZ.WebAPI.Controllers.Movie
             _moviePersonService = moviePersonService;
         }
         [HttpPost]
+        [Authorize(Policy = "MoviePersonManage")]
         public async Task<IActionResult> AddPersonToMovie( [FromBody]CreateMoviePersonRequest createMoviePersonRequest, CancellationToken ct)
         {
             if (!ModelState.IsValid)
@@ -36,6 +38,7 @@ namespace FZ.WebAPI.Controllers.Movie
         }
        
         [HttpDelete("{id}")]
+        [Authorize(Policy = "MoviePersonManage")]
         public async Task<IActionResult> RemovePersonFromMovie(int id, CancellationToken ct)
         {
             try
@@ -53,6 +56,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("{personID}")]
+        [Authorize(Policy = "MoviePersonRead")]
         public async Task<IActionResult> GetMoviesByPerson(int personID, CancellationToken ct)
         {
             try
@@ -70,6 +74,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("{movieID}")]
+        [Authorize(Policy = "MoviePersonRead")]
         public async Task<IActionResult> GetPersonsByMovie(int movieID, CancellationToken ct)
         {
             try

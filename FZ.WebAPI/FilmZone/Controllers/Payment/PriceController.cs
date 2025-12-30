@@ -1,5 +1,6 @@
 ﻿using FZ.Auth.ApplicationService.Billing;
 using FZ.Auth.Dtos.Billing;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FZ.WebAPI.Controllers.Payment
@@ -12,6 +13,7 @@ namespace FZ.WebAPI.Controllers.Payment
         public PriceController(IPriceService prices) { _prices = prices; }
 
         [HttpPost("Create")]
+        [Authorize(Policy = "PriceManage")]
         public async Task<IActionResult> CreatePrice([FromBody] CreatePriceRequestDto dto, CancellationToken ct)
         {
            try 
@@ -27,6 +29,7 @@ namespace FZ.WebAPI.Controllers.Payment
 
         }
         [HttpPut("Update")]
+        [Authorize(Policy = "PriceManage")]
         public async Task<IActionResult> UpdatePrice([FromBody] UpdatePriceRequestDto dto, CancellationToken ct)
         {
             try
@@ -40,6 +43,7 @@ namespace FZ.WebAPI.Controllers.Payment
             }
         }
         [HttpDelete("Delete/{priceID}")]
+        [Authorize(Policy = "PriceManage")]
         public async Task<IActionResult> DeletePrice([FromRoute] int priceID, CancellationToken ct)
         {
             try
@@ -53,6 +57,7 @@ namespace FZ.WebAPI.Controllers.Payment
             }
         }
         [HttpGet("{priceID}")]
+        [Authorize(Policy = "PriceRead")]
         public async Task<IActionResult> GetPrice([FromRoute] int priceID, CancellationToken ct)
         {
             try
@@ -65,7 +70,9 @@ namespace FZ.WebAPI.Controllers.Payment
                 return StatusCode(500, new { ErrorCode = 500, Message = "Internal server error", Details = ex.Message });
             }
         }
+
         [HttpGet("all")]
+        [Authorize(Policy = "PriceRead")]
         public async Task<IActionResult> GetAllPrices(CancellationToken ct)
         {
             try

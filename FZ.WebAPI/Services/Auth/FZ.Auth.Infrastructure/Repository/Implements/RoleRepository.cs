@@ -73,6 +73,13 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
             _db.authUserRoles.RemoveRange(userRoles);
             return Task.CompletedTask;
         }
+        public async Task<List<AuthRole>> GetRolesByIdsAsync(IEnumerable<int> roleIds, CancellationToken ct)
+        {
+            // Dùng Contains để tạo câu lệnh SQL: WHERE roleID IN (...)
+            return await _db.authRoles
+                .Where(r => roleIds.Contains(r.roleID))
+                .ToListAsync(ct);
+        }
     }
 
 
