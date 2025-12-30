@@ -5,6 +5,7 @@ using FZ.Auth.Dtos.User;
 using FZ.Auth.Infrastructure.Repository.Abtracts;
 using FZ.Auth.Infrastructure.Repository.Implements;
 using FZ.Constant;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
@@ -31,6 +32,7 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.User
         private readonly IDeviceIdProvider _deviceId;
         private readonly IRoleRepository _roleRepository;
         private readonly IUserRoleRepository _userRoleRepository;
+        private readonly IHttpContextAccessor _httpContextAccessor;
         IProfileRepository _profiles;
 
         private readonly IDatabase _redis;  // THÊM
@@ -49,6 +51,8 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.User
             IRoleRepository roleRepository,
             IMfaService mfaService,
             IUserRoleRepository userRoleRepository,
+            IHttpContextAccessor httpContextAccessor,
+
 
              IConnectionMultiplexer redis,
             IDeviceIdProvider deviceIdProvider)
@@ -66,6 +70,8 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.User
             _roleRepository = roleRepository;
             _userRoleRepository = userRoleRepository;
             _mfaService = mfaService;
+            _audit = auditLogRepository;
+            _httpContextAccessor = httpContextAccessor;
             _redis = redis.GetDatabase(); // THÊM
         }
 
@@ -79,6 +85,11 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.User
                     return ResponseConst.Error<LoginResponse>(400, "Thiếu thông tin đăng nhập");
 
                 var identifier = req.userName.Trim();
+                var userAgent = _httpContextAccessor.HttpContext?.Request.Headers["User-Agent"].ToString();
+                if (string.IsNullOrEmpty(userAgent))
+                {
+                    userAgent = "Unknown";
+                }
 
                 return await _uow.ExecuteInTransactionAsync<ResponseDto<LoginResponse>>(async innerCt =>
                 {
@@ -130,7 +141,7 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.User
                         permissions: permissions // <--- QUAN TRỌNG
                     );
 
-                    await _audit.LogAsync(new AuthAuditLog { userID = user.userID, action = "Login", result = "OK", detail = $"sessionID={session.sessionID}", ip = ip ?? "", createdAt = DateTime.UtcNow }, innerCt);
+                    await _audit.LogAsync(new AuthAuditLog { userID = user.userID, action = "Login", result = "OK", detail = $"sessionID={session.sessionID}", ip = ip ?? "", createdAt = DateTime.UtcNow , userAgent = userAgent }, innerCt);
 
                     var res = new LoginResponse
                     {
