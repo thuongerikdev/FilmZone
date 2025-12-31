@@ -4,6 +4,8 @@ import { Box, IconButton, Typography, useTheme } from "@mui/material";
 import { Link } from "react-router-dom";
 import "react-pro-sidebar/dist/css/styles.css";
 import { tokens } from "../../theme";
+
+// Icons
 import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
 import PeopleOutlinedIcon from "@mui/icons-material/PeopleOutlined";
 import ContactsOutlinedIcon from "@mui/icons-material/ContactsOutlined";
@@ -142,103 +144,120 @@ const Sidebar = ({ onCollapsedChange }) => {
               setSelected={setSelected}
             />
 
+            {/* NHÓM 1: QUẢN LÝ USER */}
             <Typography
               variant="h6"
               color={colors.grey[300]}
               sx={{ m: "15px 0 5px 20px" }}
             >
-              Quản Lý
+              Quản lý User/Dịch vụ
             </Typography>
             <Item
-              title="Quản Lý Users"
+              title="Quản lý Users"
               to="/users"
               icon={<PeopleOutlinedIcon />}
               selected={selected}
               setSelected={setSelected}
             />
             <Item
-              title="Quản Lý Phim"
+              title="Quản lý Permissions"
+              to="/permissions"
+              icon={<PeopleOutlinedIcon />}
+              selected={selected}
+              setSelected={setSelected}
+            />
+            <Item
+              title="Quản lý Roles"
+              to="/roles"
+              icon={<PeopleOutlinedIcon />}
+              selected={selected}
+              setSelected={setSelected}
+            />
+            {/* <Item
+              title="Hồ Sơ Cá Nhân"
+              to="/form"
+              icon={<PersonOutlinedIcon />}
+              selected={selected}
+              setSelected={setSelected}
+            /> */}
+            <Item
+              title="Bản Đồ Phân Bố"
+              to="/geography"
+              icon={<MapOutlinedIcon />}
+              selected={selected}
+              setSelected={setSelected}
+            />
+
+            {/* NHÓM 2: QUẢN LÝ NỘI DUNG */}
+            <Typography
+              variant="h6"
+              color={colors.grey[300]}
+              sx={{ m: "15px 0 5px 20px" }}
+            >
+              Quản lý Nội dung
+            </Typography>
+            <Item
+              title="Danh Sách Phim"
               to="/movies"
               icon={<MovieOutlinedIcon />}
               selected={selected}
               setSelected={setSelected}
             />
             <Item
-              title="Quản Lý Diễn Viên"
+              title="Diễn Viên/Đạo Diễn"
               to="/persons"
               icon={<PeopleAltOutlinedIcon />}
               selected={selected}
               setSelected={setSelected}
             />
             <Item
-              title="Hóa Đơn"
-              to="/invoices"
-              icon={<ReceiptOutlinedIcon />}
-              selected={selected}
-              setSelected={setSelected}
-            />
-
-            <Typography
-              variant="h6"
-              color={colors.grey[300]}
-              sx={{ m: "15px 0 5px 20px" }}
-            >
-              Trang
-            </Typography>
-            <Item
-              title="Biểu Mẫu Hồ Sơ"
-              to="/form"
-              icon={<PersonOutlinedIcon />}
-              selected={selected}
-              setSelected={setSelected}
-            />
-            <Item
-              title="Lịch"
+              title="Lịch Phát Hành"
               to="/calendar"
               icon={<CalendarTodayOutlinedIcon />}
               selected={selected}
               setSelected={setSelected}
             />
             <Item
-              title="FAQ"
+              title="Câu Hỏi Thường Gặp"
               to="/faq"
               icon={<HelpOutlineOutlinedIcon />}
               selected={selected}
               setSelected={setSelected}
             />
 
+            {/* NHÓM 3: QUẢN LÝ TÀI CHÍNH */}
             <Typography
               variant="h6"
               color={colors.grey[300]}
               sx={{ m: "15px 0 5px 20px" }}
             >
-              Biểu Đồ
+              Quản lý Tài Chính
             </Typography>
             <Item
-              title="Biểu Đồ Cột"
+              title="Hóa Đơn & Thanh Toán"
+              to="/invoices"
+              icon={<ReceiptOutlinedIcon />}
+              selected={selected}
+              setSelected={setSelected}
+            />
+            <Item
+              title="Biểu Đồ Doanh Thu (Bar)"
               to="/bar"
               icon={<BarChartOutlinedIcon />}
               selected={selected}
               setSelected={setSelected}
             />
             <Item
-              title="Biểu Đồ Tròn"
+              title="Tỷ Lệ Lợi Nhuận (Pie)"
               to="/pie"
               icon={<PieChartOutlineOutlinedIcon />}
               selected={selected}
               setSelected={setSelected}
             />
             <Item
-              title="Biểu Đồ Đường"
+              title="Xu Hướng Tăng Trưởng"
               to="/line"
               icon={<TimelineOutlinedIcon />}
-              selected={selected}
-              setSelected={setSelected}
-            />
-            <Item
-              title="Biểu Đồ Địa Lý"
-              to="/geography"
-              icon={<MapOutlinedIcon />}
               selected={selected}
               setSelected={setSelected}
             />

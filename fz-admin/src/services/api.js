@@ -1,23 +1,110 @@
 // services/api.js
 import axios from "axios"
 
+const isAdmin = () => {
+    return localStorage.getItem("isAdmin") === "true";
+};
+
 const API_BASE_URL = "https://filmzone-api.koyeb.app"
 
 const api = axios.create({
     baseURL: API_BASE_URL,
     headers: {
         "Content-Type": "application/json",
+        "credentials": "include",
     },
 })
 
-// Interceptor để thêm token
-api.interceptors.request.use(config => {
-    const token = localStorage.getItem("token")
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`
+// --- 1. Request Interceptor: Gắn token vào mọi request ---
+api.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem("token");
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    },
+    (error) => {
+        return Promise.reject(error);
     }
-    return config
-})
+);
+
+// --- 2. Response Interceptor: Xử lý khi Token hết hạn (Lỗi 401) ---
+api.interceptors.response.use(
+    (response) => {
+        return response;
+    },
+    async (error) => {
+        const originalRequest = error.config;
+
+        // Debug: Log ra để xem Axios thực sự nhìn thấy gì
+        if (error.response) {
+            console.log("Headers Axios nhận được:", error.response.headers);
+        }
+
+        if (error.response) {
+            // 1. Kiểm tra header (nếu backend đã fix expose)
+            // 2. HOẶC kiểm tra thông báo lỗi trong body (nếu có)
+            // 3. HOẶC kiểm tra www-authenticate (nếu backend expose)
+            // 4. Fallback: Nếu 401 và chưa retry -> Coi như hết hạn token
+            
+            const headers = error.response.headers;
+            
+            const isUnauthorized = error.response.status === 401;
+            
+            const isTokenExpired = isUnauthorized && !originalRequest._retry;
+
+            if (isTokenExpired) {
+                originalRequest._retry = true; 
+
+                try {
+                    console.log("Phát hiện lỗi 401, đang gọi Refresh Token...");
+                    const refreshToken = localStorage.getItem("refreshToken");
+
+                    if (!refreshToken) {
+                        console.log("Không có refresh token, logout.");
+                        handleLogout();
+                        return Promise.reject(error);
+                    }
+
+                    const response = await axios.post(`${API_BASE_URL}/login/auth/refresh`, {
+                        refreshToken: refreshToken
+                    });
+
+                    if (response.data && response.data.errorCode === 200) {
+                        const { accessToken, accessTokenExpiresAt, refreshToken, refreshTokenExpiresAt } = response.data.data;
+
+                        localStorage.setItem("token", accessToken);
+                        localStorage.setItem("tokenExpiration", accessTokenExpiresAt);
+                        if (refreshToken) {
+                            localStorage.setItem("refreshToken", refreshToken);
+                            localStorage.setItem("refreshTokenExpiration", refreshTokenExpiresAt);
+                        }
+
+                        api.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
+                        originalRequest.headers["Authorization"] = `Bearer ${accessToken}`;
+
+                        console.log("Refresh thành công, gọi lại request cũ...");
+                        return api(originalRequest);
+                    }
+                } catch (refreshError) {
+                    // ... xử lý lỗi refresh ...
+                    console.error("Lỗi khi Refresh Token:", refreshError);
+                    handleLogout();
+                    return Promise.reject(refreshError);
+                }
+            }
+        }
+
+        return Promise.reject(error);
+    }
+);
+
+// Hàm Logout chung
+const handleLogout = () => {
+    localStorage.clear(); 
+    window.location.href = "/login"; 
+};
 
 // Account APIs
 export const startMfaTotp = data => api.post("/account/mfa/totp/start", data)
@@ -56,7 +143,7 @@ export const deleteComment = id =>
     api.delete(`/api/Comment/DeleteComment/${id}`)
 export const getCommentById = id => api.get(`/api/Comment/GetCommentByID/${id}`)
 export const getCommentsByUserId = userID =>
-    api.get(`/api/Comment/GetCommentsByUserID/${userID}`)
+    api.get(`/api/Comment/GetCommentsByUserID/${userID}?userID=${userID}`)
 export const getCommentsByMovieId = movieID =>
     api.get(`/api/Comment/GetCommentsByMovieID/${movieID}`, {
         params: { movieID },
@@ -116,7 +203,7 @@ export const getImageSourcesByType = Type =>
     api.get(`/movie/ImageSource/GetImageSourcesByType/${Type}`)
 
 // Login APIs
-export const userLogin = data => api.post("/login/userLogin", data)
+export const userLogin = data => api.post("/login/StaffLogin", data)
 export const loginMobile = data => api.post("/login/login/mobile", data)
 export const googleLogin = () => api.get("/login/google-login")
 export const logout = data => api.post("/login/logout", data)
@@ -259,8 +346,24 @@ export const getTagById = TagID => api.get(`/movie/Tag/GetTagById/${TagID}`)
 export const getAllTags = () => api.get("/movie/Tag/GetAllTags/getALlTags")
 
 // User APIs
-export const getAllUsers = () => api.get("/user/getAllUsers")
+export const getAllUsers = () => {
+    const prefix = isAdmin() ? "/user/admin" : "/user"; 
+    return api.get(`${prefix}/getAllUsers`);
+}
+export const adminGetAllUsers = () => api.get("/user/admin/getAllUsers")
+export const getUserByID = userID => api.get(`/user/getUserByID/${userID}`)
+export const getUserSlimByID = userID => {
+    const prefix = isAdmin() ? "/user/admin" : "/user"; 
+    return api.get(`${prefix}/GetUserSlimById${userID}`);
+}
 export const deleteUser = params => api.delete("/user/deleteUser", { params })
+export const updateUserProfile = (formData) => {
+    return api.put("/user/update/profile", formData, {
+        headers: {
+            "Content-Type": "multipart/form-data",
+        },
+    });
+};
 export const getMe = () => api.get("/user/me")
 
 // UserRating APIs
@@ -347,5 +450,28 @@ export const deleteEpisodeSubtitle = async id => {
     )
     return response.json()
 }
+
+
+// Permission APIs
+export const getAllPermissions = () => {
+    const prefix = isAdmin() ? "/permissions/admin" : "/permissions";
+    return api.get(`${prefix}/getall`);
+};
+export const addPermission = data => api.post("/permissions/addPermission", data)
+export const updatePermission = data => api.put("/permissions/updatePermission", data)
+export const deletePermission = permissionID => api.delete(`/permissions/delate?permissionId=${permissionID}`)
+export const getPermissionbyRoleId = (roleID) => {
+    const prefix = isAdmin() ? "/permissions/admin" : "/permissions";
+    return api.get(`${prefix}/getbyRoleID/${roleID}`);
+};
+
+// RolePermission APIs
+export const assignPermissionToRole = (data) => {
+    const url = isAdmin() 
+        ? "/role-permissions/admin/assign-permissions" 
+        : "/role-permissions/assign-permissions";
+    return api.post(url, data);
+};
+
 
 export default api

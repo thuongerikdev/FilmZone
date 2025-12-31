@@ -27,6 +27,10 @@ import Profile from "./pages/Profile"
 import { CssBaseline, ThemeProvider } from "@mui/material"
 import { ColorModeContext, useMode } from "./theme"
 import MovieEdit from "./pages/MovieEdit"
+import UpdateUserProfile from "./screens/users/updateUser"
+import Permissions from "./screens/permissions/listpermissions"
+import Roles from "./screens/permissions/listRoles"
+import RoleDetail from "./screens/permissions/roleDetail"
 
 function App() {
     const [theme, colorMode] = useMode()
@@ -74,7 +78,19 @@ function App() {
                                             path="/users/:userId"
                                             element={<UserDetail />}
                                         />
-
+                                        <Route 
+                                            path="/users/update/:userId" 
+                                            element={<UpdateUserProfile/>} />
+                                        {/*Permission Management */}
+                                        <Route
+                                            path="/permissions"
+                                            element={<Permissions />}
+                                        />
+                                        <Route
+                                            path="/roles"
+                                            element={<Roles />}
+                                        />
+                                        <Route path="/roles/:roleId" element={<RoleDetail />} />
                                         {/* Movie Management */}
                                         <Route
                                             path="/movies"
