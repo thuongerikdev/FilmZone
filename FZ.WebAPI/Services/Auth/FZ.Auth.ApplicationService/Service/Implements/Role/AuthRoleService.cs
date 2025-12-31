@@ -99,6 +99,7 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.Role
             var roles = await _roleRepository.GetRoleByUserID(userID, ct);
             var rolesDto = roles.Select(r => new RoleResponse
             {
+                roleID = r.roleID,
                 roleName = r.roleName,
                 roleDescription = r.roleDescription,
                 isDefault = r.isDefault
@@ -118,6 +119,7 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.Role
             }
             var newRole = new Domain.Role.AuthRole
             {
+                roleID =existingRole.roleID,
                 roleName = addRole.roleName,
                 isDefault = addRole.isDefault,
                 roleDescription = addRole.roleDescription,
@@ -129,6 +131,7 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.Role
             await _uow.SaveChangesAsync(ct);
             var roleDto = new RoleResponse
             {
+                roleID = newRole.roleID,
                 roleName = newRole.roleName,
                 roleDescription = newRole.roleDescription,
                 isDefault = newRole.isDefault,
