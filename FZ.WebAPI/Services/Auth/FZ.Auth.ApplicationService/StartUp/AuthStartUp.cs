@@ -408,6 +408,7 @@ namespace FZ.Auth.ApplicationService.StartUp
             });
 
             // === CORS ===
+            // === CORS ===
             var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
             builder.Services.AddCors(opt =>
             {
@@ -418,7 +419,10 @@ namespace FZ.Auth.ApplicationService.StartUp
 
                     p.AllowAnyHeader()
                      .AllowAnyMethod()
-                     .AllowCredentials();
+                     .AllowCredentials()
+                     // 👇 THÊM DÒNG NÀY (Quan trọng)
+                     // Danh sách các header bạn muốn FE đọc được
+                     .WithExposedHeaders("WWW-Authenticate", "x-token-expired", "Content-Disposition");
                 });
             });
 
