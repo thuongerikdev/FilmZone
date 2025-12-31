@@ -117,6 +117,48 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.User
             }
 
         }
+        public async Task<ResponseDto<UserSlimDto?>> GetSlimUserWhereScopeUserByID(int userID, CancellationToken ct)
+        {
+            _logger.LogInformation("Fetching slim user with scope for user ID: {UserID}", userID);
+            try
+            {
+                var user = await _users.GetSlimUserWhereScopeUserByID(userID, ct);
+                if (user == null)
+                {
+                    _logger.LogWarning("Slim user with ID: {UserID} not found.", userID);
+                    return ResponseConst.Error<UserSlimDto>(500, "User not found");
+                }
+                _logger.LogInformation("Successfully fetched slim user with ID: {UserID}", userID);
+                return ResponseConst.Success("Fetched user successfully", user);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while fetching slim user with scope for user ID: {UserID}", userID);
+                return ResponseConst.Error<UserSlimDto>(500, "Internal error");
+            }
+        }
+
+        public async Task<ResponseDto<List<GetUserResponseDto?>>> GetAllUserWhereScopeUserAsync(CancellationToken ct)
+        {
+            _logger.LogInformation("Fetching all users with scope.");
+            try
+            {
+                var list = await _users.GetAllUserWhereScopeUserAsync( ct);
+                if (list == null)
+                {
+                    _logger.LogWarning("No users found with scope.");
+                    return ResponseConst.Error<List<GetUserResponseDto?>>(500, "No users found");
+                }
+                _logger.LogInformation("Successfully fetched all users with scope.");
+                return ResponseConst.Success("Fetched all users successfully.", list);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while fetching all users with scope.");
+                return ResponseConst.Error<List<GetUserResponseDto?>>(500, "Internal error");
+            }
+
+        }
 
         public async  Task<ResponseDto<bool>> AuthUpdateUserName(int userID, string userName, CancellationToken ct)
         {

@@ -1,5 +1,7 @@
 ﻿using FZ.Auth.ApplicationService.Service.Implements.Role;
+using FZ.Auth.Domain.Role;
 using FZ.Auth.Dtos.Role;
+using FZ.Constant;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,17 +16,7 @@ namespace FZ.WebAPI.Controllers.Auth
         {
             _permissionService = permissionService;
         }
-        [HttpGet("getall")]
-        [Authorize(Policy = "PermissionRead")]
-        public async Task<IActionResult> GetAllPermissions(CancellationToken ct)
-        {
-            var result = await _permissionService.GetAllPermissionsAsync(ct);
-            if (result.ErrorCode != 200)
-            {
-                return BadRequest(result);
-            }
-            return Ok(result);
-        }
+      
         [HttpPost("addPermission")]
         [Authorize(Policy = "PermissionManage")]
         public async Task<IActionResult> AddPermissionAsync(CreatePermissionRequestDto req, CancellationToken ct)
@@ -88,11 +80,25 @@ namespace FZ.WebAPI.Controllers.Auth
                 return BadRequest(new { ErrorCode = 400, ex.Message });
             }
         }
-        [HttpGet("getbyid")]
+
+
+        [HttpGet("getall")]
         [Authorize(Policy = "PermissionRead")]
-        public async Task<IActionResult> GetPermissionByIdAsync([FromQuery] int permissionId, CancellationToken ct)
+        public async Task<IActionResult> GetAllPermissions(CancellationToken ct)
         {
-            var result = await _permissionService.GetPermissionByIdAsync(permissionId, ct);
+            var result = await _permissionService.GetAllPermissionsAsynWhereScopeUserc(ct);
+            if (result.ErrorCode != 200)
+            {
+                return BadRequest(result);
+            }
+            return Ok(result);
+        }
+
+        [HttpGet("getbyid/{permissionId}")]
+        [Authorize(Policy = "PermissionRead")]
+        public async Task<IActionResult> GetPermissionByIdAsync(int permissionId, CancellationToken ct)
+        {
+            var result = await _permissionService.GetPermissionByIdAsyncWhereScopeUser(permissionId, ct);
             if (result.ErrorCode != 200)
             {
                 return BadRequest(result);
@@ -103,6 +109,53 @@ namespace FZ.WebAPI.Controllers.Auth
         [Authorize(Policy = "PermissionRead")]
         public async Task<IActionResult> GetPermissionByCodeAsync(int ID, CancellationToken ct)
         {
+            var result = await _permissionService.GetPermissionsByUserIdAsyncWhereScopeUser(ID, ct);
+            if (result.ErrorCode != 200)
+            {
+                return BadRequest(result);
+            }
+            return Ok(result);
+        }
+
+        [HttpGet("getbyRoleID/{ID}")]
+        [Authorize(Policy = "PermissionRead")]
+        public async Task<IActionResult> GetPermissionByRoleIdAsync(int ID, CancellationToken ct)
+        {
+            var result = await _permissionService.GettPermissionByRoleIdAsyncWhereScopeUser(ID, ct);
+            if (result.ErrorCode != 200)
+            {
+                return BadRequest(result);
+            }
+            return Ok(result);
+        }
+
+        [HttpGet("admin/getall")]
+        [Authorize(Policy = "PermissionReadAdmin")]
+        public async Task<IActionResult> GetAllPermissionsAdmin(CancellationToken ct)
+        {
+            var result = await _permissionService.GetAllPermissionsAsync(ct);
+            if (result.ErrorCode != 200)
+            {
+                return BadRequest(result);
+            }
+            return Ok(result);
+        }
+
+        [HttpGet("admin/getbyid/{permissionId}")]
+        [Authorize(Policy = "PermissionReadAdmin")]
+        public async Task<IActionResult> GetPermissionByIdAsyncAdmin(int permissionId, CancellationToken ct)
+        {
+            var result = await _permissionService.GetPermissionByIdAsync(permissionId, ct);
+            if (result.ErrorCode != 200)
+            {
+                return BadRequest(result);
+            }
+            return Ok(result);
+        }
+        [HttpGet("admin/getbyUserID/{ID}")]
+        [Authorize(Policy = "PermissionReadAdmin")]
+        public async Task<IActionResult> GetPermissionByCodeAsyncAdmin(int ID, CancellationToken ct)
+        {
             var result = await _permissionService.GetPermissionsByUserIdAsync(ID, ct);
             if (result.ErrorCode != 200)
             {
@@ -110,9 +163,9 @@ namespace FZ.WebAPI.Controllers.Auth
             }
             return Ok(result);
         }
-        [HttpGet("getbyRoleID/{ID}")]
-        [Authorize(Policy = "PermissionRead")]
-        public async Task<IActionResult> GetPermissionByRoleIdAsync(int ID, CancellationToken ct)
+        [HttpGet("admin/getbyRoleID/{ID}")]
+        [Authorize(Policy = "PermissionReadAdmin")]
+        public async Task<IActionResult> GetPermissionByRoleIdAsyncAdmin(int ID, CancellationToken ct)
         {
             var result = await _permissionService.GetPermissionByRoleIdAsync(ID, ct);
             if (result.ErrorCode != 200)
@@ -121,6 +174,9 @@ namespace FZ.WebAPI.Controllers.Auth
             }
             return Ok(result);
         }
+
+
+
         [HttpPost("BulkCreate")]
         [Authorize(Policy = "PermissionManage")]
 
@@ -152,5 +208,10 @@ namespace FZ.WebAPI.Controllers.Auth
             }
             return Ok(results);
         }
+
+        //Task<ResponseDto<AuthPermission>> GetPermissionByNameAsyncWhereScopeUser(string permissionName, CancellationToken ct);
+        //Task<ResponseDto<List<AuthPermission>>> GetAllPermissionsAsynWhereScopeUserc(CancellationToken ct);
+        //Task<ResponseDto<List<AuthPermission>>> GettPermissionByRoleIdAsyncWhereScopeUser(int roleId, CancellationToken ct);
+        //Task<ResponseDto<AuthPermission>> GetPermissionByIdAsyncWhereScopeUser(int permissionId, CancellationToken ct);
     }
 }

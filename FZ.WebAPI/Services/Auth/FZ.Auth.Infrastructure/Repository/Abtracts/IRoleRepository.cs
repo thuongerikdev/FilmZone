@@ -1,5 +1,6 @@
 ﻿
 using FZ.Auth.Domain.Role;
+using FZ.Auth.Dtos.User;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,6 +21,11 @@ namespace FZ.Auth.Infrastructure.Repository.Abtracts
 
         Task<List<AuthRole>> GetRoleByUserID(int userID, CancellationToken ct);
         Task<List<AuthRole>> GetRolesByIdsAsync(IEnumerable<int> roleIds, CancellationToken ct);
+        Task<bool> CheckRoleScopeAsync(int roleId, string scope, CancellationToken ct);
+
+        Task<bool> AreAllRolesInScopeAsync(List<int> roleIds, string scope, CancellationToken ct);
+
+
     }
     public interface IUserRoleRepository
     {

@@ -37,6 +37,12 @@ namespace FZ.Auth.Infrastructure.Repository.Abtracts
         Task<List<string>> GetPermissionsByUserIdAsync(int userId, CancellationToken ct);
         Task<UserSlimDto?> GetSlimUserByID(int userID, CancellationToken ct);
         Task<List<GetUserResponseDto?>> GetAllUserAsync( CancellationToken ct);
+
+        Task<UserSlimDto?> GetSlimUserWhereScopeUserByID(int userID, CancellationToken ct);
+        Task<List<GetUserResponseDto?>> GetAllUserWhereScopeUserAsync(CancellationToken ct);
+        Task<bool> CheckUserScopeAsync(int userId, string scope, CancellationToken ct);
+
+
     }
     public interface IProfileRepository
     {

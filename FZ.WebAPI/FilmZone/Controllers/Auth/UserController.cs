@@ -16,17 +16,7 @@ namespace FZ.WebAPI.Controllers.Auth
         {
             _userService = userService;
         }
-        [HttpGet("getAllUsersSlim")]
-        [Authorize(Policy = "UserReadList")]
-        public async Task<IActionResult> GetAllUsers(CancellationToken ct)
-        {
-            var result = await _userService.GetAllSlimAsync(ct);
-            if (result.ErrorCode != 200)
-            {
-                return BadRequest(result);
-            }
-            return Ok(result);
-        }
+
 
         [HttpDelete("deleteUser")]
         [Authorize(Policy = "UserDelete")]
@@ -56,23 +46,12 @@ namespace FZ.WebAPI.Controllers.Auth
             return Ok(result);
         }
 
-        [HttpGet("getUserById")]
-        [Authorize(Policy = "UserReadDetails")]
-        public async Task<IActionResult> GetUserById( int userId, CancellationToken ct)
-        {
-            var result = await _userService.GetUserByIDAsync(userId, ct);
-            if (result.ErrorCode != 200)
-            {
-                return BadRequest(result);
-            }
-            return Ok(result);
 
-        }
         [HttpGet("GetUserSlimById{userID}")]
         [Authorize(Policy = "UserReadDetails")]
         public async Task<IActionResult> GetUserSlimById( int userID,  CancellationToken ct)
         {
-            var result =  await _userService.GetSlimUserByID(userID, ct);
+            var result =  await _userService.GetSlimUserWhereScopeUserByID(userID, ct);
             if (result.ErrorCode != 200)
             {
                 return BadRequest(result);
@@ -84,7 +63,7 @@ namespace FZ.WebAPI.Controllers.Auth
         [Authorize(Policy = "UserReadDetails")]
         public async Task<IActionResult> GetAllUsersFull(CancellationToken ct)
         {
-            var result = await _userService.GetAllUserAsync(ct);
+            var result = await _userService.GetAllUserWhereScopeUserAsync(ct);
             if (result.ErrorCode != 200)
             {
                 return BadRequest(result);
@@ -109,6 +88,57 @@ namespace FZ.WebAPI.Controllers.Auth
         {
             var result = await _userService.AuthUpdateUserName(userId, newUsername, ct);
             if (result.ErrorCode != 200) return StatusCode(result.ErrorCode, result);
+            return Ok(result);
+        }
+
+
+
+        [HttpGet("admin/getAllUser")]
+        [Authorize(Policy = "UserReadDetailsAdmin")]
+        public async Task<IActionResult> GetAllUsersAdminFull(CancellationToken ct)
+        {
+            var result = await _userService.GetAllUserAsync(ct);
+            if (result.ErrorCode != 200)
+            {
+                return BadRequest(result);
+            }
+            return Ok(result);
+        }
+
+        [HttpGet("admin/GetUserSlimById{userID}")]
+        [Authorize(Policy = "UserReadDetailsAdmin")]
+        public async Task<IActionResult> AdminGetUserSlimById(int userID, CancellationToken ct)
+        {
+            var result = await _userService.GetSlimUserByID(userID, ct);
+            if (result.ErrorCode != 200)
+            {
+                return BadRequest(result);
+            }
+            return Ok(result);
+        }
+
+
+        [HttpGet("admin/getUserById")]
+        [Authorize(Policy = "UserReadDetailsAdmin")]
+        public async Task<IActionResult> GetUserById(int userId, CancellationToken ct)
+        {
+            var result = await _userService.GetUserByIDAsync(userId, ct);
+            if (result.ErrorCode != 200)
+            {
+                return BadRequest(result);
+            }
+            return Ok(result);
+        }
+
+        [HttpGet("getAllUsersSlim")]
+        [Authorize(Policy = "UserReadDetailsAdmin")]
+        public async Task<IActionResult> GetAllUsers(CancellationToken ct)
+        {
+            var result = await _userService.GetAllSlimAsync(ct);
+            if (result.ErrorCode != 200)
+            {
+                return BadRequest(result);
+            }
             return Ok(result);
         }
     }

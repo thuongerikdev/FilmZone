@@ -1,10 +1,12 @@
-﻿using FZ.Auth.Domain.Role;
+﻿
+using FZ.Auth.Domain.Role;
 using FZ.Auth.Domain.User;
 using FZ.Auth.Infrastructure.Repository.Abtracts;
 using FZ.Constant;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -15,18 +17,24 @@ namespace FZ.Auth.Infrastructure
     {
         public static async Task SeedPermissionsAsync(AuthDbContext context)
         {
-            // 1. Đồng bộ Permission từ Constant vào Database
-            // (Chỉ thêm mới nếu chưa có, KHÔNG xóa quyền cũ để an toàn dữ liệu)
+            // =========================================================
+            // 1. ĐỒNG BỘ PERMISSION TỪ CODE (CONSTANTS) -> DB
+            // =========================================================
             var allConstantPermissions = PermissionConstants.Permissions;
             var existingPermissions = await context.authPermissions.ToListAsync();
             var newPermissionsToAdd = new List<AuthPermission>();
 
             foreach (var kvp in allConstantPermissions)
             {
+                // Chỉ thêm quyền chưa có trong DB
                 if (!existingPermissions.Any(p => p.code == kvp.Value))
                 {
                     string scope = "user";
-                    if ((kvp.Value.Contains("manage") || kvp.Value.Contains("delete") || kvp.Value.Contains("upload") || kvp.Value.Contains("read_all"))
+                    // Logic đoán scope: Nếu có từ khóa quản lý/xóa/upload/xem tất cả -> Staff
+                    // Trừ trường hợp quyền thao tác dữ liệu cá nhân (_own)
+                    if ((kvp.Value.Contains("manage") || kvp.Value.Contains("delete") ||
+                         kvp.Value.Contains("upload") || kvp.Value.Contains("read_all") ||
+                         kvp.Value.Contains(".admin"))
                         && !kvp.Value.Contains("_own"))
                     {
                         scope = "staff";
@@ -34,7 +42,7 @@ namespace FZ.Auth.Infrastructure
 
                     newPermissionsToAdd.Add(new AuthPermission
                     {
-                        // ID tự sinh, không set cứng
+                        // ID tự sinh bởi DB
                         permissionName = kvp.Key,
                         code = kvp.Value,
                         permissionDescription = kvp.Key,
@@ -46,39 +54,70 @@ namespace FZ.Auth.Infrastructure
             if (newPermissionsToAdd.Any())
             {
                 await context.authPermissions.AddRangeAsync(newPermissionsToAdd);
-                await context.SaveChangesAsync(); // Lưu để lấy ID
+                await context.SaveChangesAsync();
             }
 
-            // 2. Định nghĩa các nhóm quyền (Mapping Logic)
-            var guestCodes = new HashSet<string> { "auth.login", "auth.login_google", "auth.register", "auth.forgot_password", "system.health", "payment.callback", "subtitle.callback" };
+            // =========================================================
+            // 2. ĐỊNH NGHĨA NHÓM QUYỀN (MAPPING LOGIC)
+            // =========================================================
 
-            var customerFreeCodes = new HashSet<string> {
-                "account.mfa_setup", "account.change_password", "auth.logout", "auth.refresh", "auth.mfa_verify",
-                "comment.read", "episode.read", "movie.read_details", "movie.browse", "movie_person.read", "movie_tag.read",
-                "person.read", "tag.read", "user.read_profile", "user.update_profile", "rating.read",
-                "plan.read", "price.read", "region.read", "search.movie", "search.suggest", "search.person",
-                "subscription.read_own", "subscription.cancel", "order.read_own", "invoice.read_own", "payment.checkout", "image.read"
+            // Guest (Chưa login - Không lưu DB)
+            var guestCodes = new HashSet<string> {
+                "auth.login", "auth.login_google", "auth.register",
+                "auth.forgot_password", "system.health",
+                "payment.callback", "subtitle.callback"
             };
 
+            // Customer Free (Quyền cơ bản + Quyền cá nhân)
+            var customerFreeCodes = new HashSet<string> {
+                "account.mfa_setup", "account.change_password",
+                "auth.logout", "auth.refresh", "auth.mfa_verify",
+                "comment.read", "episode.read",
+                "movie.read_details", "movie.browse",
+                "movie_person.read", "movie_tag.read",
+                "person.read", "tag.read",
+                "user.read_profile", "user.update_profile", "user.read_details",
+                "rating.read",
+                "plan.read", "price.read", "region.read",
+                "search.movie", "search.suggest", "search.person",
+                "subscription.read_own", "subscription.cancel",
+                "order.read_own", "invoice.read_own",
+                "payment.checkout", "image.read"
+            };
+
+            // Customer VIP (Quyền nâng cao)
             var customerVipCodes = new HashSet<string> {
-                "comment.create", "comment.update_own", "comment.delete_own", "source.read", "progress.track", "progress.read",
-                "movie.watch_stream", "movie.watch_vip", "subtitle.read", "saved_movie.manage", "saved_movie.read",
+                "comment.create", "comment.update_own", "comment.delete_own",
+                "source.read", "progress.track", "progress.read",
+                "movie.watch_stream", "movie.watch_vip", "subtitle.read",
+                "saved_movie.manage", "saved_movie.read",
                 "rating.create", "rating.update", "rating.delete"
             };
 
+            // Staff (Quản lý - Danh sách các tính năng quản lý chung)
             var staffCodes = new HashSet<string> {
-                "upload.archive", "upload.vimeo", "upload.youtube", "episode.manage", "source.manage", "image.manage",
-                "invoice.read_all", "movie.manage", "movie_person.manage", "movie_tag.manage", "subtitle.upload", "subtitle.translate", "subtitle.manage",
-                "order.read_all", "permission.read", "person.manage", "plan.manage", "price.manage", "region.manage",
-                "subscription.read_all", "subscription.manage", "tag.manage", "user.read_list", "user.read_details", "search.advanced"
+                "upload.archive", "upload.vimeo", "upload.youtube",
+                "episode.manage", "source.manage", "image.manage",
+                "invoice.read_all", "movie.manage", "movie_person.manage", "movie_tag.manage",
+                "subtitle.upload", "subtitle.translate", "subtitle.manage",
+                "order.read_all", "permission.read", "person.manage",
+                "plan.manage", "price.manage", "region.manage",
+                "subscription.read_all", "subscription.manage", "tag.manage",
+                "user.read_list", "user.read_details",
+                "search.advanced",
+                "role.assign", "permission.assign" 
+                // Lưu ý: KHÔNG liệt kê các quyền .admin vào đây
             };
 
-            // 3. Gán quyền vào Role (Sync RolePermission)
+            // =========================================================
+            // 3. GÁN QUYỀN VÀO ROLE (SYNC ROLE-PERMISSION)
+            // =========================================================
+
             // Lấy dữ liệu mới nhất từ DB
             var allPermissionsInDb = await context.authPermissions.ToListAsync();
             var allRolePermissionsInDb = await context.authRolePermissions.ToListAsync();
 
-            // Lấy ID của các Role (Đã seed trong DbContext)
+            // ID Role (Tương ứng với file Seed trong DbContext)
             int adminRoleId = 1;
             int contentMgrId = 2;
             int userMgrId = 3;
@@ -88,75 +127,94 @@ namespace FZ.Auth.Infrastructure
 
             var linksToAdd = new List<AuthRolePermission>();
 
+            // Helper check tồn tại để tránh Add trùng
+            void AddLinkIfNotExist(int rId, int pId)
+            {
+                bool existsInDb = allRolePermissionsInDb.Any(rp => rp.roleID == rId && rp.permissionID == pId);
+                bool existsInPending = linksToAdd.Any(rp => rp.roleID == rId && rp.permissionID == pId);
+
+                if (!existsInDb && !existsInPending)
+                {
+                    linksToAdd.Add(new AuthRolePermission { roleID = rId, permissionID = pId });
+                }
+            }
+
             foreach (var perm in allPermissionsInDb)
             {
                 if (guestCodes.Contains(perm.code)) continue;
 
-                // --- Helper: Hàm check xem quyền đã được gán chưa để tránh trùng lặp ---
-                void AddLinkIfNotExist(int rId, int pId)
-                {
-                    bool existsInDb = allRolePermissionsInDb.Any(rp => rp.roleID == rId && rp.permissionID == pId);
-                    bool existsInPending = linksToAdd.Any(rp => rp.roleID == rId && rp.permissionID == pId);
-
-                    if (!existsInDb && !existsInPending)
-                    {
-                        linksToAdd.Add(new AuthRolePermission { roleID = rId, permissionID = pId });
-                    }
-                }
-
-                // 1. ADMIN: Full quyền
+                // -----------------------------------------------------
+                // 1. ADMIN (ID 1): NHẬN TẤT CẢ (Bao gồm cả .admin)
+                // -----------------------------------------------------
                 AddLinkIfNotExist(adminRoleId, perm.permissionID);
 
-                // 2. CUSTOMER FREE
-                if (customerFreeCodes.Contains(perm.code))
-                {
-                    AddLinkIfNotExist(customerId, perm.permissionID);
-                    // VIP cũng có quyền Free
-                    AddLinkIfNotExist(vipId, perm.permissionID);
-                    // Staff cũng cần quyền cơ bản của User
-                    AddLinkIfNotExist(contentMgrId, perm.permissionID);
-                    AddLinkIfNotExist(userMgrId, perm.permissionID);
-                    AddLinkIfNotExist(financeMgrId, perm.permissionID);
-                }
 
-                // 3. CUSTOMER VIP (Chỉ VIP có thêm)
-                if (customerVipCodes.Contains(perm.code))
-                {
-                    AddLinkIfNotExist(vipId, perm.permissionID);
-                }
+                // -----------------------------------------------------
+                // 2. STAFF ROLES (ID 2, 3, 4)
+                // -----------------------------------------------------
+                // Logic: Là quyền trong nhóm Staff HOẶC chứa từ khóa quản lý
+                // QUAN TRỌNG: Loại bỏ tất cả quyền có đuôi ".admin"
 
-                // 4. STAFF ROLES
-                if (staffCodes.Contains(perm.code))
+                bool isStaffPerm = staffCodes.Contains(perm.code) ||
+                                   (perm.code.Contains("manage") || perm.code.Contains("read_list"));
+
+                if (isStaffPerm && !perm.code.EndsWith(".admin"))
                 {
-                    // Phân quyền chi tiết
-                    // Content Manager
-                    if (perm.code.StartsWith("movie") || perm.code.StartsWith("episode") || perm.code.StartsWith("person") ||
-                        perm.code.StartsWith("tag") || perm.code.StartsWith("image") || perm.code.StartsWith("source") ||
+                    // A. Content Manager (Nội dung)
+                    if (perm.code.StartsWith("movie") || perm.code.StartsWith("episode") ||
+                        perm.code.StartsWith("person") || perm.code.StartsWith("tag") ||
+                        perm.code.StartsWith("image") || perm.code.StartsWith("source") ||
                         perm.code.StartsWith("subtitle") || perm.code.StartsWith("upload"))
                     {
                         AddLinkIfNotExist(contentMgrId, perm.permissionID);
                     }
 
-                    // User Manager
-                    if (perm.code.StartsWith("user"))
+                    // B. User Manager (Người dùng)
+                    if (perm.code.StartsWith("user") ||
+                        perm.code.StartsWith("role.assign") ||
+                        perm.code.StartsWith("permission.assign"))
                     {
                         AddLinkIfNotExist(userMgrId, perm.permissionID);
                     }
 
-                    // Finance Manager
-                    if (perm.code.StartsWith("order") || perm.code.StartsWith("invoice") || perm.code.StartsWith("plan") ||
-                        perm.code.StartsWith("price") || perm.code.StartsWith("subscription"))
+                    // C. Finance Manager (Tài chính)
+                    if (perm.code.StartsWith("order") || perm.code.StartsWith("invoice") ||
+                        perm.code.StartsWith("plan") || perm.code.StartsWith("price") ||
+                        perm.code.StartsWith("subscription"))
                     {
                         AddLinkIfNotExist(financeMgrId, perm.permissionID);
                     }
 
-                    // Shared Staff Permissions
+                    // D. Shared Staff Permissions (Quyền chung cho cả 3 ông)
                     if (perm.code == "permission.read" || perm.code == "search.advanced")
                     {
                         AddLinkIfNotExist(contentMgrId, perm.permissionID);
                         AddLinkIfNotExist(userMgrId, perm.permissionID);
                         AddLinkIfNotExist(financeMgrId, perm.permissionID);
                     }
+                }
+
+
+                // -----------------------------------------------------
+                // 3. CUSTOMER FREE & BASIC STAFF RIGHTS
+                // -----------------------------------------------------
+                if (customerFreeCodes.Contains(perm.code))
+                {
+                    AddLinkIfNotExist(customerId, perm.permissionID);
+                    AddLinkIfNotExist(vipId, perm.permissionID);
+
+                    // Staff cũng cần quyền cơ bản (đổi pass, logout, xem profile mình)
+                    AddLinkIfNotExist(contentMgrId, perm.permissionID);
+                    AddLinkIfNotExist(userMgrId, perm.permissionID);
+                    AddLinkIfNotExist(financeMgrId, perm.permissionID);
+                }
+
+                // -----------------------------------------------------
+                // 4. CUSTOMER VIP
+                // -----------------------------------------------------
+                if (customerVipCodes.Contains(perm.code))
+                {
+                    AddLinkIfNotExist(vipId, perm.permissionID);
                 }
             }
 
@@ -167,16 +225,18 @@ namespace FZ.Auth.Infrastructure
             }
         }
 
+        // =========================================================
+        // SEED ADMIN USER
+        // =========================================================
         public static async Task SeedAdminUserAsync(AuthDbContext context, IServiceProvider serviceProvider)
         {
-            // Lấy logger để in ra console cho dễ nhìn thấy lỗi
             var logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("SeederAdmin");
 
             try
             {
                 var adminEmail = "admin@fz.com";
 
-                // 1. Kiểm tra User tồn tại
+                // 1. Kiểm tra User tồn tại (Bỏ qua filter xóa mềm nếu có)
                 var adminUserExists = await context.authUsers.IgnoreQueryFilters().AnyAsync(u => u.email == adminEmail);
                 if (adminUserExists)
                 {
@@ -184,14 +244,13 @@ namespace FZ.Auth.Infrastructure
                     return;
                 }
 
-                // 2. Tìm Role Admin (QUAN TRỌNG: Không gán cứng ID = 1)
-                // Tìm theo tên để an toàn hơn, phòng trường hợp ID trong DB bị nhảy
+                // 2. Tìm Role Admin an toàn
                 var adminRole = await context.authRoles.FirstOrDefaultAsync(r => r.roleName == "admin");
 
                 if (adminRole == null)
                 {
                     logger.LogError("❌ Critical Error: Role 'admin' not found in DB. Please run Migrations first.");
-                    // Tùy chọn: Nếu chưa có Role thì tạo luôn Role (chữa cháy)
+                    // Tự động tạo Role chữa cháy nếu thiếu để không crash app
                     adminRole = new AuthRole { roleName = "admin", roleDescription = "Admin (Auto Generated)", scope = "staff" };
                     context.authRoles.Add(adminRole);
                     await context.SaveChangesAsync();
@@ -200,7 +259,7 @@ namespace FZ.Auth.Infrastructure
 
                 // 3. Hash Password
                 var passwordHasher = serviceProvider.GetRequiredService<IPasswordHasher>();
-                string rawPassword = "admin";
+                string rawPassword = "Admin@123"; // Mật khẩu mặc định
                 string hashedPassword = passwordHasher.Hash(rawPassword);
 
                 // 4. Tạo User
@@ -234,7 +293,7 @@ namespace FZ.Auth.Infrastructure
                 var adminRoleLink = new AuthUserRole
                 {
                     userID = adminUser.userID,
-                    roleID = adminRole.roleID, // Dùng ID thật lấy từ DB
+                    roleID = adminRole.roleID,
                     assignedAt = DateTime.UtcNow
                 };
 
@@ -246,9 +305,8 @@ namespace FZ.Auth.Infrastructure
             catch (Exception ex)
             {
                 logger.LogError(ex, "❌ Failed to seed Admin User");
-                throw; // Ném lỗi ra để AuthStartUp bắt được
+                throw; // Ném lỗi ra để AuthStartUp bắt được và dừng app nếu cần
             }
         }
     }
-    
 }

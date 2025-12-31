@@ -21,8 +21,15 @@ namespace FZ.Auth.ApplicationService.Service.Implements.Role
         Task<ResponseDto<AuthPermission>> UpdatePermissionAsync(UpdatePermissionRequestDto updatePermissionRequestDto, CancellationToken ct);
         Task<ResponseDto<AuthPermission>> DeletePermissionAsync(int permissionId, CancellationToken ct);
         Task<ResponseDto<List<AuthPermission>>> GetAllPermissionsAsync(CancellationToken ct);
-        Task<ResponseDto<List<AuthPermission>>> GetPermissionByRoleIdAsync (int roleId, CancellationToken ct);
+        Task<ResponseDto<List<AuthPermission>>> GetPermissionByRoleIdAsync(int roleId, CancellationToken ct);
         Task<ResponseDto<List<AuthPermission>>> CreatePermissionsAsync(List<CreatePermissionRequestDto> reqs, CancellationToken ct);
+
+
+        Task<ResponseDto<List<AuthPermission>>> GetPermissionsByUserIdAsyncWhereScopeUser(int userId, CancellationToken ct);
+        Task<ResponseDto<AuthPermission>> GetPermissionByNameAsyncWhereScopeUser(string permissionName, CancellationToken ct);
+        Task<ResponseDto<List<AuthPermission>>> GetAllPermissionsAsynWhereScopeUserc(CancellationToken ct);
+        Task<ResponseDto<List<AuthPermission>>> GettPermissionByRoleIdAsyncWhereScopeUser(int roleId, CancellationToken ct);
+        Task<ResponseDto<AuthPermission>> GetPermissionByIdAsyncWhereScopeUser(int permissionId, CancellationToken ct);
 
 
     }
@@ -244,6 +251,97 @@ namespace FZ.Auth.ApplicationService.Service.Implements.Role
                 _logger.LogError(ex, "Error creating bulk permissions.");
                 return ResponseConst.Error<List<AuthPermission>>(500, "Error creating permissions.");
             }
+        }
+        public async Task<ResponseDto<AuthPermission>> GetPermissionByNameAsyncWhereScopeUser(string permissionName, CancellationToken ct)
+        {
+            _logger.LogInformation("Getting permission with name {PermissionName} and scope USER", permissionName);
+            try
+            {
+                var permission = await _permissionRepository.GetPermissionByNameAsyncWhereScopeUser(permissionName, ct);
+                if (permission == null)
+                {
+                    _logger.LogWarning("Permission with name {PermissionName} not found in scope USER", permissionName);
+                    return ResponseConst.Error<AuthPermission>(404, "Permission not found");
+                }
+                return ResponseConst.Success<AuthPermission>("Lấy permission thành công", permission);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting permission with name {PermissionName} in scope USER", permissionName);
+                return ResponseConst.Error<AuthPermission>(500, "Error getting permission");
+            }
+        }
+        public async Task<ResponseDto<List<AuthPermission>>> GetAllPermissionsAsynWhereScopeUserc(CancellationToken ct)
+        {
+            _logger.LogInformation("Getting all permissions in scope USER");
+            try
+            {
+                var permissions = await _permissionRepository.GetAllPermissionsAsynWhereScopeUserc(ct);
+                return ResponseConst.Success<List<AuthPermission>>("Lấy danh sách permission thành công", permissions);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting all permissions in scope USER");
+                return ResponseConst.Error<List<AuthPermission>>(500, "Error getting permissions");
+            }
+        }
+        public async Task<ResponseDto<List<AuthPermission>>> GettPermissionByRoleIdAsyncWhereScopeUser(int roleId, CancellationToken ct)
+        {
+            _logger.LogInformation("Getting permissions for role with ID {RoleId} in scope USER", roleId);
+            try
+            {
+                var permissions = await _permissionRepository.GettPermissionByRoleIdAsyncWhereScopeUser(roleId, ct);
+                if (permissions == null)
+                {
+                    _logger.LogWarning("No permissions found for role with ID {RoleId} in scope USER", roleId);
+                    return ResponseConst.Error<List<AuthPermission>>(404, "No permissions found");
+                }
+                return ResponseConst.Success<List<AuthPermission>>("Lấy danh sách thành công", permissions);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting permissions for role with ID {RoleId} in scope USER", roleId);
+                return ResponseConst.Error<List<AuthPermission>>(500, "Error getting permissions");
+            }
+        }
+        public async Task<ResponseDto<AuthPermission>> GetPermissionByIdAsyncWhereScopeUser(int permissionId, CancellationToken ct)
+        {
+            _logger.LogInformation("Getting permission with ID {PermissionId} in scope USER", permissionId);
+            try
+            {
+                var permission = await _permissionRepository.GetPermissionByIdAsyncWhereScopeUser(permissionId, ct);
+                if (permission == null)
+                {
+                    _logger.LogWarning("Permission with ID {PermissionId} not found in scope USER", permissionId);
+                    return ResponseConst.Error<AuthPermission>(404, "Permission not found");
+                }
+                return ResponseConst.Success<AuthPermission>("Lấy permission thành công", permission);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting permission with ID {PermissionId} in scope USER", permissionId);
+                return ResponseConst.Error<AuthPermission>(500, "Error getting permission");
+            }
+        }
+        public async Task<ResponseDto<List<AuthPermission>>> GetPermissionsByUserIdAsyncWhereScopeUser(int userId, CancellationToken ct)
+        {
+            _logger.LogInformation("Getting permissions for user with ID {UserId} in scope USER", userId);
+            try
+            {
+                var permissions = await _permissionRepository.GetPermissionsByUserIdAsyncWhereScopeUser(userId, ct);
+                if (permissions == null)
+                {
+                    _logger.LogWarning("No permissions found for user with ID {UserId} in scope USER", userId);
+                    return ResponseConst.Error<List<AuthPermission>>(404, "No permissions found");
+                }
+                return ResponseConst.Success<List<AuthPermission>>("Lấy danh sách thành công", permissions);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting permissions for user with ID {UserId} in scope USER", userId);
+                return ResponseConst.Error<List<AuthPermission>>(500, "Error getting permissions");
+            }
+
         }
     }
 }

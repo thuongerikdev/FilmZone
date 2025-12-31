@@ -69,5 +69,8 @@ namespace FZ.Auth.ApplicationService.MFAService.Abtracts
         Task<ResponseDto<bool>> AuthUpdateUserName(int userID, string userName, CancellationToken ct);
         Task<ResponseDto<UserSlimDto?>> GetSlimUserByID(int userID, CancellationToken ct);
         Task<ResponseDto<List<GetUserResponseDto?>>> GetAllUserAsync( CancellationToken ct);
+
+        Task<ResponseDto<UserSlimDto?>> GetSlimUserWhereScopeUserByID(int userID, CancellationToken ct);
+        Task<ResponseDto<List<GetUserResponseDto?>>> GetAllUserWhereScopeUserAsync(CancellationToken ct);
     }
 }

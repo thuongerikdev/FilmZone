@@ -106,9 +106,12 @@ namespace FZ.Auth.Dtos.User
             List<EmailVerificationDto> emailVerifications,
             List<PasswordResetDto> passwordResets,
             List<RefreshTokenDto> refreshTokens,
-            List<string> roles,
-            List<string> permissions
+            List<roleDto> roles,
+            List<permissionDto> permissions
         );
+
+        public record roleDto(int roleID, string roleName,string roleDescription);
+        public record permissionDto(int permissionID, string permissionName, string code);
 
         public record ProfileDto(string? firstName, string? lastName, string? avatar, string? gender, DateTime? dateOfBirth);
 

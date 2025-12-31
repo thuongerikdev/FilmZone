@@ -137,13 +137,22 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
                         .ToList(),
 
                     u.userRoles
-                        .Select(ur => ur.role.roleName)
+                          .Select(ur => new roleDto(
+                            ur.role.roleID,
+                            ur.role.roleName,
+                            ur.role.roleDescription
+                        ))
                         .Distinct()
                         .ToList(),
 
-                    u.userRoles
-                        .SelectMany(ur => ur.role.rolePermissions.Select(rp => rp.permission.permissionName))
-                        .Distinct()
+                   u.userRoles
+                        .SelectMany(ur => ur.role.rolePermissions)
+                        .Select(rp => new permissionDto(
+                            rp.permission.permissionID,
+                            rp.permission.permissionName,
+                            rp.permission.code
+                        ))
+                        .Distinct() // Quan trọng: 1 user có nhiều role, các role có thể trùng permission
                         .ToList()
                 ))
                 .ToListAsync(ct);
@@ -249,19 +258,177 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
 
                     // --- Roles ---
                     u.userRoles
-                        .Select(ur => ur.role.roleName)
+                        .Select(ur => new roleDto(
+                            ur.role.roleID,
+                            ur.role.roleName,
+                            ur.role.roleDescription
+                        ))
                         .Distinct() // Tránh trùng lặp nếu data lỗi
                         .ToList(),
 
                     // --- Permissions ---
                     u.userRoles
                         .SelectMany(ur => ur.role.rolePermissions)
-                        .Select(rp => rp.permission.permissionName)
+                        .Select(rp => new permissionDto(
+                            rp.permission.permissionID,
+                            rp.permission.permissionName,
+                            rp.permission.code
+                        ))
                         .Distinct() // Quan trọng: 1 user có nhiều role, các role có thể trùng permission
                         .ToList()
                 ))
                 .FirstOrDefaultAsync(ct);
         }
+        public async Task<UserSlimDto?> GetSlimUserWhereScopeUserByID(int userID, CancellationToken ct)
+        {
+            var now = DateTime.UtcNow;
+
+            return await _db.authUsers
+                .AsNoTracking()
+                .AsSplitQuery() // Ngăn chặn bùng nổ dữ liệu (Cartesian Explosion)
+                .Where(x => x.userID == userID && x.scope == "user")
+                .Select(u => new UserSlimDto(
+                    u.userID,
+                    u.userName,
+                    u.email,
+                    u.status,
+                    u.isEmailVerified,
+
+                    // --- Profile ---
+                    u.profile == null ? null : new ProfileDto(
+                        u.profile.firstName,
+                        u.profile.lastName,
+                        u.profile.avatar,
+                        u.profile.gender,
+                        u.profile.dateOfBirth
+                    ),
+
+                    // --- MFA ---
+                    u.mfaSecret == null ? null : new MfaSecretDto(
+                        u.mfaSecret.type,
+                        u.mfaSecret.isEnabled,
+                        u.mfaSecret.updatedAt
+                    ),
+
+                    // --- Sessions (Top 5) ---
+                    u.sessions
+                        .OrderByDescending(s => s.createdAt)
+                        .Take(5)
+                        .Select(s => new SessionDto(
+                            s.sessionID,
+                            s.deviceId,
+                            s.ip,
+                            s.userAgent,
+                            s.createdAt,
+                            s.lastSeenAt,
+                            s.isRevoked
+                        ))
+                        .ToList(),
+
+                    // --- Audit Logs (Top 50) ---
+                    u.auditLogs
+                        .OrderByDescending(a => a.createdAt)
+                        .Take(50)
+                        .Select(a => new AuditLogDto(
+                            a.auditID,
+                            a.action,
+                            a.result,
+                            a.ip,
+                            a.userAgent,
+                            a.createdAt,
+                            a.detail
+                        ))
+                        .ToList(),
+
+                    // --- Email Verifications ---
+                    u.emailVerifications
+                        .OrderByDescending(ev => ev.createdAt)
+                        .Select(ev => new EmailVerificationDto(
+                            ev.emailVerificationID,
+                            ev.createdAt,
+                            ev.expiresAt,
+                            ev.consumedAt
+                        ))
+                        .ToList(),
+
+                    // --- Password Resets (Top 3) ---
+                    u.passwordResets
+                        .OrderByDescending(pr => pr.createdAt)
+                        .Take(3)
+                        .Select(pr => new PasswordResetDto(
+                            pr.passwordResetID,
+                            pr.createdAt,
+                            pr.expiresAt,
+                            pr.consumedAt
+                        ))
+                        .ToList(),
+
+                    // --- Refresh Tokens (Top 20) ---
+                    u.refreshTokens
+                        .OrderByDescending(rt => rt.Created)
+                        .Take(20)
+                        .Select(rt => new RefreshTokenDto(
+                            rt.refreshTokenID,
+                            rt.sessionID,
+                            rt.Created,
+                            rt.Expires,
+                            rt.Revoked,
+                            rt.ReplacedByToken,
+                            rt.Revoked == null && rt.Expires > now // IsActive logic
+                        ))
+                        .ToList(),
+
+                    // --- Roles (Updated DTO) ---
+                    u.userRoles
+                        .Where(ur => ur.role.scope == "user") // Lọc Role Scope
+                        .Select(ur => new roleDto(
+                            ur.role.roleID,
+                            ur.role.roleName,
+                            ur.role.roleDescription
+                        ))
+                        .Distinct()
+                        .ToList(),
+
+                    // --- Permissions (Updated DTO & Logic) ---
+                    u.userRoles
+                        .Where(ur => ur.role.scope == "user")       // 1. Lọc Role Scope
+                        .SelectMany(ur => ur.role.rolePermissions)  // Flatten ra danh sách quyền
+                        .Where(rp => rp.permission.scope == "user") // 2. Lọc Permission Scope
+                        .Select(rp => new permissionDto(
+                            rp.permission.permissionID,
+                            rp.permission.permissionName,
+                            rp.permission.code
+                        ))
+                        .Distinct() // Loại bỏ quyền trùng lặp (do user có nhiều role chứa cùng 1 quyền)
+                        .ToList()
+                ))
+                .FirstOrDefaultAsync(ct);
+        }
+
+        public async Task<List<GetUserResponseDto?>> GetAllUserWhereScopeUserAsync(CancellationToken ct)
+        {
+            var user = await _db.authUsers
+                .Where(u => u.scope == "user")
+                .Select(u => new GetUserResponseDto
+                {
+                    userID = u.userID,
+                    userName = u.userName,
+                    email = u.email,
+                    status = u.status,
+                    isEmailVerified = u.isEmailVerified,
+                    profile = u.profile == null ? null : new ProfileResponseDto
+                    {
+                        firstName = u.profile.firstName,
+                        lastName = u.profile.lastName,
+                        avatar = u.profile.avatar,
+                        gender = u.profile.gender,
+                        dateOfBirth = u.profile.dateOfBirth
+                    }
+                })
+                .ToListAsync(ct);
+            return user;
+        }
+
 
         public async Task<GetUserResponseDto?> GetUserByIDAsync(int userID, CancellationToken ct)
         {
@@ -344,6 +511,11 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
         {
             _db.authUsers.Update(user);
             return Task.CompletedTask;
+        }
+
+        public async Task<bool> CheckUserScopeAsync(int userId, string scope, CancellationToken ct)
+        {
+            return await _db.authUsers.AnyAsync(u => u.userID == userId && u.scope == scope, ct);
         }
     }
 

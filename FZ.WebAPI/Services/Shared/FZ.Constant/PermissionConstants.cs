@@ -25,16 +25,18 @@ namespace FZ.Constant
             { "UserDelete", "user.delete" },
             { "UserReadProfile", "user.read_profile" },
             { "UserUpdateProfile", "user.update_profile" },
-            { "UserReadList", "user.read_list" },
             { "UserReadDetails", "user.read_details" },
+            { "UserReadDetailsAdmin", "user.read_details.admin" },
 
             // --- Role & Permission ---
             { "RoleRead", "role.read" },
             { "RoleManage", "role.manage" },
-            { "RoleAssign", "role.assign" },
+            { "RoleAssignAdmin", "role.assign.admin" },
             { "PermissionManage", "permission.manage" },
             { "PermissionRead", "permission.read" },
+            { "PermissionReadAdmin", "permission.read.admin" },
             { "PermissionAssign", "permission.assign" },
+            { "PermissionAssignAdmin", "permission.assign.admin" },
 
             // --- Movie & Content ---
             { "MovieReadDetails", "movie.read_details" },

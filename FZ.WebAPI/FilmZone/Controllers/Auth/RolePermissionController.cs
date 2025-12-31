@@ -24,6 +24,29 @@ namespace FZ.WebAPI.Controllers.Auth
             }
             try
             {
+                var result = await _rolePermissionService.AddUserScopeRolePermissionAsync(req, ct);
+                if (result.ErrorCode != 200)
+                {
+                    return BadRequest(result);
+                }
+                return Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { ErrorCode = 400, ex.Message });
+            }
+        }
+
+        [HttpPost("admin/assign-permissions")]
+        [Authorize(Policy = "PermissionAssignAdmin")]
+        public async Task<IActionResult> AssignPermissionsToRoleAsyncAdmin(RolePermissionRequestDto req, CancellationToken ct)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            try
+            {
                 var result = await _rolePermissionService.AddRolePermissionAsync(req, ct);
                 if (result.ErrorCode != 200)
                 {

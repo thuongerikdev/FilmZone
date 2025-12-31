@@ -59,6 +59,21 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
                 .Where(r => roleIds.Contains(r.roleID))
                 .ToListAsync(ct);
         }
+        public async Task<bool> CheckRoleScopeAsync(int roleId, string scope, CancellationToken ct)
+        {
+            return await _db.authRoles.AnyAsync(r => r.roleID == roleId && r.scope == scope, ct);
+        }
+
+        public async Task<bool> AreAllRolesInScopeAsync(List<int> roleIds, string scope, CancellationToken ct)
+        {
+            if (roleIds == null || !roleIds.Any()) return true;
+
+            // Đếm số lượng Role trong DB khớp ID và khớp Scope
+            var countValid = await _db.authRoles
+                .CountAsync(r => roleIds.Contains(r.roleID) && r.scope == scope, ct);
+
+            return countValid == roleIds.Distinct().Count();
+        }
     }
 
     public class UserRoleRepository : IUserRoleRepository

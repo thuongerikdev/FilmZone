@@ -14,15 +14,22 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
         Task<List<AuthPermission>> GetPermissionsByUserIdAsync(int userId, CancellationToken ct);
         Task AddPermissionAsync(AuthPermission permission, CancellationToken ct);
         Task UpdatePermissionAsync(AuthPermission permission, CancellationToken ct);
-        Task DeletePermissionAsync (AuthPermission permission, CancellationToken ct);
+        Task DeletePermissionAsync(AuthPermission permission, CancellationToken ct);
         Task<AuthPermission?> GetPermissionByNameAsync(string permissionName, CancellationToken ct);
         Task<List<AuthPermission>> GetAllPermissionsAsync(CancellationToken ct);
         Task<List<AuthPermission>> GettPermissionByRoleIdAsync(int roleId, CancellationToken ct);
-        Task<AuthPermission> GetPermissionByIdAsync (int permissionId, CancellationToken ct);
+        Task<AuthPermission> GetPermissionByIdAsync(int permissionId, CancellationToken ct);
+
+        Task<List<AuthPermission>> GetPermissionsByUserIdAsyncWhereScopeUser (int userId, CancellationToken ct);
+        Task<AuthPermission?> GetPermissionByNameAsyncWhereScopeUser(string permissionName, CancellationToken ct);
+        Task<List<AuthPermission>> GetAllPermissionsAsynWhereScopeUserc(CancellationToken ct);
+        Task<List<AuthPermission>> GettPermissionByRoleIdAsyncWhereScopeUser(int roleId, CancellationToken ct);
+        Task<AuthPermission> GetPermissionByIdAsyncWhereScopeUser(int permissionId, CancellationToken ct);
         Task AddRangePermissionAsync(List<AuthPermission> permissions, CancellationToken ct);
+        Task<bool> AreAllPermissionsInScopeAsync(List<int> permissionIds, string scope, CancellationToken ct);
 
     }
-    public class PermissionRepository: IPermissionRepository
+    public class PermissionRepository : IPermissionRepository
     {
         private readonly AuthDbContext _db;
         public PermissionRepository(AuthDbContext db) => _db = db;
@@ -82,6 +89,62 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
                 .Select(rp => rp.permission)
                 .ToListAsync(ct);
             return permissions;
+        }
+        public async Task<AuthPermission?> GetPermissionByNameAsyncWhereScopeUser(string permissionName, CancellationToken ct)
+        {
+            return await _db.authPermissions
+                .Where(p => p.scope == "user")
+                .FirstOrDefaultAsync(p => p.permissionName == permissionName, ct);
+        }
+        public async Task<List<AuthPermission>> GetAllPermissionsAsynWhereScopeUserc(CancellationToken ct)
+        {
+            return await _db.authPermissions
+                .Where(p => p.scope == "user")
+                .ToListAsync(ct);
+
+
+        }
+        public async Task<List<AuthPermission>> GettPermissionByRoleIdAsyncWhereScopeUser(int roleId, CancellationToken ct)
+        {
+            var permissions = await _db.authRolePermissions
+                .Where(rp => rp.roleID == roleId)
+                .Include(rp => rp.permission)
+                .Where(rp => rp.permission.scope == "user")
+                .Select(rp => rp.permission)
+                .ToListAsync(ct);
+            return permissions;
+        }
+        public async Task<AuthPermission> GetPermissionByIdAsyncWhereScopeUser(int permissionId, CancellationToken ct)
+        {
+            return await _db.authPermissions
+                .Where(p => p.scope == "user")
+                .FirstAsync(p => p.permissionID == permissionId, ct);
+        }
+        public async Task<List<AuthPermission>> GetPermissionsByUserIdAsyncWhereScopeUser(int userId, CancellationToken ct)
+        {
+            // Join: User -> UserRole -> Role -> RolePermission -> Permission
+            var query = await _db.Entry(_db.authUsers.Find(userId))
+                .Collection(u => u.userRoles)
+                .Query()
+                .Include(ur => ur.role)
+                .ThenInclude(r => r.rolePermissions)
+                .ThenInclude(rp => rp.permission)
+                .SelectMany(ur => ur.role.rolePermissions)
+                .Select(rp => rp.permission)
+                .Where(p => p.scope == "user")
+                .ToListAsync();
+            return query;
+        }
+        public async Task<bool> AreAllPermissionsInScopeAsync(List<int> permissionIds, string scope, CancellationToken ct)
+        {
+            if (permissionIds == null || !permissionIds.Any()) return true; // List rỗng coi như hợp lệ
+
+            // Đếm số lượng permission trong DB có ID nằm trong list VÀ đúng scope
+            var countValid = await _db.authPermissions
+                .CountAsync(p => permissionIds.Contains(p.permissionID) && p.scope == scope, ct);
+
+            // Nếu số lượng tìm thấy == số lượng gửi lên -> Tất cả đều đúng scope
+            return countValid == permissionIds.Distinct().Count();
         }
 
     }
