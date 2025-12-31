@@ -19,6 +19,17 @@ namespace FZ.Auth.Dtos.Role
         public int permissionID { get; set; }
     }
 
+    public class CreatePermissionScopeUserRequestDto
+    {
+        public string permissionName { get; set; }
+        public string permissionDescription { get; set; }
+        public string code { get; set; }
+    }
+    public class UpdatePermissionScopeUserRequestDto : CreatePermissionScopeUserRequestDto
+    {
+        public int permissionID { get; set; }
+    }
+
     public class RolePermissionRequestDto
     {
         public int roleID { get; set; }

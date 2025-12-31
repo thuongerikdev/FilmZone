@@ -6,6 +6,7 @@ using FZ.Auth.ApplicationService.MFAService.Implements;
 using FZ.Auth.ApplicationService.MFAService.Implements.Account;
 using FZ.Auth.ApplicationService.MFAService.Implements.Role;
 using FZ.Auth.ApplicationService.MFAService.Implements.User;
+using FZ.Auth.ApplicationService.Service.Implements.MFA;
 using FZ.Auth.ApplicationService.Service.Implements.Role;
 using FZ.Auth.Infrastructure;
 using FZ.Auth.Infrastructure.Repository.Abtracts;
@@ -272,6 +273,9 @@ namespace FZ.Auth.ApplicationService.StartUp
             builder.Services.AddScoped<IAuthRolePermissionService, AuthRolePermissionService>();
             builder.Services.AddScoped<IAuthUserRoleService, AuthUserRoleService>();
 
+            builder.Services.AddScoped<IAuthUserSessionService, AuthUserSessionService>();
+            builder.Services.AddScoped<IAuthAuditLogService, AuthAuditLogService>();
+
             // === Authentication (JWT + Cookies + Google) ===
             var secretKey = builder.Configuration["Jwt:SecretKey"] ?? "A_very_long_and_secure_secret_key_1234567890";
             var key = Encoding.UTF8.GetBytes(secretKey);
@@ -446,6 +450,8 @@ namespace FZ.Auth.ApplicationService.StartUp
                     // 1. (Tuỳ chọn) Tự động chạy Migration nếu chưa update database
                     // logger.LogInformation("Applying migrations...");
                     await context.Database.MigrateAsync();
+
+                    //await AuthDataSeeder.SyncRolesAsync(context);
 
                     // 2. Chạy Seeder
                     logger.LogInformation("Starting Permission Seeding...");

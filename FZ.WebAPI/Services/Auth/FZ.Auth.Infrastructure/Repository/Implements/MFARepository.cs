@@ -19,28 +19,18 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
         {
             await _db.authAuditLogs.AddAsync(authAuditLog, ct);
         }
+        public Task<List<AuthAuditLog>> GetLogsByUserIdAsync(int userId, CancellationToken ct)
+    => _db.authAuditLogs.Where(log => log.userID == userId).ToListAsync(ct);
+
+        public Task<List<AuthAuditLog>> GetAllLogsAsync(CancellationToken ct)
+            => _db.authAuditLogs.ToListAsync(ct);
+
+        public Task<AuthAuditLog> GetLogsByID(int auditID, CancellationToken ct)
+            => _db.authAuditLogs.FirstAsync(x => x.auditID == auditID, ct);
+
+
     }
 
-    //public sealed class MFARepository : IMFARepository
-    //{
-    //    private readonly AuthDbContext _db;
-    //    public MFARepository(AuthDbContext db) => _db = db;
-
-    //    public Task<bool> CheckEnabledMFAAsync(int userId, CancellationToken ct)
-    //    {
-    //        return _db.authMfaSecrets.AnyAsync(x => x.userID == userId && x.isEnabled == true, ct);
-    //    }
-    //    public Task AddMFAAsync(Domain.MFA.AuthMfaSecret authMFA, CancellationToken ct)
-    //        => _db.authMfaSecrets.AddAsync(authMFA, ct).AsTask();
-
-    //    public Task<Domain.MFA.AuthMfaSecret?> GetByUserIdAsync(int userId, CancellationToken ct)
-    //        => _db.authMfaSecrets.FirstOrDefaultAsync(x => x.userID == userId, ct);
-    //    //public Task UpdateMFAAsync(Domain.MFA.AuthMfaSecret authMFA, CancellationToken ct)
-    //    //{
-    //    //    _db.authMfaSecrets.Update(authMFA); // hoặc để EF tracking tự detect
-    //    //    return Task.CompletedTask;
-    //    //}
-    //}
     public sealed class MFARepository : IMFARepository
     {
         private readonly AuthDbContext _db;
@@ -65,6 +55,15 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
 
         public Task<bool> CheckEnabledMFAAsync(int userId, CancellationToken ct)
             => _db.authMfaSecrets.AnyAsync(x => x.userID == userId && x.type == "TOTP" && x.status == "Enabled", ct);
+
+
+
+        public Task<AuthMfaSecret> GetByIdAsync(int id, CancellationToken ct)
+            => _db.authMfaSecrets.FirstAsync(x => x.mfaID == id, ct);
+        public Task<List<AuthMfaSecret>> GetAllMFAAsync(CancellationToken ct)
+            => _db.authMfaSecrets.ToListAsync(ct);
+
+
     }
 
 
@@ -102,6 +101,16 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
                     .SetProperty(s => s.lastSeenAt, now),
                     ct);
         }
+      
+        public Task<List<AuthUserSession>> GetActiveSessionsByUserIdAsync(int userId, CancellationToken ct)
+            => _db.authUserSessions
+                .Where(s => s.userID == userId && !s.isRevoked)
+                .ToListAsync(ct);
+        public Task<List<AuthUserSession>> GetAllSessionsAsync( CancellationToken ct)
+            => _db.authUserSessions
+              .ToListAsync(ct);
+
+
     }
 
 

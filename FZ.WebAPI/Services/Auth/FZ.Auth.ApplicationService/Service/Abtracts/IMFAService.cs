@@ -1,4 +1,5 @@
-﻿using FZ.Auth.Dtos;
+﻿using FZ.Auth.Domain.MFA;
+using FZ.Auth.Dtos;
 using FZ.Constant;
 using System;
 using System.Collections.Generic;
@@ -14,5 +15,9 @@ namespace FZ.Auth.ApplicationService.MFAService.Abtracts
         Task<ResponseDto<bool>> ConfirmTotpEnrollmentAsync(int userId, string code, CancellationToken ct);
         Task<ResponseDto<bool>> DisableTotpAsync(int userId, string? confirmCode, CancellationToken ct);
         Task<bool> VerifyTotpAsync(int userId, string code, CancellationToken ct);
+
+        Task<ResponseDto<AuthMfaSecret>> GetByUserAsync(int userId, CancellationToken ct);
+        Task<ResponseDto<AuthMfaSecret>> GetByIdAsync(int id, CancellationToken ct);
+        Task<ResponseDto<List<AuthMfaSecret>>> GetAllMFAAsync(CancellationToken ct);
     }
 }

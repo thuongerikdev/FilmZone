@@ -31,12 +31,18 @@ namespace FZ.Constant
             // --- Role & Permission ---
             { "RoleRead", "role.read" },
             { "RoleManage", "role.manage" },
+            { "RoleManageAdmin", "role.manage.admin" },
+            { "RoleAssign", "role.assign" },
             { "RoleAssignAdmin", "role.assign.admin" },
             { "PermissionManage", "permission.manage" },
+            { "PermissionManageAdmin", "permission.manage.admin" },
             { "PermissionRead", "permission.read" },
             { "PermissionReadAdmin", "permission.read.admin" },
             { "PermissionAssign", "permission.assign" },
             { "PermissionAssignAdmin", "permission.assign.admin" },
+
+            { "AuditLogManage", "audit_log.manage" },
+            { "UserSessionManage", "usersession.manage" },
 
             // --- Movie & Content ---
             { "MovieReadDetails", "movie.read_details" },

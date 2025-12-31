@@ -56,6 +56,7 @@ namespace FZ.Auth.ApplicationService.MFAService.Abtracts
         Task<ResponseDto<bool>> LogoutByRefreshTokenAsync(string refreshToken, CancellationToken ct);
         Task<ResponseDto<bool>> LogoutSessionAsync(int userId, int sessionId, CancellationToken ct);
         Task<ResponseDto<int>> LogoutAllDevicesAsync(int userId, CancellationToken ct);
+        Task<ResponseDto<LoginResponse>> LoginStaffAsync(LoginRequest req, CancellationToken ct);
 
     }
 

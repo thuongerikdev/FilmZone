@@ -20,6 +20,18 @@ namespace FZ.Auth.Dtos.Role
     
     }
 
+    public class AddRoleWhereScopeUserRequest
+    {
+        public string roleName { get; set; }
+        public string roleDescription { get; set; }
+        public bool isDefault { get; set; } = false; // Vai trò mặc định khi tạo user mới
+    }
+    public class UpdateRoleWhereScopeUserRequest : AddRoleWhereScopeUserRequest
+    {
+        public int roleID { get; set; }
+    }
+
+
     public class  UserRoleRequestDto
     {
         [Required]

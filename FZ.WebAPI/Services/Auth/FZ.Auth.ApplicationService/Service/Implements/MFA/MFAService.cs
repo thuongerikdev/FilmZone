@@ -151,5 +151,38 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.Account
             }
             catch { return false; }
         }
+
+
+        public Task<ResponseDto<AuthMfaSecret>> GetByUserAsync(int userId, CancellationToken ct)
+        {
+            return _repo.GetByUserAsync(userId, ct)
+                .ContinueWith(t =>
+                {
+                    var entity = t.Result;
+                    if (entity == null)
+                        return ResponseConst.Error<AuthMfaSecret>(404, "MFA not found for user.");
+                    return ResponseConst.Success("MFA retrieved successfully.", entity);
+                }, ct);
+        }
+        public Task<ResponseDto<AuthMfaSecret>> GetByIdAsync(int id, CancellationToken ct)
+        {
+            return _repo.GetByIdAsync(id, ct)
+                .ContinueWith(t =>
+                {
+                    var entity = t.Result;
+                    if (entity == null)
+                        return ResponseConst.Error<AuthMfaSecret>(404, "MFA not found by ID.");
+                    return ResponseConst.Success("MFA retrieved successfully.", entity);
+                }, ct);
+        }
+        public Task<ResponseDto<List<AuthMfaSecret>>> GetAllMFAAsync(CancellationToken ct)
+        {
+            return _repo.GetAllMFAAsync(ct)
+                .ContinueWith(t =>
+                {
+                    var list = t.Result;
+                    return ResponseConst.Success("MFA list retrieved successfully.", list);
+                }, ct);
+        }
     }
 }

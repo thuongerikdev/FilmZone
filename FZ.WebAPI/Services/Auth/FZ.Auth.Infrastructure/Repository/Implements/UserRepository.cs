@@ -517,6 +517,19 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
         {
             return await _db.authUsers.AnyAsync(u => u.userID == userId && u.scope == scope, ct);
         }
+
+        public async Task<List<RoleSlimDto>> GetRolesByUserIdAsync(int userId, CancellationToken ct)
+        {
+            return await _db.authUserRoles
+                .AsNoTracking()
+                .Where(ur => ur.userID == userId)
+                .Select(ur => new RoleSlimDto
+                {
+                    roleID = ur.role.roleID,
+                    roleName = ur.role.roleName
+                })
+                .ToListAsync(ct);
+        }
     }
 
     public sealed class ProfileRepository : IProfileRepository

@@ -27,7 +27,71 @@ namespace FZ.WebAPI.Controllers.Auth
         }
         [HttpPost("addRole")]
         [Authorize(Policy = "RoleManage")]
-        public async Task<IActionResult> AddRoleAsync(AddRoleRequest req, CancellationToken ct)
+        public async Task<IActionResult> AddRoleAsync(AddRoleWhereScopeUserRequest req, CancellationToken ct)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            try
+            {
+                var result = await _roleService.AddRoleAsyncWhereScopeUser(req, ct);
+                if (result.ErrorCode != 200)
+                {
+                    return BadRequest(result);
+                }
+                return Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { ErrorCode = 400, ex.Message });
+            }
+        }
+        [HttpPut("updateRole")]
+        [Authorize(Policy = "RoleManage")]
+        public async Task<IActionResult> UpdateRoleAsync(UpdateRoleWhereScopeUserRequest req, CancellationToken ct)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            try
+            {
+                var result = await _roleService.UpdateRoleAsyncWhereScopeUser(req, ct);
+                if (result.ErrorCode != 200)
+                {
+                    return BadRequest(result);
+                }
+                return Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { ErrorCode = 400, ex.Message });
+            }
+        }
+        [HttpDelete("deleteRole/{roleID}")]
+        [Authorize(Policy = "RoleManage")]
+        public async Task<IActionResult> DeleteRoleAsync(int roleID, CancellationToken ct)
+        {
+            try
+            {
+                var result = await _roleService.DeleteRoleAsyncWhereScopeUser(roleID, ct);
+                if (result.ErrorCode != 200)
+                {
+                    return BadRequest(result);
+                }
+                return Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { ErrorCode = 400, ex.Message });
+            }
+        }
+        //Admin Role Management
+
+        [HttpPost("admin/addRole")]
+        [Authorize(Policy = "RoleManageAdmin")]
+        public async Task<IActionResult> AdminAddRoleAsync(AddRoleRequest req, CancellationToken ct)
         {
             if (!ModelState.IsValid)
             {
@@ -47,9 +111,9 @@ namespace FZ.WebAPI.Controllers.Auth
                 return BadRequest(new { ErrorCode = 400, ex.Message });
             }
         }
-        [HttpPut("updateRole")]
-        [Authorize(Policy = "RoleManage")]
-        public async Task<IActionResult> UpdateRoleAsync(UpdateRoleRequest req, CancellationToken ct)
+        [HttpPut("admin/updateRole")]
+        [Authorize(Policy = "RoleManageAdmin")]
+        public async Task<IActionResult> AdminUpdateRoleAsync(UpdateRoleRequest req, CancellationToken ct)
         {
             if (!ModelState.IsValid)
             {
@@ -69,9 +133,9 @@ namespace FZ.WebAPI.Controllers.Auth
                 return BadRequest(new { ErrorCode = 400, ex.Message });
             }
         }
-        [HttpDelete("deleteRole/{roleID}")]
-        [Authorize(Policy = "RoleManage")]
-        public async Task<IActionResult> DeleteRoleAsync(int roleID, CancellationToken ct)
+        [HttpDelete("admin/deleteRole/{roleID}")]
+        [Authorize(Policy = "RoleManageAdmin")]
+        public async Task<IActionResult> AdminDeleteRoleAsync(int roleID, CancellationToken ct)
         {
             try
             {
@@ -87,6 +151,7 @@ namespace FZ.WebAPI.Controllers.Auth
                 return BadRequest(new { ErrorCode = 400, ex.Message });
             }
         }
+
         [HttpGet("getRoleByUserID/{userID}")]
         [Authorize(Policy = "RoleRead")]
         public async Task<IActionResult> GetRoleByUserID(int userID, CancellationToken ct)

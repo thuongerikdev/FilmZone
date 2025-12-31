@@ -484,7 +484,121 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.User
                 return ResponseConst.Error<LoginResponse>(500, "Có lỗi xảy ra. Vui lòng thử lại sau");
             }
         }
+        public async Task<ResponseDto<LoginResponse>> LoginStaffAsync(LoginRequest req, CancellationToken ct)
+        {
+            using var scope = _logger.BeginScope(new Dictionary<string, object?> { ["action"] = "LoginStaff", ["userName"] = req?.userName });
 
+            try
+            {
+                if (req == null || string.IsNullOrWhiteSpace(req.userName) || string.IsNullOrWhiteSpace(req.password))
+                    return ResponseConst.Error<LoginResponse>(400, "Thiếu thông tin đăng nhập");
+
+                var identifier = req.userName.Trim();
+                var userAgent = _httpContextAccessor.HttpContext?.Request.Headers["User-Agent"].ToString() ?? "Unknown";
+
+                return await _uow.ExecuteInTransactionAsync<ResponseDto<LoginResponse>>(async innerCt =>
+                {
+                    var ip = _tokenGenerate.GetClientIp();
+                    var ua = _tokenGenerate.GetUserAgent();
+
+                    // 1. Tìm User
+                    var user = await _userRepository.FindByEmailAsync(identifier, innerCt)
+                            ?? await _userRepository.FindByUserNameAsync(identifier, innerCt);
+
+                    if (user is null) return ResponseConst.Error<LoginResponse>(401, "Sai tài khoản hoặc mật khẩu");
+
+                    // 2. Check Password & Status
+                    if (!string.Equals(user.status, "Active", StringComparison.OrdinalIgnoreCase)) return ResponseConst.Error<LoginResponse>(403, "Tài khoản bị khóa");
+                    if (!_hasher.Verify(req.password, user.passwordHash)) return ResponseConst.Error<LoginResponse>(401, "Sai tài khoản hoặc mật khẩu");
+
+                    // 3. CHECK SCOPE: Chỉ cho phép Staff đăng nhập
+                    if (!string.Equals(user.scope, "staff", StringComparison.OrdinalIgnoreCase))
+                    {
+                        await _audit.LogAsync(new AuthAuditLog { userID = user.userID, action = "LoginStaff", result = "Forbidden", detail = "Scope mismatch (not staff)", ip = ip ?? "", userAgent = ua ?? "", createdAt = DateTime.UtcNow }, innerCt);
+                        return ResponseConst.Error<LoginResponse>(403, "Bạn không có quyền truy cập vào trang quản trị.");
+                    }
+
+                    // 4. Lấy Permissions & ROLES
+                    var permissions = await _userRepository.GetPermissionsByUserIdAsync(user.userID, innerCt);
+
+                    // Lấy danh sách Role Name
+                    var roles = await _userRepository.GetRolesByUserIdAsync(user.userID, innerCt);
+                    // (Lưu ý: Bạn cần đảm bảo IUserRepository có hàm này, nếu chưa có xem phần bổ sung bên dưới)
+
+                    // 5. Check MFA (Nếu cần áp dụng cho Staff)
+                    var mfaEnabled = await _mfa.CheckEnabledMFAAsync(user.userID, innerCt);
+                    if (mfaEnabled)
+                    {
+                        var ticket = Guid.NewGuid().ToString("N");
+                        await _redis.StringSetAsync(MfaLoginKey(ticket), user.userID.ToString(), TimeSpan.FromMinutes(5));
+                        return ResponseConst.Success("MFA required", new LoginResponse { requiresMfa = true, mfaTicket = ticket });
+                    }
+
+                    // 6. Tạo Session
+                    var deviceId = _deviceId.GetOrCreate();
+                    var session = new AuthUserSession
+                    {
+                        userID = user.userID,
+                        deviceId = deviceId,
+                        ip = ip ?? "",
+                        userAgent = ua ?? "",
+                        createdAt = DateTime.UtcNow,
+                        lastSeenAt = DateTime.UtcNow,
+                        isRevoked = false
+                    };
+                    await _sessions.AddSessionAsync(session, innerCt);
+                    await _uow.SaveChangesAsync(innerCt);
+
+                    // 7. Phát Token
+                    var pair = await _tokenGenerate.IssuePairAsync(
+                        user: user,
+                        sessionId: session.sessionID,
+                        createdByIp: ip,
+                        accessTtl: TimeSpan.FromMinutes(60), // Staff cho token sống lâu hơn chút nếu muốn
+                        refreshTtl: TimeSpan.FromDays(7),
+                        permissions: permissions
+                    );
+
+                    var roleNamesString = string.Join(",", roles.Select(r => r.roleName));
+                    await _audit.LogAsync(new AuthAuditLog
+                    {
+                        userID = user.userID,
+                        action = "LoginStaff",
+                        result = "OK",
+                        detail = $"Roles: {roleNamesString}", // Log role name thôi cho gọn
+                        ip = ip ?? "",
+                        userAgent = userAgent,
+                        createdAt = DateTime.UtcNow
+                    }, innerCt);
+
+                    // 8. Trả về Response kèm RoleNames
+                    var res = new LoginResponse
+                    {
+                        userID = user.userID,
+                        userName = user.userName,
+                        email = user.email,
+                        token = pair.accessToken,
+                        tokenExpiration = DateTime.UtcNow.AddMinutes(60),
+                        refreshToken = pair.refreshToken.Token,
+                        refreshTokenExpiration = pair.refreshToken.Expires,
+                        sessionId = session.sessionID,
+                        deviceId = deviceId,
+                        permissions = permissions,
+
+                        // --- GÁN LIST DTO VÀO ĐÂY ---
+                        roles = roles
+                    };
+
+                    return ResponseConst.Success("Đăng nhập quản trị thành công", res);
+
+                }, System.Data.IsolationLevel.ReadCommitted, ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "LoginStaffAsync error");
+                return ResponseConst.Error<LoginResponse>(500, "Lỗi hệ thống");
+            }
+        }
 
 
         // ===== Helpers =====

@@ -16,33 +16,27 @@ namespace FZ.WebAPI.Controllers.Auth
         {
             _permissionService = permissionService;
         }
-      
-        [HttpPost("addPermission")]
+
+        [HttpPost("BulkCreate")]
         [Authorize(Policy = "PermissionManage")]
-        public async Task<IActionResult> AddPermissionAsync(CreatePermissionRequestDto req, CancellationToken ct)
+
+        public async Task<IActionResult> BulkCreatePermissionsAsync(List<CreatePermissionScopeUserRequestDto> reqs, CancellationToken ct)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
             try
             {
-                var result = await _permissionService.CreatePermissionAsync(req, ct);
-                if (result.ErrorCode != 200)
-                {
-                    return BadRequest(result);
-                }
-                return Ok(result);
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { ErrorCode = 400, ex.Message });
+                var results = await _permissionService.CreatePermissionAsyncWhereScopeUser(reqs, ct);
+                return Ok(results);
 
             }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { ErrorCode = 400, ex.Message });
+            }
         }
+
         [HttpPut("updatePermission")]
         [Authorize(Policy = "PermissionManage")]
-        public async Task<IActionResult> UpdatePermissionAsync(UpdatePermissionRequestDto req, CancellationToken ct)
+        public async Task<IActionResult> UpdatePermissionAsync(UpdatePermissionScopeUserRequestDto req, CancellationToken ct)
         {
             if (!ModelState.IsValid)
             {
@@ -50,7 +44,7 @@ namespace FZ.WebAPI.Controllers.Auth
             }
             try
             {
-                var result = await _permissionService.UpdatePermissionAsync(req, ct);
+                var result = await _permissionService.UpdatePermissionAsyncWhereScopeUser(req, ct);
                 if (result.ErrorCode != 200)
                 {
                     return BadRequest(result);
@@ -62,13 +56,13 @@ namespace FZ.WebAPI.Controllers.Auth
                 return BadRequest(new { ErrorCode = 400, ex.Message });
             }
         }
-        [HttpDelete("delate")]
+        [HttpDelete("delete")]
         [Authorize(Policy = "PermissionManage")]
         public async Task<IActionResult> DeletePermissionAsync([FromQuery] int permissionId, CancellationToken ct)
         {
             try
             {
-                var result = await _permissionService.DeletePermissionAsync(permissionId, ct);
+                var result = await _permissionService.DeletePermissionAsyncWhereScopeUser(permissionId, ct);
                 if (result.ErrorCode != 200)
                 {
                     return BadRequest(result);
@@ -177,10 +171,12 @@ namespace FZ.WebAPI.Controllers.Auth
 
 
 
-        [HttpPost("BulkCreate")]
-        [Authorize(Policy = "PermissionManage")]
 
-        public async Task<IActionResult> BulkCreatePermissionsAsync(List<CreatePermissionRequestDto> reqs, CancellationToken ct)
+
+        [HttpPost("admin/BulkCreate")]
+        [Authorize(Policy = "PermissionManageAdmin")]
+
+        public async Task<IActionResult> AdminBulkCreatePermissionsAsync(List<CreatePermissionRequestDto> reqs, CancellationToken ct)
         {
             if (!ModelState.IsValid)
             {
@@ -207,6 +203,70 @@ namespace FZ.WebAPI.Controllers.Auth
                 }
             }
             return Ok(results);
+        }
+        [HttpPost("admin/addPermission")]
+        [Authorize(Policy = "PermissionManageAdmin")]
+        public async Task<IActionResult> AdminAddPermissionAsync(CreatePermissionRequestDto req, CancellationToken ct)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            try
+            {
+                var result = await _permissionService.CreatePermissionAsync(req, ct);
+                if (result.ErrorCode != 200)
+                {
+                    return BadRequest(result);
+                }
+                return Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { ErrorCode = 400, ex.Message });
+
+            }
+        }
+
+        [HttpPut("admin/updatePermission")]
+        [Authorize(Policy = "PermissionManageAdmin")]
+        public async Task<IActionResult> AdminUpdatePermissionAsync(UpdatePermissionRequestDto req, CancellationToken ct)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            try
+            {
+                var result = await _permissionService.UpdatePermissionAsync(req, ct);
+                if (result.ErrorCode != 200)
+                {
+                    return BadRequest(result);
+                }
+                return Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { ErrorCode = 400, ex.Message });
+            }
+        }
+        [HttpDelete("admin/delete")]
+        [Authorize(Policy = "PermissionManageAdmin")]
+        public async Task<IActionResult> AdminDeletePermissionAsync([FromQuery] int permissionId, CancellationToken ct)
+        {
+            try
+            {
+                var result = await _permissionService.DeletePermissionAsync(permissionId, ct);
+                if (result.ErrorCode != 200)
+                {
+                    return BadRequest(result);
+                }
+                return Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { ErrorCode = 400, ex.Message });
+            }
         }
 
         //Task<ResponseDto<AuthPermission>> GetPermissionByNameAsyncWhereScopeUser(string permissionName, CancellationToken ct);

@@ -42,6 +42,8 @@ namespace FZ.Auth.Infrastructure.Repository.Abtracts
         Task<List<GetUserResponseDto?>> GetAllUserWhereScopeUserAsync(CancellationToken ct);
         Task<bool> CheckUserScopeAsync(int userId, string scope, CancellationToken ct);
 
+        Task<List<RoleSlimDto>> GetRolesByUserIdAsync(int userId, CancellationToken ct);
+
 
     }
     public interface IProfileRepository

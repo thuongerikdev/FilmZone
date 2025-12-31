@@ -10,6 +10,11 @@ namespace FZ.Auth.Infrastructure.Repository.Abtracts
     public interface IAuditLogRepository
     {
         Task LogAsync(AuthAuditLog authAuditLog, CancellationToken ct);
+        Task<List<AuthAuditLog>> GetLogsByUserIdAsync(int userId, CancellationToken ct);
+        Task <AuthAuditLog> GetLogsByID(int auditID, CancellationToken ct);
+        Task<List<AuthAuditLog>> GetAllLogsAsync(CancellationToken ct);
+
+
     }
     //public interface IMFARepository
     //{
@@ -27,6 +32,8 @@ namespace FZ.Auth.Infrastructure.Repository.Abtracts
     public interface IMFARepository
     {
         Task<AuthMfaSecret?> GetByUserAsync(int userId, CancellationToken ct);
+        Task <AuthMfaSecret> GetByIdAsync(int id, CancellationToken ct);
+        Task<List<AuthMfaSecret>> GetAllMFAAsync(CancellationToken ct);
         Task UpsertAsync(AuthMfaSecret entity, CancellationToken ct);
         Task<bool> CheckEnabledMFAAsync(int userId, CancellationToken ct); // đã có từ code cũ
     }
@@ -38,6 +45,8 @@ namespace FZ.Auth.Infrastructure.Repository.Abtracts
     {
         Task AddSessionAsync(AuthUserSession session, CancellationToken ct);
         Task<AuthUserSession?> FindByIdAsync(int sessionId, CancellationToken ct);
+        Task<List<AuthUserSession>> GetActiveSessionsByUserIdAsync(int userId, CancellationToken ct);
+        Task <List<AuthUserSession>> GetAllSessionsAsync( CancellationToken ct);
         Task MarkRevokedAsync(int sessionId, CancellationToken ct);
 
         // NEW: revoke tất cả session của 1 user, trả về số bản ghi bị ảnh hưởng

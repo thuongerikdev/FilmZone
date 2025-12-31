@@ -50,7 +50,7 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.Role
             var existingRole = await _roleRepository.GetRoleByIdAsync(req.roleID, ct);
             if (existingRole == null)
             {
-                throw new InvalidOperationException("Role not found.");
+                return ResponseConst.Error<RoleResponse>(400, "Role not found.");
             }
             existingRole.roleName = req.roleName;
             existingRole.roleDescription = req.roleDescription;
@@ -72,7 +72,7 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.Role
             var existingRole = await _roleRepository.GetRoleByIdAsync(roleID, ct);
             if (existingRole == null)
             {
-                throw new InvalidOperationException("Role not found.");
+                return ResponseConst.Error<bool>(404, "Role not found.");
             }
             await _roleRepository.DeleteRoleAsync(roleID, ct);
             await _uow.SaveChangesAsync(ct);
@@ -84,7 +84,7 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.Role
             var role = await _roleRepository.GetRoleByIdAsync(roleID, ct);
             if (role == null)
             {
-                throw new InvalidOperationException("Role not found.");
+                return ResponseConst.Error<RoleResponse>(400, "Role not found.");
             }
             var roleDto = new RoleResponse
             {
@@ -117,7 +117,7 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.Role
             var existingRole = await _roleRepository.GetRoleByNameAsync(addRole.roleName, ct);
             if (existingRole != null)
             {
-                throw new InvalidOperationException("Role already exists.");
+                return ResponseConst.Error<RoleResponse>(400, "Role already exists.");
             }
             var newRole = new Domain.Role.AuthRole
             {
@@ -140,6 +140,79 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.Role
                 scope = newRole.scope
             };
             return ResponseConst.Success("Thêm vai trò thành công", roleDto);
+        }
+
+        public async Task<ResponseDto<RoleResponse>> AddRoleAsyncWhereScopeUser(AddRoleWhereScopeUserRequest addRole, CancellationToken ct)
+        {
+            var existingRole = await _roleRepository.GetRoleByNameAsync(addRole.roleName, ct);
+            if (existingRole != null)
+            {
+                return ResponseConst.Error<RoleResponse>(400, "Role already exists.");
+            }
+            var newRole = new Domain.Role.AuthRole
+            {
+                roleID = existingRole.roleID,
+                roleName = addRole.roleName,
+                isDefault = addRole.isDefault,
+                roleDescription = addRole.roleDescription,
+                scope = "user"
+
+
+            };
+            await _roleRepository.AddRoleAsync(newRole, ct);
+            await _uow.SaveChangesAsync(ct);
+            var roleDto = new RoleResponse
+            {
+                roleID = newRole.roleID,
+                roleName = newRole.roleName,
+                roleDescription = newRole.roleDescription,
+                isDefault = newRole.isDefault,
+                scope = newRole.scope
+            };
+            return ResponseConst.Success("Thêm vai trò thành công", roleDto);
+        }
+
+        public async Task<ResponseDto<RoleResponse>> UpdateRoleAsyncWhereScopeUser(UpdateRoleWhereScopeUserRequest req, CancellationToken ct)
+        {
+            {
+                var existingRole = await _roleRepository.GetRoleByIdAsync(req.roleID, ct);
+                if (existingRole == null)
+                {
+                    return ResponseConst.Error<RoleResponse>(404, "Role not found.");
+                }
+                if (existingRole.scope != "user")
+                {
+                    return ResponseConst.Error<RoleResponse>(400, "Access Denied: Cannot update role outside 'user' scope.");
+                }
+                existingRole.roleName = req.roleName;
+                existingRole.roleDescription = req.roleDescription;
+                existingRole.isDefault = req.isDefault;
+                await _roleRepository.UpdateRoleAsync(existingRole, ct);
+                await _uow.SaveChangesAsync(ct);
+                var roleDto = new RoleResponse
+                {
+                    roleName = existingRole.roleName,
+                    roleDescription = existingRole.roleDescription,
+                    isDefault = existingRole.isDefault
+                };
+                return ResponseConst.Success("Cập nhật vai trò thành công", roleDto);
+            }
+
+        }
+        public async Task<ResponseDto<bool>> DeleteRoleAsyncWhereScopeUser(int roleID, CancellationToken ct)
+        {
+            var existingRole = await _roleRepository.GetRoleByIdAsync(roleID, ct);
+            if (existingRole == null)
+            {
+                return ResponseConst.Error<bool>(404, "Role not found.");
+            }
+            if (existingRole.scope != "user")
+            {
+               return ResponseConst.Error<bool>(400, "Access Denied: Cannot delete role outside 'user' scope.");
+            }
+            await _roleRepository.DeleteRoleAsync(roleID, ct);
+            await _uow.SaveChangesAsync(ct);
+            return ResponseConst.Success("Xoá vai trò thành công", true);
         }
     }
 }

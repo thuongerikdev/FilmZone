@@ -67,6 +67,39 @@ namespace FZ.WebAPI.Controllers.Auth
 
             return Ok(result);
         }
+        [HttpPost("StaffLogin")]
+        public async Task<IActionResult> StaffLogin([FromBody] LoginRequest loginRequest, CancellationToken ct)
+        {
+            var result = await _authLoginService.LoginStaffAsync(loginRequest, ct);
+
+            if (result.ErrorCode != 200 || result.Data is null)
+                return StatusCode(result.ErrorCode, result);
+
+            // MFA Required -> FE tự chuyển hướng
+            if (TryGetBoolProp(result.Data, "requiresMfa") == true) return Ok(result);
+
+            if (TryExtractTokens(result.Data, out var access, out var refresh, out var accessExp, out var refreshExp))
+            {
+                // 1. Set JWT & Refresh Cookie (HttpOnly - Bảo mật)
+                SetAuthCookies(access!, refresh!, accessExp, refreshExp);
+
+                // 2. Set Permission Cookie (Not HttpOnly - Cho UI Logic ẩn hiện nút)
+                // Lấy permissions từ LoginResponse
+                var perms = TryGetPermissions(result.Data);
+                if (perms != null)
+                {
+                    Response.Cookies.Append("fz.permissions", JsonSerializer.Serialize(perms), new CookieOptions
+                    {
+                        HttpOnly = false, // JS đọc được
+                        Secure = true,
+                        SameSite = SameSiteMode.None,
+                        Expires = accessExp
+                    });
+                }
+            }
+
+            return Ok(result);
+        }
 
         [HttpPost("login/mobile")]
         [AllowAnonymous]

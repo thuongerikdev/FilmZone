@@ -28,6 +28,12 @@ namespace FZ.Auth.Dtos.User
         public List<string> permissions { get; set; }
         public DateTime tokenExpiration { get; set; }
         public DateTime refreshTokenExpiration { get; set; }
+        public List<RoleSlimDto> roles { get; set; } = new();
+    }
+    public class RoleSlimDto
+    {
+        public int roleID { get; set; }
+        public string roleName { get; set; } = default!;
     }
 
     // Password reset
