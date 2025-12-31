@@ -93,7 +93,7 @@ namespace FZ.WebAPI.Controllers.Auth
 
 
 
-        [HttpGet("admin/getAllUser")]
+        [HttpGet("admin/getAllUsers")]
         [Authorize(Policy = "UserReadDetailsAdmin")]
         public async Task<IActionResult> GetAllUsersAdminFull(CancellationToken ct)
         {
