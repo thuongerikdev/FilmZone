@@ -25,6 +25,7 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.Role
             var roles = await _roleRepository.GetAllRolesAsync(ct);
             var rolesDto = roles.Select(r => new RoleResponse
             {
+                roleID = r.roleID,
                 roleName = r.roleName,
                 roleDescription = r.roleDescription,
                 scope = r.scope,
@@ -87,6 +88,7 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.Role
             }
             var roleDto = new RoleResponse
             {
+                roleID = role.roleID,
                 roleName = role.roleName,
                 roleDescription = role.roleDescription,
                 isDefault = role.isDefault
