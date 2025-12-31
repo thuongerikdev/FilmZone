@@ -121,7 +121,6 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.Role
             }
             var newRole = new Domain.Role.AuthRole
             {
-                roleID =existingRole.roleID,
                 roleName = addRole.roleName,
                 isDefault = addRole.isDefault,
                 roleDescription = addRole.roleDescription,
@@ -151,7 +150,6 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.Role
             }
             var newRole = new Domain.Role.AuthRole
             {
-                roleID = existingRole.roleID,
                 roleName = addRole.roleName,
                 isDefault = addRole.isDefault,
                 roleDescription = addRole.roleDescription,
