@@ -19,10 +19,11 @@ import {
 import { DataGrid } from "@mui/x-data-grid";
 import { tokens } from "../theme";
 import Header from "../components/Header";
-import { getAllUsers, deleteUser, deleteComment, getCommentsByUserId } from "../services/api";
+import { getAllUsers, deleteUser, deleteComment, getCommentsByUserId, getUserSlimByID } from "../services/api";
 
 // Icons
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import UpgradeIcon from '@mui/icons-material/Upgrade';
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import PersonIcon from "@mui/icons-material/Person";
 import EmailIcon from "@mui/icons-material/Email";
@@ -64,9 +65,9 @@ const UserDetail = () => {
   // Fetch User Info
   const fetchUserDetail = useCallback(async () => {
     try {
-      const response = await getAllUsers();
+      const response = await getUserSlimByID(userId);
       if (response.data.errorCode === 200) {
-        const user = response.data.data.find(u => u.userID === parseInt(userId));
+        const user = response.data.data
         setUserData(user);
       }
     } catch (error) {
@@ -93,6 +94,12 @@ const UserDetail = () => {
     fetchUserDetail().then(() => { if (isActive) fetchUserComments(); });
     return () => { isActive = false; };
   }, [fetchUserDetail, fetchUserComments]);
+
+  const handleNavigateToUpdate = () => {
+      navigate(`/users/update/${userId}`, { 
+          state: { currentUser: userData } 
+      });
+  };
 
   const handleDelete = async () => {
     if (window.confirm("Bạn có chắc chắn muốn xóa user này?")) {
@@ -198,8 +205,14 @@ const UserDetail = () => {
       {/* Header Section */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Box display="flex" alignItems="center" gap={2}>
-          <Avatar sx={{ width: 64, height: 64, bgcolor: colors.blueAccent[500] }}>
-             {userData.userName.charAt(0).toUpperCase()}
+          <Avatar 
+            src={userData.profile?.avatar} 
+            
+            alt={userData.userName}
+            
+            sx={{ width: 64, height: 64, bgcolor: colors.blueAccent[500] }}
+          >
+            {userData.userName?.charAt(0).toUpperCase()}
           </Avatar>
           <Box>
              <Typography variant="h2" color={colors.grey[100]} fontWeight="bold">
@@ -219,6 +232,14 @@ const UserDetail = () => {
             variant="outlined"
           >
             Quay lại
+          </Button>
+           <Button
+            startIcon={<UpgradeIcon />} 
+            onClick={handleNavigateToUpdate} 
+            color="success"
+            variant="outlined"
+          >
+            Cập nhật User
           </Button>
           <Button
             startIcon={<DeleteOutlineIcon />}
@@ -288,7 +309,18 @@ const UserDetail = () => {
 
                       <Typography color={colors.grey[400]}>Roles:</Typography>
                       <Box display="flex" gap={1}>
-                        {userData.roles?.map((r, i) => <Chip key={i} label={r} size="small" color="info" />)}
+                        {userData.roles?.map((role, index) => (
+                          <Chip 
+                            key={role.roleID || index} 
+                            
+                            label={role.roleName} 
+                            
+                            title={role.roleDescription}
+                            
+                            size="small" 
+                            color="info" 
+                          />
+                        ))}
                       </Box>
                    </Box>
                  </CardContent>

@@ -150,11 +150,25 @@ const Sidebar = ({ onCollapsedChange }) => {
               color={colors.grey[300]}
               sx={{ m: "15px 0 5px 20px" }}
             >
-              Quản lý User
+              Quản lý User/Dịch vụ
             </Typography>
             <Item
-              title="Danh Sách Users"
+              title="Quản lý Users"
               to="/users"
+              icon={<PeopleOutlinedIcon />}
+              selected={selected}
+              setSelected={setSelected}
+            />
+            <Item
+              title="Quản lý Permissions"
+              to="/permissions"
+              icon={<PeopleOutlinedIcon />}
+              selected={selected}
+              setSelected={setSelected}
+            />
+            <Item
+              title="Quản lý Roles"
+              to="/roles"
               icon={<PeopleOutlinedIcon />}
               selected={selected}
               setSelected={setSelected}

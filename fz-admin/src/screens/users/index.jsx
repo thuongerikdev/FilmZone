@@ -163,45 +163,6 @@ const theme = useTheme();
       ),
     },
     {
-      field: "roles",
-      headerName: "Vai trò",
-      flex: 1,
-      minWidth: 180,
-      renderCell: ({ value }) => {
-        const displayRoles = value.slice(0, 2);
-        const remaining = value.length - 2;
-        
-        return (
-          <Box display="flex" gap={0.5} alignItems="center" height="100%" flexWrap="nowrap">
-            {displayRoles.map((role, idx) => (
-              <Chip
-                key={idx}
-                label={role}
-                size="small"
-                sx={{
-                  backgroundColor: role.toLowerCase().includes('admin') 
-                    ? colors.redAccent[600] 
-                    : colors.blueAccent[700],
-                  color: colors.grey[100],
-                  maxWidth: "100px", 
-                }}
-              />
-            ))}
-            {remaining > 0 && (
-              <Tooltip title={value.slice(2).join(", ")} arrow>
-                <Chip
-                  label={`+${remaining}`}
-                  size="small"
-                  variant="outlined"
-                  sx={{ color: colors.grey[100], borderColor: colors.grey[100] }}
-                />
-              </Tooltip>
-            )}
-          </Box>
-        );
-      },
-    },
-    {
       field: "sessionsCount",
       headerName: "Sessions",
       width: 80,
@@ -226,7 +187,7 @@ const theme = useTheme();
               <VisibilityOutlinedIcon />
             </IconButton>
           </Tooltip>
-          
+
           <Tooltip title="Xóa User">
             <IconButton
               onClick={() => handleDelete(row.userID)}

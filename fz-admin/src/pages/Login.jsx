@@ -39,7 +39,9 @@ const Login = () => {
         
         // Lưu token, refreshToken và user info vào localStorage
         localStorage.setItem("token", userData.token);
+        localStorage.setItem("tokenExpiration", userData.tokenExpiration);
         localStorage.setItem("refreshToken", userData.refreshToken);
+        localStorage.setItem("refreshTokenExpiration", userData.refreshTokenExpiration);
         localStorage.setItem("sessionId", userData.sessionId);
         localStorage.setItem("deviceId", userData.deviceId);
         localStorage.setItem("user", JSON.stringify({
@@ -50,6 +52,14 @@ const Login = () => {
           tokenExpiration: userData.tokenExpiration,
           refreshTokenExpiration: userData.refreshTokenExpiration
         }));
+
+        const isAdmin = userData.roles?.some(role => role.roleName === 'admin');
+
+        if (isAdmin) {
+            localStorage.setItem("isAdmin", "true");
+        } else {
+            localStorage.removeItem("isAdmin"); 
+        }
         
         // Kiểm tra nếu cần MFA
         if (userData.requiresMfa && userData.mfaTicket) {
