@@ -384,6 +384,7 @@ namespace FZ.Auth.ApplicationService.Service.Implements.Role
                         permissionName = req.permissionName,
                         permissionDescription = req.permissionDescription,
                         code = req.code,
+                        scope= "user"
                     });
 
                     // Add vào HashSet tạm để tránh chính input request có 2 code trùng nhau
