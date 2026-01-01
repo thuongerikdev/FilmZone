@@ -43,6 +43,8 @@ const Roles = () => {
   const navigate = useNavigate();
   const colors = tokens(theme.palette.mode);
 
+  const isAdmin = localStorage.getItem("isAdmin") === "true";
+
   const [roles, setRoles] = useState([]);
   const [filteredRoles, setFilteredRoles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -104,7 +106,7 @@ const Roles = () => {
         roleID: 0,
         roleName: "",
         roleDescription: "",
-        scope: "user",
+        scope: "user", 
         isDefault: false,
       });
     }
@@ -165,7 +167,6 @@ const Roles = () => {
     }
   };
 
-  // --- 4. Columns Configuration ---
   const columns = [
     {
       field: "roleID",
@@ -415,17 +416,28 @@ const Roles = () => {
             />
 
             <Box display="flex" gap={2}>
-                <TextField
-                select
-                label="Scope (Phạm vi)"
-                fullWidth
-                variant="filled"
-                value={currentRole.scope}
-                onChange={(e) => setCurrentRole({ ...currentRole, scope: e.target.value })}
-                >
-                    <MenuItem value="user">User (Người dùng)</MenuItem>
-                    <MenuItem value="staff">Staff (Nhân viên)</MenuItem>
-                </TextField>
+                {isAdmin ? (
+                    <TextField
+                        select
+                        label="Scope (Phạm vi)"
+                        fullWidth
+                        variant="filled"
+                        value={currentRole.scope}
+                        onChange={(e) => setCurrentRole({ ...currentRole, scope: e.target.value })}
+                    >
+                        <MenuItem value="user">User (Người dùng)</MenuItem>
+                        <MenuItem value="staff">Staff (Nhân viên)</MenuItem>
+                    </TextField>
+                ) : (
+                    <TextField
+                        label="Scope (Phạm vi)"
+                        fullWidth
+                        variant="filled"
+                        value="user"
+                        disabled
+                        helperText="Mặc định là User"
+                    />
+                )}
 
                 <FormControlLabel
                 control={
