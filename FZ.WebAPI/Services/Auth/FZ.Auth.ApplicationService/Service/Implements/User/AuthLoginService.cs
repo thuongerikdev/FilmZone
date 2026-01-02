@@ -554,7 +554,7 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.User
                         user: user,
                         sessionId: session.sessionID,
                         createdByIp: ip,
-                        accessTtl: TimeSpan.FromMinutes(1), // Staff cho token sống lâu hơn chút nếu muốn
+                        accessTtl: TimeSpan.FromMinutes(60), // Staff cho token sống lâu hơn chút nếu muốn
                         refreshTtl: TimeSpan.FromDays(7),
                         permissions: permissions
                     );
