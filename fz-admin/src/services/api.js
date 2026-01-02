@@ -49,11 +49,8 @@ api.interceptors.response.use(
     async error => {
         const originalRequest = error.config
 
-        // Nếu gặp lỗi 401 và chưa retry
         if (error.response?.status === 401 && !originalRequest._retry) {
-            // TRƯỜNG HỢP 1: Đang có một request khác đang refresh token
             if (isRefreshing) {
-                // Đẩy request này vào hàng đợi, chờ thằng kia refresh xong thì chạy lại
                 return new Promise(function (resolve, reject) {
                     failedQueue.push({ resolve, reject })
                 })
@@ -67,7 +64,6 @@ api.interceptors.response.use(
                     })
             }
 
-            // TRƯỜNG HỢP 2: Mình là thằng đầu tiên phát hiện token hết hạn
             originalRequest._retry = true
             isRefreshing = true
 
@@ -84,24 +80,20 @@ api.interceptors.response.use(
                     const { accessToken, refreshToken: newRefreshToken } =
                         res.data.data
 
-                    // Lưu token mới
                     localStorage.setItem("token", accessToken)
                     if (newRefreshToken)
                         localStorage.setItem("refreshToken", newRefreshToken)
 
-                    // Set header mặc định
                     api.defaults.headers.common["Authorization"] =
                         "Bearer " + accessToken
                     originalRequest.headers["Authorization"] =
                         "Bearer " + accessToken
 
-                    // Báo cho các request đang chờ trong hàng đợi chạy đi
                     processQueue(null, accessToken)
 
                     return api(originalRequest)
                 }
             } catch (err) {
-                // Refresh thất bại -> Logout tất cả
                 processQueue(err, null)
                 localStorage.clear()
                 window.location.href = "/login" // Chuyển trang
