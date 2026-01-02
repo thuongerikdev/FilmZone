@@ -40,4 +40,21 @@ namespace FZ.Auth.Dtos.Role
         public List<int> roleIDs { get; set; }
 
     }
+
+    public class CloneRoleRequest
+    {
+        public int sourceRoleId { get; set; } // ID role muốn nhân bản
+        public string newRoleName { get; set; } = default!;
+        public string newRoleDescription { get; set; } = default!;
+        public string? newScope { get; set; } // Tùy chọn, nếu null thì lấy theo role cũ
+        public bool isDefault { get; set; } = false;
+    }
+    public class CloneUserRoleRequest
+    {
+        public int sourceRoleId { get; set; } // ID role muốn nhân bản
+        public string newRoleName { get; set; } = default!;
+        public string newRoleDescription { get; set; } = default!;
+        public bool isDefault { get; set; } = false;
+        // KHÔNG CÓ trường scope ở đây
+    }
 }

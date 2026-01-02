@@ -20,9 +20,12 @@ namespace FZ.Auth.ApplicationService.MFAService.Abtracts
         Task<ResponseDto<RoleResponse>> UpdateRoleAsyncWhereScopeUser(UpdateRoleWhereScopeUserRequest req, CancellationToken ct);
         Task<ResponseDto<bool>> DeleteRoleAsyncWhereScopeUser(int roleID, CancellationToken ct);
 
+        Task<ResponseDto<RoleResponse>> CloneRoleWhereScopeUserAsync(CloneUserRoleRequest req, CancellationToken ct);
+
 
 
         //Task<ResponseDto<bool>> AssignRoleToUserAsync(AssignRoleRequest req, CancellationToken ct);
         Task<ResponseDto<List<RoleResponse>>> GetRoleByUserID(int userID, CancellationToken ct);
+        Task<ResponseDto<RoleResponse>> CloneRoleAsync(CloneRoleRequest req, CancellationToken ct);
     }
 }

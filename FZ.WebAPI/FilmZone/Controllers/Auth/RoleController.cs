@@ -171,6 +171,62 @@ namespace FZ.WebAPI.Controllers.Auth
             }
         }
 
+        [HttpPost("clonerole")]
+        [Authorize(Policy = "RoleManage")]
+        public async Task<IActionResult> CloneRoleAsync(CloneUserRoleRequest req, CancellationToken ct)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            try
+            {
+                var result = await _roleService.CloneRoleWhereScopeUserAsync(req, ct);
+                if (result.ErrorCode != 200)
+                {
+                    return BadRequest(result);
+                }
+                return Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { ErrorCode = 400, ex.Message });
+            }
+        }
+        [HttpPost("admin/clonerole")]
+        [Authorize(Policy = "RoleManageAdmin")]
+        public async Task<IActionResult> AdminCloneRoleAsync(CloneRoleRequest req, CancellationToken ct)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            try
+            {
+                var result = await _roleService.CloneRoleAsync(req, ct);
+                if (result.ErrorCode != 200)
+                {
+                    return BadRequest(result);
+                }
+                return Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { ErrorCode = 400, ex.Message });
+            }
+        }
+
+
+
+
+
+
+
+
+
+
+
+
         //[ApiController]
         //[Route("api/users")]
         //public class UserController : ControllerBase

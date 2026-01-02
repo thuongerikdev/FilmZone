@@ -1,4 +1,5 @@
 ﻿using FZ.Auth.ApplicationService.MFAService.Abtracts;
+using FZ.Auth.Domain.Role;
 using FZ.Auth.Dtos.Role;
 using FZ.Auth.Infrastructure.Repository.Abtracts;
 using FZ.Constant;
@@ -211,6 +212,115 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.Role
             await _roleRepository.DeleteRoleAsync(roleID, ct);
             await _uow.SaveChangesAsync(ct);
             return ResponseConst.Success("Xoá vai trò thành công", true);
+        }
+
+        public async Task<ResponseDto<RoleResponse>> CloneRoleAsync(CloneRoleRequest req, CancellationToken ct)
+        {
+            // 1. Lấy role nguồn
+            var sourceRole = await _roleRepository.GetRoleWithPermissionsAsync(req.sourceRoleId, ct);
+            if (sourceRole == null)
+            {
+                return ResponseConst.Error<RoleResponse>(404, "Role nguồn không tồn tại.");
+            }
+
+            // 2. Xác định scope mới (Lấy từ request, nếu không có thì lấy theo role cũ)
+            string targetScope = req.newScope ?? sourceRole.scope;
+
+            // 3. Gọi hàm xử lý chung
+            return await _processCloneRoleInternal(sourceRole, req.newRoleName, req.newRoleDescription, targetScope, req.isDefault, ct);
+        }
+
+        // ==================================================================================
+        // 2. HÀM PUBLIC: CHỈ NHÂN BẢN ROLE CÓ SCOPE LÀ USER (Quyền hạn chế)
+        // ==================================================================================
+        public async Task<ResponseDto<RoleResponse>> CloneRoleWhereScopeUserAsync(CloneUserRoleRequest req, CancellationToken ct)
+        {
+            // 1. Lấy role nguồn kèm Permissions
+            var sourceRole = await _roleRepository.GetRoleWithPermissionsAsync(req.sourceRoleId, ct);
+
+            // Validation cơ bản
+            if (sourceRole == null)
+            {
+                return ResponseConst.Error<RoleResponse>(404, "Role nguồn không tồn tại.");
+            }
+
+            // 2. SECURITY CHECK: CHẶN NHÂN BẢN ADMIN/STAFF
+            // Nếu role nguồn có scope khác "user" (tức là admin, staff...), CHẶN NGAY.
+            if (sourceRole.scope != "user")
+            {
+                // Trả về lỗi 403 Forbidden
+                return ResponseConst.Error<RoleResponse>(403, "BẢO MẬT: Bạn không được phép nhân bản Role quản trị (Admin/Staff).");
+            }
+
+            // 3. ÉP BUỘC SCOPE ĐÍCH
+            // Luôn luôn là "user", bất kể tình huống nào.
+            string forcedScope = "user";
+
+            // 4. Gọi hàm xử lý chung (Tái sử dụng logic tạo và lưu DB)
+            return await _processCloneRoleInternal(
+                sourceRole,
+                req.newRoleName,
+                req.newRoleDescription,
+                forcedScope,
+                req.isDefault,
+                ct
+            );
+        }
+
+        // ==================================================================================
+        // HÀM PRIVATE: XỬ LÝ LOGIC CHUNG (DB OPERATIONS)
+        // ==================================================================================
+        private async Task<ResponseDto<RoleResponse>> _processCloneRoleInternal(
+            AuthRole sourceRole,
+            string newName,
+            string newDesc,
+            string targetScope,
+            bool isDefault,
+            CancellationToken ct)
+        {
+            // A. Kiểm tra tên trùng
+            var existingRole = await _roleRepository.GetRoleByNameAsync(newName, ct);
+            if (existingRole != null)
+            {
+                return ResponseConst.Error<RoleResponse>(409, $"Tên Role '{newName}' đã tồn tại.");
+            }
+
+            // B. Tạo Entity mới
+            var newRole = new AuthRole
+            {
+                roleName = newName,
+                roleDescription = newDesc,
+                scope = targetScope, // Scope đã được kiểm duyệt từ hàm gọi
+                isDefault = isDefault,
+                rolePermissions = new List<AuthRolePermission>()
+            };
+
+            // C. Copy Permissions từ Role nguồn sang Role mới
+            if (sourceRole.rolePermissions != null && sourceRole.rolePermissions.Any())
+            {
+                foreach (var rp in sourceRole.rolePermissions)
+                {
+                    newRole.rolePermissions.Add(new AuthRolePermission
+                    {
+                        permissionID = rp.permissionID
+                        // roleID sẽ tự động sinh khi save
+                    });
+                }
+            }
+
+            // D. Lưu DB
+            await _roleRepository.AddRoleAsync(newRole, ct);
+            await _uow.SaveChangesAsync(ct);
+
+            // E. Trả về kết quả
+            return ResponseConst.Success("Nhân bản vai trò thành công", new RoleResponse
+            {
+                roleID = newRole.roleID,
+                roleName = newRole.roleName,
+                roleDescription = newRole.roleDescription,
+                isDefault = newRole.isDefault,
+                scope = newRole.scope
+            });
         }
     }
 }

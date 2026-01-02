@@ -74,6 +74,12 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
 
             return countValid == roleIds.Distinct().Count();
         }
+        public async Task<AuthRole?> GetRoleWithPermissionsAsync(int roleId, CancellationToken ct)
+        {
+            return await _db.authRoles
+                .Include(r => r.rolePermissions) // Quan trọng: Load kèm Permissions
+                .FirstOrDefaultAsync(r => r.roleID == roleId, ct);
+        }
     }
 
     public class UserRoleRepository : IUserRoleRepository
@@ -95,6 +101,7 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
             _db.authUserRoles.RemoveRange(userRoles);
             return Task.CompletedTask;
         }
+
        
     }
 
