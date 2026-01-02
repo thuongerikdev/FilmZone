@@ -310,11 +310,25 @@ export const verifyRegisterEmail = data =>
 
 // Role APIs
 export const getAllRoles = () => api.get("/roles/getall")
-export const addRole = data => api.post("/roles/addRole", data)
-export const updateRole = data => api.put("/roles/updateRole", data)
-export const deleteRole = roleID => api.delete(`/roles/deleteRole/${roleID}`)
+export const addRole = data => {
+    const prefix = isAdmin() ? "/roles/admin" : "/roles";  
+    return api.post(`${prefix}/addRole`, data)
+}
+export const updateRole = data => {
+    const prefix = isAdmin() ? "/roles/admin" : "/roles";  
+    return api.put(`${prefix}/updateRole`, data)
+}
+export const deleteRole = roleID => {
+    const prefix = isAdmin() ? "/roles/admin" : "/roles";  
+    return api.delete(`${prefix}/deleteRole/${roleID}`)
+}
 export const getRoleByUserId = userID =>
     api.get(`/roles/getRoleByUserID/${userID}`)
+
+export const cloneRole = data => {
+    const prefix = isAdmin() ? "/roles/admin" : "/roles";  
+    return api.post(`${prefix}/clonerole`, data)
+}
 
 // SavedMovie APIs
 export const createSavedMovie = data =>
@@ -350,7 +364,7 @@ export const getAllUsers = () => {
     const prefix = isAdmin() ? "/user/admin" : "/user"; 
     return api.get(`${prefix}/getAllUsers`);
 }
-export const adminGetAllUsers = () => api.get("/user/admin/getAllUsers")
+
 export const getUserByID = userID => api.get(`/user/getUserByID/${userID}`)
 export const getUserSlimByID = userID => {
     const prefix = isAdmin() ? "/user/admin" : "/user"; 
@@ -457,9 +471,24 @@ export const getAllPermissions = () => {
     const prefix = isAdmin() ? "/permissions/admin" : "/permissions";
     return api.get(`${prefix}/getall`);
 };
-export const addPermission = data => api.post("/permissions/addPermission", data)
-export const updatePermission = data => api.put("/permissions/updatePermission", data)
-export const deletePermission = permissionID => api.delete(`/permissions/delate?permissionId=${permissionID}`)
+export const addPermission = data => {
+    const isBulk = !isAdmin();
+    const prefix = isAdmin()
+        ? "/permissions/admin/addPermission"
+        : "/permissions/BulkCreate";
+
+    const payload = isBulk ? [data] : data;
+
+    return api.post(prefix, payload);
+};
+export const updatePermission = data => {
+    const prefix = isAdmin() ? "/permissions/admin" : "/permissions";
+    return api.put(`${prefix}/updatePermission`, data)
+}
+export const deletePermission = permissionID => {
+    const prefix = isAdmin() ? "/permissions/admin" : "/permissions";
+    return api.delete(`${prefix}/delete?permissionId=${permissionID}`)
+}
 export const getPermissionbyRoleId = (roleID) => {
     const prefix = isAdmin() ? "/permissions/admin" : "/permissions";
     return api.get(`${prefix}/getbyRoleID/${roleID}`);

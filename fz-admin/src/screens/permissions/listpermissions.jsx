@@ -13,6 +13,7 @@ import {
   Tooltip,
   Chip,
   InputAdornment,
+  MenuItem,
 } from "@mui/material";
 // 1. Import GridToolbar
 import { DataGrid, GridToolbar } from "@mui/x-data-grid";
@@ -34,7 +35,7 @@ import VpnKeyIcon from "@mui/icons-material/VpnKey";
 const Permissions = () => {
   const theme = useTheme();
   const colors = tokens(theme.palette.mode);
-
+  const isAdmin = localStorage.getItem("isAdmin") === "true";
   const [permissions, setPermissions] = useState([]);
   const [filteredPermissions, setFilteredPermissions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -95,7 +96,7 @@ const Permissions = () => {
         permissionName: "",
         permissionDescription: "",
         code: "",
-        scope: "",
+        scope: "user", 
       });
     }
     setOpenDialog(true);
@@ -356,7 +357,7 @@ const Permissions = () => {
         />
       </Box>
 
-      {/* DIALOG ADD/EDIT*/}
+      {/* DIALOG ADD/EDIT */}
       <Dialog 
         open={openDialog} 
         onClose={handleCloseDialog}
@@ -392,13 +393,31 @@ const Permissions = () => {
               onChange={(e) => setCurrentPermission({...currentPermission, code: e.target.value})}
               required
             />
-            <TextField
-              label="Scope (Phạm vi)"
-              fullWidth
-              variant="filled"
-              value={currentPermission.scope}
-              onChange={(e) => setCurrentPermission({...currentPermission, scope: e.target.value})}
-            />
+
+            {isAdmin ? (
+              <TextField
+                select 
+                label="Scope (Phạm vi)"
+                fullWidth
+                variant="filled"
+                value={currentPermission.scope || "user"}
+                onChange={(e) => setCurrentPermission({...currentPermission, scope: e.target.value})}
+              >
+                <MenuItem value="user">User (Người dùng)</MenuItem>
+                <MenuItem value="staff">Staff (Nhân viên)</MenuItem>
+              </TextField>
+            ) : (
+     
+              <TextField
+                label="Scope (Phạm vi)"
+                fullWidth
+                variant="filled"
+                value="user" 
+                disabled 
+
+              />
+            )}
+
             <TextField
               label="Mô tả"
               fullWidth
@@ -410,7 +429,7 @@ const Permissions = () => {
             />
           </Box>
         </DialogContent>
-        <DialogActions sx={{ p: 2, borderTop: `1px solid ${colors.primary[500]}` }}>
+         <DialogActions sx={{ p: 2, borderTop: `1px solid ${colors.primary[500]}` }}>
           <Button onClick={handleCloseDialog} sx={{ color: colors.grey[200] }}>
             Hủy bỏ
           </Button>

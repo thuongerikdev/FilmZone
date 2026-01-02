@@ -301,9 +301,9 @@ const UpdateUserProfile = () => {
 const userSchema = yup.object().shape({
   newUserName: yup.string().required("Vui lòng nhập Username"),
   firstName: yup.string().required("Vui lòng nhập Tên"),
-  lastName: yup.string().required("Vui lòng nhập Họ"),
-  gender: yup.string().required("Vui lòng chọn giới tính"),
-  dateOfBirth: yup.date().required("Vui lòng chọn ngày sinh"),
+  lastName: yup.string().nullable(),
+  gender: yup.string().nullable(),
+  dateOfBirth: yup.date().nullable().typeError("Ngày sinh không hợp lệ"),
   // Avatar không required vì user có thể không muốn đổi ảnh
 });
 
