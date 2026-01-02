@@ -420,41 +420,112 @@ namespace FZ.WebAPI.Controllers.Auth
         [AllowAnonymous]
         public async Task<IActionResult> Refresh([FromBody] RefreshRequest? body, CancellationToken ct)
         {
-            // 1) Ưu tiên RT trong body (mobile); nếu không có thì lấy từ cookie (web)
-            var usingBody = !string.IsNullOrWhiteSpace(body?.RefreshToken);
-            var rtRaw = usingBody ? body!.RefreshToken! : Request.Cookies["fz.refresh"];
-            if (string.IsNullOrWhiteSpace(rtRaw)) return Unauthorized();
-
-            // 2) CSRF cho luồng cookie (web)
-            if (!usingBody)
+            try
             {
-                var csrfCookie = Request.Cookies["fz.csrf"];
-                var csrfHeader = Request.Headers["X-CSRF"].ToString();
-                if (string.IsNullOrEmpty(csrfCookie) || csrfCookie != csrfHeader)
-                    return StatusCode(StatusCodes.Status403Forbidden, new { error = "CSRF validation failed" });
+                // 1) Ưu tiên RT trong body (mobile); nếu không có thì lấy từ cookie (web)
+                // Lưu ý: Mobile thường gửi body, Web (nếu bảo mật cao) sẽ gửi cookie HttpOnly
+                var usingBody = !string.IsNullOrWhiteSpace(body?.RefreshToken);
+                var rtRaw = usingBody ? body!.RefreshToken! : Request.Cookies["fz.refresh"];
+
+                // Nếu không tìm thấy token ở đâu cả
+                if (string.IsNullOrWhiteSpace(rtRaw))
+                {
+                    return BadRequest(new { errorCode = 400, errorMessage = "Refresh token is missing." });
+                }
+
+                // 2) CSRF cho luồng cookie (web)
+                // Nếu dùng Cookie, bắt buộc phải check CSRF để tránh tấn công giả mạo
+                if (!usingBody)
+                {
+                    var csrfCookie = Request.Cookies["fz.csrf"];
+                    var csrfHeader = Request.Headers["X-CSRF"].ToString();
+
+                    if (string.IsNullOrEmpty(csrfCookie) || string.IsNullOrEmpty(csrfHeader) || csrfCookie != csrfHeader)
+                    {
+                        // Xóa cookie để force login lại
+                        DeleteAuthCookies();
+                        return StatusCode(StatusCodes.Status403Forbidden, new { errorCode = 403, errorMessage = "CSRF validation failed." });
+                    }
+                }
+
+                // 3) Xoay token (CÓ TRY-CATCH)
+                // Hàm này sẽ ném Exception nếu token cũ không hợp lệ (hết hạn/thu hồi/dùng lại)
+                var (access, newRt) = await _tokenGenerate.RotateAsync(
+                    incomingRefreshToken: rtRaw,
+                    ip: _tokenGenerate.GetClientIp() ?? "unknown",
+                    accessTtl: TimeSpan.FromMinutes(30),
+                    refreshTtl: TimeSpan.FromDays(7)
+                );
+
+                // 4) Set lại cookie cho web (Nếu request gốc dùng cookie hoặc muốn đồng bộ cả 2)
+                var accessExp = DateTimeOffset.UtcNow.AddMinutes(30);
+                SetAuthCookies(access, newRt.Token, accessExp, newRt.Expires);
+
+                // 5) Trả kết quả JSON
+                Response.Headers["Cache-Control"] = "no-store";
+
+                return Ok(new ResponseDto<object>
+                {
+                    ErrorCode = 200,
+                    ErrorMessage = "Làm mới token thành công",
+                    Data = new
+                    {
+                        accessToken = access,
+                        accessTokenExpiresAt = accessExp,
+                        refreshToken = newRt.Token,
+                        refreshTokenExpiresAt = newRt.Expires
+                    }
+                });
             }
-
-            // 3) Xoay token
-            var (access, newRt) = await _tokenGenerate.RotateAsync(
-                incomingRefreshToken: rtRaw,
-                ip: _tokenGenerate.GetClientIp(),
-                accessTtl: TimeSpan.FromMinutes(30),
-                refreshTtl: TimeSpan.FromDays(7)
-            );
-
-            // 4) Set lại cookie cho web; giới hạn Path refresh -> chỉ gửi tới /login/auth
-            var accessExp = DateTimeOffset.UtcNow.AddMinutes(30);
-            SetAuthCookies(access, newRt.Token, accessExp, newRt.Expires);
-
-            // 5) Luôn trả JSON -> mobile dùng ngay, web có thể bỏ qua
-            Response.Headers["Cache-Control"] = "no-store";
-            return Ok(new
+            catch (UnauthorizedAccessException ex)
             {
-                accessToken = access,
-                accessTokenExpiresAt = accessExp,
-                refreshToken = newRt.Token,
-                refreshTokenExpiresAt = newRt.Expires
-            });
+                // ĐÂY LÀ CHỖ QUAN TRỌNG NHẤT: Bắt lỗi token không hợp lệ
+                // Xóa cookie cũ đi để trình duyệt không gửi rác nữa
+                DeleteAuthCookies();
+
+                return StatusCode(401, new ResponseDto<object>
+                {
+                    ErrorCode = 401,
+                    ErrorMessage = "Phiên đăng nhập đã hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại."
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ResponseDto<object> { ErrorCode = 500, ErrorMessage = "Lỗi hệ thống." });
+            }
+        }
+
+        // --- Helper Set Cookie (Tham khảo) ---
+        private void SetAuthCookies(string accessToken, string refreshToken, DateTimeOffset accessExp, DateTimeOffset refreshExp)
+        {
+            var cookieOptions = new CookieOptions
+            {
+                HttpOnly = true, // JS không đọc được (chống XSS)
+                Secure = true,   // Chỉ chạy trên HTTPS
+                SameSite = SameSiteMode.None, // Cần thiết nếu FE và BE khác domain (ví dụ localhost:3000 và localhost:5000)
+                Path = "/"       // Access token dùng cho toàn site
+            };
+
+            // 1. Access Token Cookie
+            Response.Cookies.Append("fz.access", accessToken, cookieOptions);
+
+            // 2. Refresh Token Cookie (Quan trọng: Path chỉ định)
+            var refreshOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.None,
+                Path = "/login/auth/refresh", // Chỉ gửi cookie này khi gọi đúng endpoint refresh (Bảo mật hơn)
+                Expires = refreshExp
+            };
+            Response.Cookies.Append("fz.refresh", refreshToken, refreshOptions);
+        }
+
+        private void DeleteAuthCookies()
+        {
+            Response.Cookies.Delete("fz.access");
+            Response.Cookies.Delete("fz.refresh");
+            Response.Cookies.Delete("fz.csrf");
         }
 
 

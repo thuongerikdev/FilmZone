@@ -2,8 +2,8 @@
 import axios from "axios"
 
 const isAdmin = () => {
-    return localStorage.getItem("isAdmin") === "true";
-};
+    return localStorage.getItem("isAdmin") === "true"
+}
 
 const API_BASE_URL = "https://filmzone-api.koyeb.app"
 
@@ -11,100 +11,116 @@ const api = axios.create({
     baseURL: API_BASE_URL,
     headers: {
         "Content-Type": "application/json",
-        "credentials": "include",
+        credentials: "include",
     },
 })
 
 // --- 1. Request Interceptor: Gắn token vào mọi request ---
 api.interceptors.request.use(
-    (config) => {
-        const token = localStorage.getItem("token");
+    config => {
+        const token = localStorage.getItem("token")
         if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
+            config.headers.Authorization = `Bearer ${token}`
         }
-        return config;
+        return config
     },
-    (error) => {
-        return Promise.reject(error);
+    error => {
+        return Promise.reject(error)
     }
-);
+)
 
 // --- 2. Response Interceptor: Xử lý khi Token hết hạn (Lỗi 401) ---
-api.interceptors.response.use(
-    (response) => {
-        return response;
-    },
-    async (error) => {
-        const originalRequest = error.config;
+let isRefreshing = false
+let failedQueue = []
 
-        // Debug: Log ra để xem Axios thực sự nhìn thấy gì
-        if (error.response) {
-            console.log("Headers Axios nhận được:", error.response.headers);
+const processQueue = (error, token = null) => {
+    failedQueue.forEach(prom => {
+        if (error) {
+            prom.reject(error)
+        } else {
+            prom.resolve(token)
         }
+    })
+    failedQueue = []
+}
 
-        if (error.response) {
-            // 1. Kiểm tra header (nếu backend đã fix expose)
-            // 2. HOẶC kiểm tra thông báo lỗi trong body (nếu có)
-            // 3. HOẶC kiểm tra www-authenticate (nếu backend expose)
-            // 4. Fallback: Nếu 401 và chưa retry -> Coi như hết hạn token
-            
-            const headers = error.response.headers;
-            
-            const isUnauthorized = error.response.status === 401;
-            
-            const isTokenExpired = isUnauthorized && !originalRequest._retry;
+api.interceptors.response.use(
+    response => response,
+    async error => {
+        const originalRequest = error.config
 
-            if (isTokenExpired) {
-                originalRequest._retry = true; 
+        // Nếu gặp lỗi 401 và chưa retry
+        if (error.response?.status === 401 && !originalRequest._retry) {
+            // TRƯỜNG HỢP 1: Đang có một request khác đang refresh token
+            if (isRefreshing) {
+                // Đẩy request này vào hàng đợi, chờ thằng kia refresh xong thì chạy lại
+                return new Promise(function (resolve, reject) {
+                    failedQueue.push({ resolve, reject })
+                })
+                    .then(token => {
+                        originalRequest.headers["Authorization"] =
+                            "Bearer " + token
+                        return api(originalRequest)
+                    })
+                    .catch(err => {
+                        return Promise.reject(err)
+                    })
+            }
 
-                try {
-                    console.log("Phát hiện lỗi 401, đang gọi Refresh Token...");
-                    const refreshToken = localStorage.getItem("refreshToken");
+            // TRƯỜNG HỢP 2: Mình là thằng đầu tiên phát hiện token hết hạn
+            originalRequest._retry = true
+            isRefreshing = true
 
-                    if (!refreshToken) {
-                        console.log("Không có refresh token, logout.");
-                        handleLogout();
-                        return Promise.reject(error);
-                    }
+            try {
+                const refreshToken = localStorage.getItem("refreshToken")
+                // Gọi API refresh (Dùng axios gốc để tránh loop)
+                const res = await axios.post(
+                    `${API_BASE_URL}/login/auth/refresh`,
+                    { refreshToken },
+                    { headers: { "Content-Type": "application/json" } }
+                )
 
-                    const response = await axios.post(`${API_BASE_URL}/login/auth/refresh`, {
-                        refreshToken: refreshToken
-                    });
+                if (res.data && res.data.data) {
+                    const { accessToken, refreshToken: newRefreshToken } =
+                        res.data.data
 
-                    if (response.data && response.data.errorCode === 200) {
-                        const { accessToken, accessTokenExpiresAt, refreshToken, refreshTokenExpiresAt } = response.data.data;
+                    // Lưu token mới
+                    localStorage.setItem("token", accessToken)
+                    if (newRefreshToken)
+                        localStorage.setItem("refreshToken", newRefreshToken)
 
-                        localStorage.setItem("token", accessToken);
-                        localStorage.setItem("tokenExpiration", accessTokenExpiresAt);
-                        if (refreshToken) {
-                            localStorage.setItem("refreshToken", refreshToken);
-                            localStorage.setItem("refreshTokenExpiration", refreshTokenExpiresAt);
-                        }
+                    // Set header mặc định
+                    api.defaults.headers.common["Authorization"] =
+                        "Bearer " + accessToken
+                    originalRequest.headers["Authorization"] =
+                        "Bearer " + accessToken
 
-                        api.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
-                        originalRequest.headers["Authorization"] = `Bearer ${accessToken}`;
+                    // Báo cho các request đang chờ trong hàng đợi chạy đi
+                    processQueue(null, accessToken)
 
-                        console.log("Refresh thành công, gọi lại request cũ...");
-                        return api(originalRequest);
-                    }
-                } catch (refreshError) {
-                    // ... xử lý lỗi refresh ...
-                    console.error("Lỗi khi Refresh Token:", refreshError);
-                    handleLogout();
-                    return Promise.reject(refreshError);
+                    return api(originalRequest)
                 }
+            } catch (err) {
+                // Refresh thất bại -> Logout tất cả
+                processQueue(err, null)
+                localStorage.clear()
+                window.location.href = "/login" // Chuyển trang
+                return Promise.reject(err)
+            } finally {
+                // Mở khóa
+                isRefreshing = false
             }
         }
 
-        return Promise.reject(error);
+        return Promise.reject(error)
     }
-);
+)
 
 // Hàm Logout chung
 const handleLogout = () => {
-    localStorage.clear(); 
-    window.location.href = "/login"; 
-};
+    localStorage.clear()
+    window.location.href = "/login"
+}
 
 // Account APIs
 export const startMfaTotp = data => api.post("/account/mfa/totp/start", data)
@@ -311,22 +327,22 @@ export const verifyRegisterEmail = data =>
 // Role APIs
 export const getAllRoles = () => api.get("/roles/getall")
 export const addRole = data => {
-    const prefix = isAdmin() ? "/roles/admin" : "/roles";  
+    const prefix = isAdmin() ? "/roles/admin" : "/roles"
     return api.post(`${prefix}/addRole`, data)
 }
 export const updateRole = data => {
-    const prefix = isAdmin() ? "/roles/admin" : "/roles";  
+    const prefix = isAdmin() ? "/roles/admin" : "/roles"
     return api.put(`${prefix}/updateRole`, data)
 }
 export const deleteRole = roleID => {
-    const prefix = isAdmin() ? "/roles/admin" : "/roles";  
+    const prefix = isAdmin() ? "/roles/admin" : "/roles"
     return api.delete(`${prefix}/deleteRole/${roleID}`)
 }
 export const getRoleByUserId = userID =>
     api.get(`/roles/getRoleByUserID/${userID}`)
 
 export const cloneRole = data => {
-    const prefix = isAdmin() ? "/roles/admin" : "/roles";  
+    const prefix = isAdmin() ? "/roles/admin" : "/roles"
     return api.post(`${prefix}/clonerole`, data)
 }
 
@@ -361,23 +377,23 @@ export const getAllTags = () => api.get("/movie/Tag/GetAllTags/getALlTags")
 
 // User APIs
 export const getAllUsers = () => {
-    const prefix = isAdmin() ? "/user/admin" : "/user"; 
-    return api.get(`${prefix}/getAllUsers`);
+    const prefix = isAdmin() ? "/user/admin" : "/user"
+    return api.get(`${prefix}/getAllUsers`)
 }
 
 export const getUserByID = userID => api.get(`/user/getUserByID/${userID}`)
 export const getUserSlimByID = userID => {
-    const prefix = isAdmin() ? "/user/admin" : "/user"; 
-    return api.get(`${prefix}/GetUserSlimById${userID}`);
+    const prefix = isAdmin() ? "/user/admin" : "/user"
+    return api.get(`${prefix}/GetUserSlimById${userID}`)
 }
 export const deleteUser = params => api.delete("/user/deleteUser", { params })
-export const updateUserProfile = (formData) => {
+export const updateUserProfile = formData => {
     return api.put("/user/update/profile", formData, {
         headers: {
             "Content-Type": "multipart/form-data",
         },
-    });
-};
+    })
+}
 export const getMe = () => api.get("/user/me")
 
 // UserRating APIs
@@ -465,42 +481,40 @@ export const deleteEpisodeSubtitle = async id => {
     return response.json()
 }
 
-
 // Permission APIs
 export const getAllPermissions = () => {
-    const prefix = isAdmin() ? "/permissions/admin" : "/permissions";
-    return api.get(`${prefix}/getall`);
-};
+    const prefix = isAdmin() ? "/permissions/admin" : "/permissions"
+    return api.get(`${prefix}/getall`)
+}
 export const addPermission = data => {
-    const isBulk = !isAdmin();
+    const isBulk = !isAdmin()
     const prefix = isAdmin()
         ? "/permissions/admin/addPermission"
-        : "/permissions/BulkCreate";
+        : "/permissions/BulkCreate"
 
-    const payload = isBulk ? [data] : data;
+    const payload = isBulk ? [data] : data
 
-    return api.post(prefix, payload);
-};
+    return api.post(prefix, payload)
+}
 export const updatePermission = data => {
-    const prefix = isAdmin() ? "/permissions/admin" : "/permissions";
+    const prefix = isAdmin() ? "/permissions/admin" : "/permissions"
     return api.put(`${prefix}/updatePermission`, data)
 }
 export const deletePermission = permissionID => {
-    const prefix = isAdmin() ? "/permissions/admin" : "/permissions";
+    const prefix = isAdmin() ? "/permissions/admin" : "/permissions"
     return api.delete(`${prefix}/delete?permissionId=${permissionID}`)
 }
-export const getPermissionbyRoleId = (roleID) => {
-    const prefix = isAdmin() ? "/permissions/admin" : "/permissions";
-    return api.get(`${prefix}/getbyRoleID/${roleID}`);
-};
+export const getPermissionbyRoleId = roleID => {
+    const prefix = isAdmin() ? "/permissions/admin" : "/permissions"
+    return api.get(`${prefix}/getbyRoleID/${roleID}`)
+}
 
 // RolePermission APIs
-export const assignPermissionToRole = (data) => {
-    const url = isAdmin() 
-        ? "/role-permissions/admin/assign-permissions" 
-        : "/role-permissions/assign-permissions";
-    return api.post(url, data);
-};
-
+export const assignPermissionToRole = data => {
+    const url = isAdmin()
+        ? "/role-permissions/admin/assign-permissions"
+        : "/role-permissions/assign-permissions"
+    return api.post(url, data)
+}
 
 export default api

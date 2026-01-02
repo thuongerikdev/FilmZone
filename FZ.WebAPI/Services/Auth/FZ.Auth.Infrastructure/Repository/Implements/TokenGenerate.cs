@@ -113,7 +113,7 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
             TimeSpan? refreshTtl = null)
         {
             // Không truyền permissions -> overridePermissions = null -> Tự query DB
-            var access = await CreateAccessTokenFromUserAsync(user, accessTtl ?? TimeSpan.FromMinutes(1), sessionId, null);
+            var access = await CreateAccessTokenFromUserAsync(user, accessTtl ?? TimeSpan.FromMinutes(30), sessionId, null);
 
             var refresh = await GenerateUniqueRefreshTokenAsync(
                 userId: user.userID,
