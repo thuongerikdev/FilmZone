@@ -25,6 +25,7 @@ import {
   addRole,
   updateRole,
   deleteRole,
+  cloneRole, 
 } from "../../services/api";
 
 // Icons
@@ -35,8 +36,9 @@ import SearchIcon from "@mui/icons-material/Search";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import VerifiedUserIcon from "@mui/icons-material/VerifiedUser";
 import SecurityIcon from "@mui/icons-material/Security";
-import { useNavigate } from "react-router-dom";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
+import ContentCopyIcon from '@mui/icons-material/ContentCopy'; 
+import { useNavigate } from "react-router-dom";
 
 const Roles = () => {
   const theme = useTheme();
@@ -51,6 +53,7 @@ const Roles = () => {
   const [searchText, setSearchText] = useState("");
   const [pageSize, setPageSize] = useState(10);
 
+  // State cho Add/Edit Dialog
   const [openDialog, setOpenDialog] = useState(false);
   const [dialogMode, setDialogMode] = useState("add");
   const [currentRole, setCurrentRole] = useState({
@@ -61,6 +64,15 @@ const Roles = () => {
     isDefault: false,
   });
 
+  // --- 3. STATE CHO CLONE DIALOG ---
+  const [openCloneDialog, setOpenCloneDialog] = useState(false);
+  const [cloneData, setCloneData] = useState({
+    sourceRoleId: 0,
+    newRoleName: "",
+    newRoleDescription: "",
+    newScope: "user",
+    isDefault: false,
+  });
 
   const fetchRoles = useCallback(async () => {
     try {
@@ -96,7 +108,7 @@ const Roles = () => {
     setFilteredRoles(filtered);
   }, [searchText, roles]);
 
-
+  // --- Handlers cho Add/Edit ---
   const handleOpenDialog = (mode, role = null) => {
     setDialogMode(mode);
     if (mode === "edit" && role) {
@@ -147,10 +159,9 @@ const Roles = () => {
 
   const handleDelete = async (roleID) => {
     if (!roleID && roleID !== 0) {
-      alert("Không tìm thấy Role ID để xóa. Vui lòng kiểm tra lại dữ liệu API.");
+      alert("Không tìm thấy Role ID để xóa.");
       return;
     }
-
     if (window.confirm("Bạn có chắc chắn muốn xóa Role này?")) {
       try {
         const response = await deleteRole(roleID);
@@ -166,6 +177,53 @@ const Roles = () => {
       }
     }
   };
+
+  // --- 4. HANDLERS CHO CLONE ---
+  const handleOpenClone = (row) => {
+    setCloneData({
+        sourceRoleId: row.roleID,
+        newRoleName: `${row.roleName}_copy`, 
+        newRoleDescription: row.roleDescription,
+        newScope: row.scope || "user", 
+        isDefault: false,
+    });
+    setOpenCloneDialog(true);
+  };
+
+  const handleCloneSubmit = async () => {
+    if (!cloneData.newRoleName) {
+        alert("Vui lòng nhập tên Role mới!");
+        return;
+    }
+
+    try {
+        const payload = {
+            sourceRoleId: cloneData.sourceRoleId,
+            newRoleName: cloneData.newRoleName,
+            newRoleDescription: cloneData.newRoleDescription,
+            isDefault: cloneData.isDefault
+        };
+
+        if (isAdmin) {
+            payload.newScope = cloneData.newScope;
+        }
+
+        const response = await cloneRole(payload);
+
+        if (response.data && (response.data.errorCode === 200 || response.data.errorCode === 201)) {
+            alert("Sao chép Role thành công!");
+            setOpenCloneDialog(false);
+            fetchRoles();
+        } else {
+            alert(response.data.errorMessage || "Sao chép thất bại!");
+        }
+
+    } catch (error) {
+        console.error("Error cloning role:", error);
+        alert("Lỗi kết nối đến server.");
+    }
+  };
+
 
   const columns = [
     {
@@ -203,7 +261,7 @@ const Roles = () => {
     },
     {
       field: "scope",
-      headerName: "Phạm vi (Scope)",
+      headerName: "Phạm vi",
       width: 120,
       headerAlign: "center",
       align: "center",
@@ -264,19 +322,30 @@ const Roles = () => {
     {
       field: "actions",
       headerName: "Hành động",
-      width: 120, 
+      width: 160, 
       sortable: false,
       headerAlign: "center",
       align: "center",
       renderCell: ({ row }) => (
-        <Box display="flex" justifyContent="center" alignItems="center" gap={1} height="100%">
+        <Box display="flex" justifyContent="center" alignItems="center" gap={0.5} height="100%">
           <Tooltip title="Xem Permissions">
             <IconButton
               onClick={() => navigate(`/roles/${row.roleID}`, { state: { roleData: row } })}
               size="small"
               sx={{ color: colors.blueAccent[400] }}
             >
-              <VisibilityOutlinedIcon />
+              <VisibilityOutlinedIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+
+          {/* --- 5. BUTTON CLONE --- */}
+          <Tooltip title="Sao chép Role">
+            <IconButton
+              onClick={() => handleOpenClone(row)}
+              size="small"
+              sx={{ color: colors.grey[100] }}
+            >
+              <ContentCopyIcon fontSize="small" />
             </IconButton>
           </Tooltip>
 
@@ -286,7 +355,7 @@ const Roles = () => {
               size="small"
               sx={{ color: colors.greenAccent[400] }}
             >
-              <EditOutlinedIcon />
+              <EditOutlinedIcon fontSize="small" />
             </IconButton>
           </Tooltip>
 
@@ -296,7 +365,7 @@ const Roles = () => {
               size="small"
               sx={{ color: colors.redAccent[500] }}
             >
-              <DeleteOutlineIcon />
+              <DeleteOutlineIcon fontSize="small" />
             </IconButton>
           </Tooltip>
         </Box>
@@ -392,10 +461,7 @@ const Roles = () => {
         fullWidth
         maxWidth="sm"
         PaperProps={{
-            sx: {
-              backgroundColor: colors.primary[400],
-              backgroundImage: "none",
-            }
+            sx: { backgroundColor: colors.primary[400], backgroundImage: "none" }
           }}
       >
         <DialogTitle sx={{ borderBottom: `1px solid ${colors.primary[500]}` }}>
@@ -412,9 +478,7 @@ const Roles = () => {
               value={currentRole.roleName}
               onChange={(e) => setCurrentRole({ ...currentRole, roleName: e.target.value })}
               required
-              helperText="Ví dụ: customer, admin, content_manager"
             />
-
             <Box display="flex" gap={2}>
                 {isAdmin ? (
                     <TextField
@@ -438,25 +502,18 @@ const Roles = () => {
                         helperText="Mặc định là User"
                     />
                 )}
-
                 <FormControlLabel
                 control={
                     <Checkbox
                     checked={currentRole.isDefault}
                     onChange={(e) => setCurrentRole({ ...currentRole, isDefault: e.target.checked })}
-                    sx={{
-                        color: colors.greenAccent[500],
-                        '&.Mui-checked': {
-                        color: colors.greenAccent[500],
-                        },
-                    }}
+                    sx={{ color: colors.greenAccent[500], '&.Mui-checked': { color: colors.greenAccent[500] } }}
                     />
                 }
                 label="Đặt làm mặc định"
                 sx={{ width: '100%' }}
                 />
             </Box>
-
             <TextField
               label="Mô tả"
               fullWidth
@@ -469,21 +526,104 @@ const Roles = () => {
           </Box>
         </DialogContent>
         <DialogActions sx={{ p: 2, borderTop: `1px solid ${colors.primary[500]}` }}>
-          <Button onClick={handleCloseDialog} sx={{ color: colors.grey[200] }}>
-            Hủy bỏ
-          </Button>
-          <Button 
-            onClick={handleSubmit} 
-            variant="contained"
-            sx={{ 
-              backgroundColor: colors.greenAccent[600],
-              "&:hover": { backgroundColor: colors.greenAccent[700] }
-            }}
-          >
+          <Button onClick={handleCloseDialog} sx={{ color: colors.grey[200] }}>Hủy bỏ</Button>
+          <Button onClick={handleSubmit} variant="contained" sx={{ backgroundColor: colors.greenAccent[600], "&:hover": { backgroundColor: colors.greenAccent[700] } }}>
             {dialogMode === "add" ? "Thêm mới" : "Lưu thay đổi"}
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* --- 6. DIALOG CLONE ROLE --- */}
+      <Dialog 
+        open={openCloneDialog} 
+        onClose={() => setOpenCloneDialog(false)}
+        fullWidth
+        maxWidth="sm"
+        PaperProps={{
+            sx: { backgroundColor: colors.primary[400], backgroundImage: "none" }
+        }}
+      >
+        <DialogTitle sx={{ borderBottom: `1px solid ${colors.primary[500]}` }}>
+          <Typography variant="h4" color={colors.grey[100]} fontWeight="bold">
+            SAO CHÉP ROLE
+          </Typography>
+          <Typography variant="caption" color={colors.grey[300]}>
+            Tạo role mới dựa trên Role ID: {cloneData.sourceRoleId}
+          </Typography>
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          <Box display="flex" flexDirection="column" gap={3} mt={1}>
+            <TextField
+              label="Tên Role Mới"
+              fullWidth
+              variant="filled"
+              value={cloneData.newRoleName}
+              onChange={(e) => setCloneData({ ...cloneData, newRoleName: e.target.value })}
+              required
+              helperText="Ví dụ: customer-pro, admin-level-2"
+            />
+
+            <Box display="flex" gap={2}>
+                {isAdmin ? (
+                    <TextField
+                        select
+                        label="Scope Mới"
+                        fullWidth
+                        variant="filled"
+                        value={cloneData.newScope}
+                        onChange={(e) => setCloneData({ ...cloneData, newScope: e.target.value })}
+                    >
+                        <MenuItem value="user">User (Người dùng)</MenuItem>
+                        <MenuItem value="staff">Staff (Nhân viên)</MenuItem>
+                    </TextField>
+                ) : (
+                    <TextField
+                        label="Scope Mới"
+                        fullWidth
+                        variant="filled"
+                        value={cloneData.newScope}
+                        disabled
+                        helperText="Mặc định là User"
+                    />
+                )}
+
+                <FormControlLabel
+                control={
+                    <Checkbox
+                    checked={cloneData.isDefault}
+                    onChange={(e) => setCloneData({ ...cloneData, isDefault: e.target.checked })}
+                    sx={{ color: colors.greenAccent[500], '&.Mui-checked': { color: colors.greenAccent[500] } }}
+                    />
+                }
+                label="Đặt làm mặc định"
+                sx={{ width: '100%' }}
+                />
+            </Box>
+
+            <TextField
+              label="Mô tả Mới"
+              fullWidth
+              multiline
+              rows={3}
+              variant="filled"
+              value={cloneData.newRoleDescription}
+              onChange={(e) => setCloneData({ ...cloneData, newRoleDescription: e.target.value })}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, borderTop: `1px solid ${colors.primary[500]}` }}>
+          <Button onClick={() => setOpenCloneDialog(false)} sx={{ color: colors.grey[200] }}>Hủy bỏ</Button>
+          <Button 
+            onClick={handleCloneSubmit} 
+            variant="contained" 
+            startIcon={<ContentCopyIcon />}
+            sx={{ backgroundColor: colors.blueAccent[600], "&:hover": { backgroundColor: colors.blueAccent[700] } }}
+          >
+            Sao chép
+          </Button>
+        </DialogActions>
+      </Dialog>
+
     </Box>
   );
 };

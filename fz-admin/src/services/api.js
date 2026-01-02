@@ -325,6 +325,11 @@ export const deleteRole = roleID => {
 export const getRoleByUserId = userID =>
     api.get(`/roles/getRoleByUserID/${userID}`)
 
+export const cloneRole = data => {
+    const prefix = isAdmin() ? "/roles/admin" : "/roles";  
+    return api.post(`${prefix}/clonerole`, data)
+}
+
 // SavedMovie APIs
 export const createSavedMovie = data =>
     api.post("/api/SavedMovie/CreateSavedMovie", data)
@@ -359,7 +364,7 @@ export const getAllUsers = () => {
     const prefix = isAdmin() ? "/user/admin" : "/user"; 
     return api.get(`${prefix}/getAllUsers`);
 }
-export const adminGetAllUsers = () => api.get("/user/admin/getAllUsers")
+
 export const getUserByID = userID => api.get(`/user/getUserByID/${userID}`)
 export const getUserSlimByID = userID => {
     const prefix = isAdmin() ? "/user/admin" : "/user"; 
