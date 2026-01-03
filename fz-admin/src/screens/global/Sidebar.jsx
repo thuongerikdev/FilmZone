@@ -20,6 +20,7 @@ import PieChartOutlineOutlinedIcon from "@mui/icons-material/PieChartOutlineOutl
 import TimelineOutlinedIcon from "@mui/icons-material/TimelineOutlined";
 import MenuOutlinedIcon from "@mui/icons-material/MenuOutlined";
 import MapOutlinedIcon from "@mui/icons-material/MapOutlined";
+import LocalOfferIcon from "@mui/icons-material/LocalOffer"; 
 
 const Item = ({ title, to, icon, selected, setSelected }) => {
   const theme = useTheme();
@@ -207,6 +208,20 @@ const Sidebar = ({ onCollapsedChange }) => {
               title="Diễn Viên/Đạo Diễn"
               to="/persons"
               icon={<PeopleAltOutlinedIcon />}
+              selected={selected}
+              setSelected={setSelected}
+            />
+            <Item
+              title="Khu vực"
+              to="/regions"
+              icon={<MapOutlinedIcon />}
+              selected={selected}
+              setSelected={setSelected}
+            />
+            <Item
+              title="Tags"
+              to="/tags"
+              icon={<LocalOfferIcon />}
               selected={selected}
               setSelected={setSelected}
             />

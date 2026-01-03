@@ -31,6 +31,8 @@ import UpdateUserProfile from "./screens/users/updateUser"
 import Permissions from "./screens/permissions/listpermissions"
 import Roles from "./screens/permissions/listRoles"
 import RoleDetail from "./screens/permissions/roleDetail"
+import Regions from "./screens/movies/region"
+import Tags from "./screens/movies/tag"
 
 function App() {
     const [theme, colorMode] = useMode()
@@ -108,7 +110,16 @@ function App() {
                                             path="/movies/edit/:movieID"
                                             element={<MovieEdit />}
                                         />
-
+                                        {/* Region Management */}
+                                        <Route
+                                            path="/regions"
+                                            element={<Regions />}
+                                        />
+                                        {/*Tag Management */}
+                                        <Route
+                                            path="/tags"
+                                            element={<Tags />} 
+                                        />
                                         {/* Person Management */}
                                         <Route
                                             path="/persons"

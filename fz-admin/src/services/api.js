@@ -30,75 +30,83 @@ api.interceptors.request.use(
 );
 
 // --- 2. Response Interceptor: Xử lý khi Token hết hạn (Lỗi 401) ---
-api.interceptors.response.use(
-    (response) => {
-        return response;
-    },
-    async (error) => {
-        const originalRequest = error.config;
+let isRefreshing = false
+let failedQueue = []
 
-        // Debug: Log ra để xem Axios thực sự nhìn thấy gì
-        if (error.response) {
-            console.log("Headers Axios nhận được:", error.response.headers);
+const processQueue = (error, token = null) => {
+    failedQueue.forEach(prom => {
+        if (error) {
+            prom.reject(error)
+        } else {
+            prom.resolve(token)
         }
+    })
+    failedQueue = []
+}
 
-        if (error.response) {
-            // 1. Kiểm tra header (nếu backend đã fix expose)
-            // 2. HOẶC kiểm tra thông báo lỗi trong body (nếu có)
-            // 3. HOẶC kiểm tra www-authenticate (nếu backend expose)
-            // 4. Fallback: Nếu 401 và chưa retry -> Coi như hết hạn token
-            
-            const headers = error.response.headers;
-            
-            const isUnauthorized = error.response.status === 401;
-            
-            const isTokenExpired = isUnauthorized && !originalRequest._retry;
+api.interceptors.response.use(
+    response => response,
+    async error => {
+        const originalRequest = error.config
 
-            if (isTokenExpired) {
-                originalRequest._retry = true; 
+        if (error.response?.status === 401 && !originalRequest._retry) {
+            if (isRefreshing) {
+                return new Promise(function (resolve, reject) {
+                    failedQueue.push({ resolve, reject })
+                })
+                    .then(token => {
+                        originalRequest.headers["Authorization"] =
+                            "Bearer " + token
+                        return api(originalRequest)
+                    })
+                    .catch(err => {
+                        return Promise.reject(err)
+                    })
+            }
 
-                try {
-                    console.log("Phát hiện lỗi 401, đang gọi Refresh Token...");
-                    const refreshToken = localStorage.getItem("refreshToken");
+            originalRequest._retry = true
+            isRefreshing = true
 
-                    if (!refreshToken) {
-                        console.log("Không có refresh token, logout.");
-                        handleLogout();
-                        return Promise.reject(error);
-                    }
+            try {
+                const refreshToken = localStorage.getItem("refreshToken")
+                // Gọi API refresh (Dùng axios gốc để tránh loop)
+                const res = await axios.post(
+                    `${API_BASE_URL}/login/auth/refresh`,
+                    { refreshToken },
+                    { headers: { "Content-Type": "application/json" } }
+                )
 
-                    const response = await axios.post(`${API_BASE_URL}/login/auth/refresh`, {
-                        refreshToken: refreshToken
-                    });
+                if (res.data && res.data.data) {
+                    const { accessToken, refreshToken: newRefreshToken } =
+                        res.data.data
 
-                    if (response.data && response.data.errorCode === 200) {
-                        const { accessToken, accessTokenExpiresAt, refreshToken, refreshTokenExpiresAt } = response.data.data;
+                    localStorage.setItem("token", accessToken)
+                    if (newRefreshToken)
+                        localStorage.setItem("refreshToken", newRefreshToken)
 
-                        localStorage.setItem("token", accessToken);
-                        localStorage.setItem("tokenExpiration", accessTokenExpiresAt);
-                        if (refreshToken) {
-                            localStorage.setItem("refreshToken", refreshToken);
-                            localStorage.setItem("refreshTokenExpiration", refreshTokenExpiresAt);
-                        }
+                    api.defaults.headers.common["Authorization"] =
+                        "Bearer " + accessToken
+                    originalRequest.headers["Authorization"] =
+                        "Bearer " + accessToken
 
-                        api.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
-                        originalRequest.headers["Authorization"] = `Bearer ${accessToken}`;
+                    processQueue(null, accessToken)
 
-                        console.log("Refresh thành công, gọi lại request cũ...");
-                        return api(originalRequest);
-                    }
-                } catch (refreshError) {
-                    // ... xử lý lỗi refresh ...
-                    console.error("Lỗi khi Refresh Token:", refreshError);
-                    handleLogout();
-                    return Promise.reject(refreshError);
+                    return api(originalRequest)
                 }
+            } catch (err) {
+                processQueue(err, null)
+                localStorage.clear()
+                window.location.href = "/login" // Chuyển trang
+                return Promise.reject(err)
+            } finally {
+                // Mở khóa
+                isRefreshing = false
             }
         }
 
-        return Promise.reject(error);
+        return Promise.reject(error)
     }
-);
+)
 
 // Hàm Logout chung
 const handleLogout = () => {
