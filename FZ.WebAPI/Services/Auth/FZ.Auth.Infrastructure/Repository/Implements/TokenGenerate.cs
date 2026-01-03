@@ -1,6 +1,6 @@
-﻿using FZ.Auth.Domain.MFA;                // AuthUserSession
-using FZ.Auth.Domain.Token;               // AuthRefreshToken
-using FZ.Auth.Domain.User;                // AuthUser
+﻿using FZ.Auth.Domain.MFA;
+using FZ.Auth.Domain.Token;
+using FZ.Auth.Domain.User;
 using FZ.Auth.Infrastructure.Repository.Abtracts;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -45,44 +45,37 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
         {
             if (string.IsNullOrWhiteSpace(ip)) return ip;
             ip = ip.Trim();
-
-            if (ip.StartsWith("[")) // [IPv6]:port
+            if (ip.StartsWith("["))
             {
                 var end = ip.IndexOf(']');
                 return end >= 0 ? ip.Substring(1, end - 1) : ip;
             }
-
             var firstColon = ip.IndexOf(':');
             var lastColon = ip.LastIndexOf(':');
-            if (firstColon == lastColon && firstColon > -1) // IPv4:port
+            if (firstColon == lastColon && firstColon > -1)
             {
                 var portPart = ip.Substring(lastColon + 1);
-                if (int.TryParse(portPart, out _))
-                    return ip.Substring(0, lastColon);
+                if (int.TryParse(portPart, out _)) return ip.Substring(0, lastColon);
             }
-            return ip; // IPv6 or no port
+            return ip;
         }
 
         public string? GetClientIp()
         {
             var ctx = _http.HttpContext;
             if (ctx is null) return null;
-
             var ip = ctx.Connection.RemoteIpAddress;
             if (ip is not null)
             {
                 if (ip.IsIPv4MappedToIPv6) ip = ip.MapToIPv4();
                 return ip.ToString();
             }
-
-            // fallback parse common proxy headers
             var h = ctx.Request.Headers;
             var candidates = new[] { "CF-Connecting-IP", "True-Client-IP", "X-Real-IP", "X-Forwarded-For" };
             foreach (var key in candidates)
             {
                 var raw = h[key].ToString();
                 if (string.IsNullOrWhiteSpace(raw)) continue;
-
                 var first = raw.Split(',')[0].Trim();
                 first = StripPort(first);
                 if (IPAddress.TryParse(first, out var addr))
@@ -96,15 +89,13 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
 
         public string? GetUserAgent() => _http.HttpContext?.Request.Headers[HeaderNames.UserAgent].ToString();
 
-        public Task AddTokenAsync(AuthRefreshToken token, CancellationToken ct)
-            => _db.authRefreshTokens.AddAsync(token, ct).AsTask();
+        public Task AddTokenAsync(AuthRefreshToken token, CancellationToken ct) => _db.authRefreshTokens.AddAsync(token, ct).AsTask();
 
         private string SecretKey => _configuration["Jwt:SecretKey"] ?? "A_very_long_and_secure_secret_key_1234567890";
-
         private static string CacheKeyAccess(int userId, int sessionId) => $"user:{userId}:sess:{sessionId}:access";
         private static string CacheKeyRefresh(int userId, int sessionId) => $"user:{userId}:sess:{sessionId}:refresh";
 
-        // ================= 1. Issue Pair (Login logic cũ - tự query quyền) =================
+        // ================= 1. Issue Pair (Login logic cũ) =================
         public async Task<(string accessToken, AuthRefreshToken refreshToken)> IssuePairAsync(
             AuthUser user,
             int sessionId,
@@ -112,8 +103,8 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
             TimeSpan? accessTtl = null,
             TimeSpan? refreshTtl = null)
         {
-            // Không truyền permissions -> overridePermissions = null -> Tự query DB
-            var access = await CreateAccessTokenFromUserAsync(user, accessTtl ?? TimeSpan.FromMinutes(30), sessionId, null);
+            // discard permissions trả về (vì login thường đã có luồng lấy permission riêng ở service)
+            var (access, _) = await CreateAccessTokenFromUserAsync(user, accessTtl ?? TimeSpan.FromMinutes(30), sessionId, null);
 
             var refresh = await GenerateUniqueRefreshTokenAsync(
                 userId: user.userID,
@@ -130,17 +121,16 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
             return (access, refresh);
         }
 
-        // ================= 2. NEW: Issue Pair (Login logic mới - Nhận Permissions từ bên ngoài) =================
+        // ================= 2. Issue Pair (Login logic mới - Nhận Permissions) =================
         public async Task<(string accessToken, AuthRefreshToken refreshToken)> IssuePairAsync(
             AuthUser user,
             int sessionId,
             string createdByIp,
             TimeSpan accessTtl,
             TimeSpan refreshTtl,
-            List<string> permissions) // <--- NHẬN LIST PERMISSION
+            List<string> permissions)
         {
-            // Truyền permissions vào hàm tạo token để tránh query DB
-            var access = await CreateAccessTokenFromUserAsync(user, accessTtl, sessionId, permissions);
+            var (access, _) = await CreateAccessTokenFromUserAsync(user, accessTtl, sessionId, permissions);
 
             var refresh = await GenerateUniqueRefreshTokenAsync(
                 userId: user.userID,
@@ -151,14 +141,13 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
             _db.authRefreshTokens.Add(refresh);
             await _db.SaveChangesAsync();
 
-            // Cache
             await _redisDb.StringSetAsync(CacheKeyAccess(user.userID, sessionId), access, TimeSpan.FromHours(1));
             await _redisDb.StringSetAsync(CacheKeyRefresh(user.userID, sessionId), refresh.Token, TimeSpan.FromDays(7));
 
             return (access, refresh);
         }
 
-        // ================= 3. Legacy IssuePair (No SessionId) =================
+        // ================= 3. Legacy IssuePair =================
         public async Task<(string accessToken, AuthRefreshToken refreshToken)> IssuePairAsync(
             AuthUser user,
             string? createdByIp,
@@ -181,12 +170,11 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
             _db.authUserSessions.Add(session);
             await _db.SaveChangesAsync();
 
-            // Gọi overload cũ (tự query quyền)
             return await IssuePairAsync(user, session.sessionID, createdByIp, accessTtl, refreshTtl);
         }
 
-        // ================= 4. Rotate (Refresh Token) =================
-        public async Task<(string accessToken, AuthRefreshToken newRefresh)> RotateAsync(
+        // ================= 4. Rotate (Refresh Token) - ĐÃ CẬP NHẬT =================
+        public async Task<(string accessToken, AuthRefreshToken newRefresh, List<string> permissions)> RotateAsync(
             string incomingRefreshToken,
             string? ip,
             TimeSpan? accessTtl = null,
@@ -196,16 +184,14 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
                 .Include(r => r.user)
                 .FirstOrDefaultAsync(r => r.Token == incomingRefreshToken);
 
-            if (current == null)
-                throw new UnauthorizedAccessException("Invalid refresh token.");
-            if (!current.IsActive)
-                throw new UnauthorizedAccessException("Refresh token is not active.");
+            if (current == null) throw new UnauthorizedAccessException("Invalid refresh token.");
+            if (!current.IsActive) throw new UnauthorizedAccessException("Refresh token is not active.");
 
-            // revoke current
+            // Revoke current
             current.Revoked = DateTime.UtcNow;
             current.RevokedByIp = ip;
 
-            // new RT keeps same sessionId
+            // Generate new Refresh Token
             var newRefresh = await GenerateUniqueRefreshTokenAsync(
                 userId: current.userID,
                 sessionId: current.sessionID,
@@ -215,27 +201,33 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
             current.ReplacedByToken = newRefresh.Token;
             _db.authRefreshTokens.Add(newRefresh);
 
-            // Khi Rotate, client không gửi lại list permission -> Truyền null để tự query DB lấy quyền mới nhất
-            var access = await CreateAccessTokenFromUserAsync(current.user, accessTtl ?? TimeSpan.FromMinutes(30), current.sessionID, null);
+            // 👇 QUAN TRỌNG: Gọi helper với overridePermissions = null để TỰ QUERY DB
+            // và hứng lấy danh sách quyền mới nhất
+            var (access, freshPermissions) = await CreateAccessTokenFromUserAsync(
+                current.user,
+                accessTtl ?? TimeSpan.FromMinutes(30),
+                current.sessionID,
+                null
+            );
 
             await _db.SaveChangesAsync();
 
+            // Cache
             await _redisDb.StringSetAsync(CacheKeyAccess(current.userID, current.sessionID), access, TimeSpan.FromHours(1));
             await _redisDb.StringSetAsync(CacheKeyRefresh(current.userID, current.sessionID), newRefresh.Token, TimeSpan.FromDays(7));
 
-            return (access, newRefresh);
+            // 👇 Trả về cả danh sách quyền mới
+            return (access, newRefresh, freshPermissions);
         }
 
-        // ================= Revoke Methods =================
+        // ... Revoke Methods giữ nguyên ...
         public async Task RevokeAsync(string refreshToken, string? ip)
         {
             var token = await _db.authRefreshTokens.FirstOrDefaultAsync(r => r.Token == refreshToken);
             if (token == null || !token.IsActive) return;
-
             token.Revoked = DateTime.UtcNow;
             token.RevokedByIp = ip;
             await _db.SaveChangesAsync();
-
             await _redisDb.KeyDeleteAsync(CacheKeyAccess(token.userID, token.sessionID));
             await _redisDb.KeyDeleteAsync(CacheKeyRefresh(token.userID, token.sessionID));
         }
@@ -244,61 +236,35 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
         {
             var now = DateTime.UtcNow;
             var tokens = await _db.authRefreshTokens
-                .Where(t => t.userID == userId
-                         && t.sessionID == sessionId
-                         && t.Revoked == null
-                         && t.Expires > now)
+                .Where(t => t.userID == userId && t.sessionID == sessionId && t.Revoked == null && t.Expires > now)
                 .ToListAsync();
-
-            foreach (var t in tokens)
-            {
-                t.Revoked = now;
-                t.RevokedByIp = ip;
-            }
-
-            if (tokens.Count > 0)
-                await _db.SaveChangesAsync();
-
+            foreach (var t in tokens) { t.Revoked = now; t.RevokedByIp = ip; }
+            if (tokens.Count > 0) await _db.SaveChangesAsync();
             await _redisDb.KeyDeleteAsync(CacheKeyAccess(userId, sessionId));
             await _redisDb.KeyDeleteAsync(CacheKeyRefresh(userId, sessionId));
-
             return tokens.Count;
         }
 
         public async Task<int> RevokeAllForUserAsync(int userId, string? ip)
         {
             var now = DateTime.UtcNow;
-
             var tokens = await _db.authRefreshTokens
                 .Where(t => t.userID == userId && t.Revoked == null && t.Expires > now)
                 .ToListAsync();
-
             var sessions = tokens.Select(t => t.sessionID).Distinct().ToList();
-
-            foreach (var t in tokens)
-            {
-                t.Revoked = now;
-                t.RevokedByIp = ip;
-            }
-
-            if (tokens.Count > 0)
-                await _db.SaveChangesAsync();
-
+            foreach (var t in tokens) { t.Revoked = now; t.RevokedByIp = ip; }
+            if (tokens.Count > 0) await _db.SaveChangesAsync();
             foreach (var sid in sessions)
             {
                 await _redisDb.KeyDeleteAsync(CacheKeyAccess(userId, sid));
                 await _redisDb.KeyDeleteAsync(CacheKeyRefresh(userId, sid));
             }
-
             return tokens.Count;
         }
 
         public async Task<(AuthRefreshToken token, AuthUser user)?> GetActiveAsync(string refreshToken)
         {
-            var token = await _db.authRefreshTokens
-                .Include(r => r.user)
-                .FirstOrDefaultAsync(r => r.Token == refreshToken);
-
+            var token = await _db.authRefreshTokens.Include(r => r.user).FirstOrDefaultAsync(r => r.Token == refreshToken);
             if (token == null || !token.IsActive) return null;
             return (token, token.user);
         }
@@ -325,8 +291,9 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
             };
         }
 
-        // ================= PRIVATE GENERATE TOKEN (Refactored) =================
-        private async Task<string> CreateAccessTokenFromUserAsync(
+        // ================= PRIVATE HELPER - ĐÃ CẬP NHẬT =================
+        // Trả về Tuple (token, permissions)
+        private async Task<(string token, List<string> permissions)> CreateAccessTokenFromUserAsync(
             AuthUser user,
             TimeSpan? ttl = null,
             int? sessionId = null,
@@ -338,21 +305,21 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
                 .Select(x => new { x.roleID, x.role.roleName })
                 .ToListAsync();
 
-            // 2. Permissions Logic (Updated for Entity.Action.Scope)
+            // 2. Permissions Logic
             var finalPermissions = new HashSet<string>();
 
             if (overridePermissions != null)
             {
+                // Login: Dùng quyền truyền vào
                 foreach (var p in overridePermissions) finalPermissions.Add(p);
             }
             else
             {
-                // CASE B: Refresh Token -> Query lại DB
+                // Refresh: Query lại DB để lấy quyền MỚI NHẤT
                 var dbPerms = await (from ur in _db.authUserRoles
                                      join rp in _db.authRolePermissions on ur.roleID equals rp.roleID
                                      join p in _db.authPermissions on rp.permissionID equals p.permissionID
                                      where ur.userID == user.userID && !string.IsNullOrEmpty(p.code)
-                                     // 👇 SỬA Ở ĐÂY: Chỉ lấy Code
                                      select p.code)
                                      .ToListAsync();
 
@@ -380,17 +347,19 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
 
             foreach (var r in roleIds) claims.Add(new Claim("role", r.roleName));
 
-            // Claim Permission bây giờ sẽ có dạng "Movie.get.admin"
+            // Claim Permission
             foreach (var p in finalPermissions) claims.Add(new Claim("permission", p));
 
-            var token = new JwtSecurityToken(
+            var tokenDescriptor = new JwtSecurityToken(
                 issuer: null,
                 audience: null,
                 claims: claims,
                 expires: DateTime.UtcNow.Add(ttl ?? TimeSpan.FromMinutes(15)),
                 signingCredentials: creds
             );
-            return new JwtSecurityTokenHandler().WriteToken(token);
+
+            // Trả về cả Token và List quyền
+            return (new JwtSecurityTokenHandler().WriteToken(tokenDescriptor), finalPermissions.ToList());
         }
     }
 }

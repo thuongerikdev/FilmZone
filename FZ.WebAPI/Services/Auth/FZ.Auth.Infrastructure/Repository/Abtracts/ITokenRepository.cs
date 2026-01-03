@@ -48,9 +48,7 @@ namespace FZ.Auth.Infrastructure.Repository.Abtracts
         );
 
         // 4. Refresh Token
-        Task<(string accessToken, AuthRefreshToken newRefresh)> RotateAsync(
-            string incomingRefreshToken, string? ip,
-            TimeSpan? accessTtl = null, TimeSpan? refreshTtl = null);
+        Task<(string accessToken, AuthRefreshToken newRefresh, List<string> permissions)> RotateAsync(string incomingRefreshToken, string? ip, TimeSpan? accessTtl = null, TimeSpan? refreshTtl = null);
 
         // 5. Revoke
         Task RevokeAsync(string refreshToken, string? ip);

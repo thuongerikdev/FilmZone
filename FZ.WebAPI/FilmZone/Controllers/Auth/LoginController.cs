@@ -450,7 +450,7 @@ namespace FZ.WebAPI.Controllers.Auth
 
                 // 3) Xoay token (CÓ TRY-CATCH)
                 // Hàm này sẽ ném Exception nếu token cũ không hợp lệ (hết hạn/thu hồi/dùng lại)
-                var (access, newRt) = await _tokenGenerate.RotateAsync(
+                var (access, newRt , permissions) = await _tokenGenerate.RotateAsync(
                     incomingRefreshToken: rtRaw,
                     ip: _tokenGenerate.GetClientIp() ?? "unknown",
                     accessTtl: TimeSpan.FromMinutes(30),
@@ -473,7 +473,8 @@ namespace FZ.WebAPI.Controllers.Auth
                         accessToken = access,
                         accessTokenExpiresAt = accessExp,
                         refreshToken = newRt.Token,
-                        refreshTokenExpiresAt = newRt.Expires
+                        refreshTokenExpiresAt = newRt.Expires,
+                        permissions = permissions
                     }
                 });
             }
