@@ -83,6 +83,7 @@ namespace FZ.Movie.ApplicationService.Service.Implements.People
                 // Cập nhật thông tin
                 existingRegion.name = request.name;
                 existingRegion.code = request.code;
+                existingRegion.description = request.description;
                 existingRegion.updatedAt = DateTime.UtcNow;
 
                 await _unitOfWork.ExecuteInTransactionAsync(async (cancellationToken) =>
