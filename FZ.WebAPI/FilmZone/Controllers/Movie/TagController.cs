@@ -103,7 +103,6 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("getALlTags")]
-        [Authorize(Policy = "TagRead")]
         public async Task<IActionResult> GetAllTags(CancellationToken ct)
         {
             try
