@@ -25,6 +25,21 @@ namespace FZ.WebAPI.Controllers.Auth
             }
             return Ok(result);
         }
+        [HttpGet("getallscope-user")]
+        [Authorize(Policy = "RoleRead")]
+        public async Task<IActionResult> GetAllRolesWhereScopeUser(CancellationToken ct)
+        {
+            var result = await _roleService.GetAllRoleWhereScopeUser(ct);
+            if (result.ErrorCode != 200)
+            {
+                return BadRequest(result);
+            }
+            return Ok(result);
+        }
+
+
+
+
         [HttpPost("addRole")]
         [Authorize(Policy = "RoleManage")]
         public async Task<IActionResult> AddRoleAsync(AddRoleWhereScopeUserRequest req, CancellationToken ct)

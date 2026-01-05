@@ -322,5 +322,10 @@ namespace FZ.Auth.ApplicationService.MFAService.Implements.Role
                 scope = newRole.scope
             });
         }
+        public async Task<ResponseDto<List<AuthRole>>> GetAllRoleWhereScopeUser(CancellationToken ct)
+        {
+            var roles = await _roleRepository.GetAllRoleWhereScopeUser(ct);
+            return ResponseConst.Success("Lấy danh sách vai trò với scope 'user' thành công", roles);
+        }
     }
 }

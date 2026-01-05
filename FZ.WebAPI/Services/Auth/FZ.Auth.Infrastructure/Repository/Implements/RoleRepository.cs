@@ -50,6 +50,9 @@ namespace FZ.Auth.Infrastructure.Repository.Implements
                .ToListAsync(ct);
 
 
+        public Task<List<AuthRole>> GetAllRoleWhereScopeUser(CancellationToken ct)
+            => _db.authRoles.Where(r => r.scope == "user").ToListAsync(ct);
+
         public Task<AuthRole?> GetDefaultRoleAsync(CancellationToken ct)
             => _db.authRoles.FirstOrDefaultAsync(x => x.isDefault, ct);
         public async Task<List<AuthRole>> GetRolesByIdsAsync(IEnumerable<int> roleIds, CancellationToken ct)

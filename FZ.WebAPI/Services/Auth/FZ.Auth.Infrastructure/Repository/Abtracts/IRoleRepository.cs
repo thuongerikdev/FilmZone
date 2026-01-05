@@ -25,6 +25,7 @@ namespace FZ.Auth.Infrastructure.Repository.Abtracts
 
         Task<bool> AreAllRolesInScopeAsync(List<int> roleIds, string scope, CancellationToken ct);
         Task<AuthRole?> GetRoleWithPermissionsAsync(int roleId, CancellationToken ct);
+        Task<List<AuthRole>> GetAllRoleWhereScopeUser(CancellationToken ct);
 
 
     }

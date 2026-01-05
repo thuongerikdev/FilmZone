@@ -1,4 +1,5 @@
-﻿using FZ.Auth.Dtos.Role;
+﻿using FZ.Auth.Domain.Role;
+using FZ.Auth.Dtos.Role;
 using FZ.Constant;
 using System;
 using System.Collections.Generic;
@@ -27,5 +28,8 @@ namespace FZ.Auth.ApplicationService.MFAService.Abtracts
         //Task<ResponseDto<bool>> AssignRoleToUserAsync(AssignRoleRequest req, CancellationToken ct);
         Task<ResponseDto<List<RoleResponse>>> GetRoleByUserID(int userID, CancellationToken ct);
         Task<ResponseDto<RoleResponse>> CloneRoleAsync(CloneRoleRequest req, CancellationToken ct);
+
+
+        Task<ResponseDto<List<AuthRole>>> GetAllRoleWhereScopeUser(CancellationToken ct);
     }
 }
