@@ -73,23 +73,24 @@ const UpdateSourceModal = ({ open, onClose, source, scope = "movie", onSuccess }
       let res;
       
       if (scope === "movie") {
-        // Payload cho Movie Source
+        // ✅ Payload cho Movie Source - ĐÚNG theo Swagger
         const payload = {
           movieID: source.movieID,
           sourceName: sourceName,
           sourceType: sourceType,
           sourceUrl: sourceUrl,
-          sourceId: sourceIdStr, // string ID (vd: avengers-1)
+          sourceId: sourceIdStr, // string ID (vd: "avengers-1")
           quality: quality,
           language: language,
           rawSubTitle: rawSubTitle,
           isVipOnly: isVipOnly,
           isActive: isActive,
-          sourceID: source.movieSourceID // int ID (PK)
+          id: source.movieSourceID // ✅ ID phải là "id" (lowercase) và là number
         };
         res = await updateMovieSource(payload);
+        
       } else {
-        // Payload cho Episode Source
+        // ✅ Payload cho Episode Source - ĐÚNG theo Swagger
         const payload = {
           episodeID: source.episodeID,
           sourceName: sourceName,
@@ -100,23 +101,22 @@ const UpdateSourceModal = ({ open, onClose, source, scope = "movie", onSuccess }
           language: language,
           isVipOnly: isVipOnly,
           isActive: isActive,
-          episodeSourceID: source.episodeSourceID // PK
+          episodeSourceID: source.episodeSourceID // ✅ Giữ nguyên tên field
         };
         res = await updateEpisodeSource(payload);
       }
 
       const data = res.data || res; 
 
-      console.log("Update Source Response:", data); // Bật F12 xem log để chắc chắn
+      console.log("Update Source Response:", data);
 
       if (data && data.errorCode === 200) {
         setSuccessMsg("Cập nhật source thành công!");
         setTimeout(() => {
-            if (onSuccess) onSuccess(); 
-            onClose();
+          if (onSuccess) onSuccess(); 
+          onClose();
         }, 1500);
       } else {
-        // Lấy errorMessage từ data, nếu không có mới dùng chuỗi mặc định
         setErrorMsg(data?.errorMessage || "Có lỗi xảy ra khi cập nhật.");
       }
 

@@ -19,7 +19,7 @@ import {
 import { DataGrid } from "@mui/x-data-grid";
 import { tokens } from "../theme";
 import Header from "../components/Header";
-import { getWatchNowMovieById, deleteMovie, getCommentsByMovieId, deleteComment, deleteEpisode ,deleteMovieSource } from "../services/api";
+import { getWatchNowMovieById, deleteMovie, getCommentsByMovieId, deleteComment, deleteEpisode ,deleteMovieSource, getMovieSourcesByMovieId, getEpisodesByMovieId } from "../services/api";
 
 // Import Modals
 import UploadSourceModal from "../components/UploadSourceModal"; 
@@ -141,8 +141,8 @@ const MovieDetail = () => {
 
   const fetchMovieSources = async () => {
     try {
-      const response = await fetch(`https://filmzone-api.koyeb.app/movie/MovieSource/GetMovieSourcesByMovieIdPublic/getByMovieId/${movieId}`);
-      const data = await response.json();
+      const response = await getMovieSourcesByMovieId(movieId);
+      const data = await response.data;
       if (data.errorCode === 200) {
         setSources(data.data);
       }
@@ -153,8 +153,8 @@ const MovieDetail = () => {
 
   const fetchEpisodes = async () => {
     try {
-      const response = await fetch(`https://filmzone-api.koyeb.app/api/Episode/GetEpisodesByMovieId/getbyMovie/${movieId}`);
-      const data = await response.json();
+      const response = await getEpisodesByMovieId(movieId);
+      const data = await response.data;
       if (data.errorCode === 200) {
         setEpisodes(data.data);
       }

@@ -27,6 +27,12 @@ import Profile from "./pages/Profile"
 import { CssBaseline, ThemeProvider } from "@mui/material"
 import { ColorModeContext, useMode } from "./theme"
 import MovieEdit from "./pages/MovieEdit"
+import UpdateUserProfile from "./screens/users/updateUser"
+import Permissions from "./screens/permissions/listpermissions"
+import Roles from "./screens/permissions/listRoles"
+import RoleDetail from "./screens/permissions/roleDetail"
+import Regions from "./screens/movies/region"
+import Tags from "./screens/movies/tag"
 import Plans from "./screens/plans";
 import PlanCreate from "./pages/PlanCreate";
 import PlanEdit from "./pages/PlanEdit";
@@ -82,7 +88,19 @@ function App() {
                                             path="/users/:userId"
                                             element={<UserDetail />}
                                         />
-
+                                        <Route 
+                                            path="/users/update/:userId" 
+                                            element={<UpdateUserProfile/>} />
+                                        {/*Permission Management */}
+                                        <Route
+                                            path="/permissions"
+                                            element={<Permissions />}
+                                        />
+                                        <Route
+                                            path="/roles"
+                                            element={<Roles />}
+                                        />
+                                        <Route path="/roles/:roleId" element={<RoleDetail />} />
                                         {/* Movie Management */}
                                         <Route
                                             path="/movies"
@@ -100,7 +118,16 @@ function App() {
                                             path="/movies/edit/:movieID"
                                             element={<MovieEdit />}
                                         />
-
+                                        {/* Region Management */}
+                                        <Route
+                                            path="/regions"
+                                            element={<Regions />}
+                                        />
+                                        {/*Tag Management */}
+                                        <Route
+                                            path="/tags"
+                                            element={<Tags />} 
+                                        />
                                         {/* Person Management */}
                                         <Route
                                             path="/persons"

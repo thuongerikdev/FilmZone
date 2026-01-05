@@ -39,7 +39,9 @@ const Login = () => {
         
         // Lưu token, refreshToken và user info vào localStorage
         localStorage.setItem("token", userData.token);
+        localStorage.setItem("tokenExpiration", userData.tokenExpiration);
         localStorage.setItem("refreshToken", userData.refreshToken);
+        localStorage.setItem("refreshTokenExpiration", userData.refreshTokenExpiration);
         localStorage.setItem("sessionId", userData.sessionId);
         localStorage.setItem("deviceId", userData.deviceId);
         localStorage.setItem("user", JSON.stringify({
@@ -50,6 +52,14 @@ const Login = () => {
           tokenExpiration: userData.tokenExpiration,
           refreshTokenExpiration: userData.refreshTokenExpiration
         }));
+
+        const isAdmin = userData.roles?.some(role => role.roleName === 'admin');
+
+        if (isAdmin) {
+            localStorage.setItem("isAdmin", "true");
+        } else {
+            localStorage.removeItem("isAdmin"); 
+        }
         
         // Kiểm tra nếu cần MFA
         if (userData.requiresMfa && userData.mfaTicket) {
@@ -116,7 +126,7 @@ const Login = () => {
           textAlign="center"
           mb={4}
         >
-          Chào mừng trở lại! Vui lòng nhập thông tin của bạn.
+          Chào mừng trở lại FilmZone
         </Typography>
 
         {error && (
@@ -182,7 +192,7 @@ const Login = () => {
             {loading ? "Đang đăng nhập..." : "Đăng Nhập"}
           </Button>
 
-          {/* <Button
+          <Button
             fullWidth
             variant="outlined"
             startIcon={<Google />}
@@ -199,9 +209,9 @@ const Login = () => {
             }}
           >
             Đăng nhập bằng Google
-          </Button> */}
+          </Button>
 
-          {/* <Box display="flex" justifyContent="center" mt={2}>
+          <Box display="flex" justifyContent="center" mt={2}>
             <Typography variant="body1" color={colors.grey[300]}>
               Chưa có tài khoản?{" "}
               <Typography
@@ -219,7 +229,7 @@ const Login = () => {
                 Đăng ký ngay
               </Typography>
             </Typography>
-          </Box> */}
+          </Box>
         </Box>
       </Box>
     </Box>

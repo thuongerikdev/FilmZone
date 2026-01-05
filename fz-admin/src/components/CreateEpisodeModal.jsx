@@ -16,12 +16,12 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import AddIcon from "@mui/icons-material/Add";
 import { tokens } from "../theme";
+import { createEpisode } from "../services/api"; // ✅ Import từ api.js
 
 const CreateEpisodeModal = ({ open, onClose, movieId, onSuccess }) => {
   const theme = useTheme();
   const colors = tokens(theme.palette.mode);
 
-  // State form
   const [seasonNumber, setSeasonNumber] = useState(1);
   const [episodeNumber, setEpisodeNumber] = useState(1);
   const [title, setTitle] = useState("");
@@ -39,7 +39,6 @@ const CreateEpisodeModal = ({ open, onClose, movieId, onSuccess }) => {
     setErrorMsg(null);
     setSuccessMsg(null);
 
-    // Validate đơn giản
     if (!title) {
       setErrorMsg("Vui lòng nhập tên tập phim.");
       setSubmitting(false);
@@ -55,35 +54,25 @@ const CreateEpisodeModal = ({ open, onClose, movieId, onSuccess }) => {
         synopsis: synopsis || "",
         description: description || "",
         durationSeconds: Number(durationSeconds),
-        releaseDate: new Date(releaseDate).toISOString() // Convert sang chuẩn ISO
+        releaseDate: new Date(releaseDate).toISOString()
       };
 
-      const response = await fetch("https://filmzone-api.koyeb.app/api/Episode/CreateEpisode", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "accept": "*/*"
-        },
-        body: JSON.stringify(payload),
-      });
+      // ✅ Sử dụng function từ api.js
+      const response = await createEpisode(payload);
 
-      const data = await response.json();
-
-      if (data.errorCode === 200) {
+      if (response.data.errorCode === 200) {
         setSuccessMsg("Tạo tập phim thành công!");
-        // Reset form sau khi tạo thành công để có thể tạo tiếp tập sau
         setEpisodeNumber(prev => prev + 1); 
         setTitle("");
         setSynopsis("");
         setDescription("");
         
         setTimeout(() => {
-            if (onSuccess) onSuccess(); // Refresh list bên ngoài
-            setSuccessMsg(null);
-            // onClose(); // Tùy chọn: Đóng modal hoặc giữ lại để nhập tiếp
+          if (onSuccess) onSuccess();
+          setSuccessMsg(null);
         }, 1500);
       } else {
-        setErrorMsg(data.errorMessage || "Có lỗi xảy ra khi tạo tập phim.");
+        setErrorMsg(response.data.errorMessage || "Có lỗi xảy ra khi tạo tập phim.");
       }
 
     } catch (err) {

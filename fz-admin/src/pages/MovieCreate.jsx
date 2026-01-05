@@ -1,123 +1,87 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Box,
-  Typography,
-  useTheme,
-  Button,
-  TextField,
-  MenuItem,
-  Grid,
-  Card,
-  CardContent,
-  IconButton,
-  Alert,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Stack,
+  Box, Typography, useTheme, Button, TextField, Card, CardContent,
+  Alert, MenuItem, Select, FormControl, InputLabel, IconButton,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  Paper, Chip, OutlinedInput, Divider, Stack
 } from "@mui/material";
 import { tokens } from "../theme";
 import Header from "../components/Header";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import CloseIcon from "@mui/icons-material/Close";
-import { createMovie } from "../services/api";
+import ImageIcon from "@mui/icons-material/Image";
+import { createMovie, getAllRegions, getAllTags } from "../services/api";
 
 const MovieCreate = () => {
   const theme = useTheme();
   const colors = tokens(theme.palette.mode);
   const navigate = useNavigate();
 
+  const [regions, setRegions] = useState([]);
+  const [tags, setTags] = useState([]);
+
   // Form states
   const [slug, setSlug] = useState("");
   const [title, setTitle] = useState("");
   const [image, setImage] = useState(null);
-  const [imagePreview, setImagePreview] = useState("");
+  const [imagePreview, setImagePreview] = useState(null);
   const [originalTitle, setOriginalTitle] = useState("");
   const [description, setDescription] = useState("");
   const [movieType, setMovieType] = useState("movie");
   const [status, setStatus] = useState("completed");
-  const [releaseDate, setReleaseDate] = useState("");
-  const [durationSeconds, setDurationSeconds] = useState("");
-  const [totalSeasons, setTotalSeasons] = useState("");
-  const [totalEpisodes, setTotalEpisodes] = useState("");
-  const [year, setYear] = useState("");
-  const [rated, setRated] = useState("0");
+  const [releaseDate, setReleaseDate] = useState(new Date().toISOString().split('T')[0]);
+  const [durationSeconds, setDurationSeconds] = useState(0);
+  const [totalSeasons, setTotalSeasons] = useState(0);
+  const [totalEpisodes, setTotalEpisodes] = useState(0);
+  const [year, setYear] = useState(new Date().getFullYear());
+  const [rated, setRated] = useState("1");
   const [regionID, setRegionID] = useState("");
-  const [popularity, setPopularity] = useState("");
-  const [tagIDsInput, setTagIDsInput] = useState("");
+  const [popularity, setPopularity] = useState(1);
+  const [selectedTagIDs, setSelectedTagIDs] = useState([]);
   const [people, setPeople] = useState([
-    { personID: "", role: "cast", characterName: "", creditOrder: "" },
+    { personID: "", role: "cast", characterName: "", creditOrder: 0 },
   ]);
   const [movieImages, setMovieImages] = useState([]);
-  const [movieImagesPreviews, setMovieImagesPreviews] = useState([]);
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // Parse tag IDs
-  const parsedTagIDs = useMemo(() => {
-    return tagIDsInput
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean)
-      .map((n) => Number(n))
-      .filter((n) => !Number.isNaN(n));
-  }, [tagIDsInput]);
+  useEffect(() => {
+    const fetchMetadata = async () => {
+      try {
+        const [regionRes, tagRes] = await Promise.all([getAllRegions(), getAllTags()]);
+        if (regionRes.data.errorCode === 200) setRegions(regionRes.data.data);
+        if (tagRes.data.errorCode === 200) setTags(tagRes.data.data);
+      } catch (err) {
+        console.error("Error fetching metadata:", err);
+      }
+    };
+    fetchMetadata();
+  }, []);
 
-  const handlePosterChange = (e) => {
-    const file = e.target.files?.[0];
+  const handleImageChange = (e) => {
+    const file = e.target.files?.[0] || null;
+    setImage(file);
     if (file) {
-      setImage(file);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result);
-      };
+      reader.onloadend = () => setImagePreview(reader.result);
       reader.readAsDataURL(file);
     }
   };
 
   const handleMovieImagesChange = (e) => {
-    const files = Array.from(e.target.files || []);
-    setMovieImages(files);
-    
-    // Create previews
-    const previews = [];
-    files.forEach((file) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        previews.push(reader.result);
-        if (previews.length === files.length) {
-          setMovieImagesPreviews([...previews]);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const removeMovieImage = (index) => {
-    setMovieImages((prev) => prev.filter((_, i) => i !== index));
-    setMovieImagesPreviews((prev) => prev.filter((_, i) => i !== index));
+    setMovieImages(Array.from(e.target.files ?? []));
   };
 
   const updatePerson = (index, key, value) => {
-    setPeople((prev) =>
-      prev.map((p, i) => (i === index ? { ...p, [key]: value } : p))
-    );
+    setPeople((prev) => prev.map((p, i) => (i === index ? { ...p, [key]: value } : p)));
   };
 
   const addPerson = () => {
-    setPeople((prev) => [
-      ...prev,
-      { personID: "", role: "cast", characterName: "", creditOrder: "" },
-    ]);
+    setPeople((prev) => [...prev, { personID: "", role: "cast", characterName: "", creditOrder: 0 }]);
   };
 
   const removePerson = (index) => {
@@ -130,19 +94,8 @@ const MovieCreate = () => {
     setError("");
     setSuccess("");
 
-    // Validation
-    if (!image) {
-      setError("Poster image là bắt buộc");
-      setSubmitting(false);
-      return;
-    }
-    if (movieImages.length === 0) {
-      setError("Vui lòng chọn ít nhất 1 ảnh phụ");
-      setSubmitting(false);
-      return;
-    }
-    if (!regionID) {
-      setError("Region ID là bắt buộc");
+    if (!image || movieImages.length === 0 || !regionID) {
+      setError("Vui lòng điền đủ: Poster, Additional Images và Region.");
       setSubmitting(false);
       return;
     }
@@ -150,47 +103,35 @@ const MovieCreate = () => {
     try {
       const fd = new FormData();
 
-      // Scalars
       fd.append("slug", slug);
       fd.append("title", title);
-      fd.append("image", image);
-      if (originalTitle) fd.append("originalTitle", originalTitle);
-      if (description) fd.append("description", description);
+      fd.append("originalTitle", originalTitle);
+      fd.append("description", description);
       fd.append("movieType", movieType);
       fd.append("status", status);
-      if (releaseDate) fd.append("releaseDate", releaseDate);
+      fd.append("releaseDate", new Date(releaseDate).toISOString());
+      fd.append("durationSeconds", parseInt(durationSeconds));
+      fd.append("totalSeasons", parseInt(totalSeasons));
+      fd.append("totalEpisodes", parseInt(totalEpisodes));
+      fd.append("year", parseInt(year));
+      fd.append("rated", rated);
+      fd.append("regionID", parseInt(regionID));
+      fd.append("popularity", parseFloat(popularity));
+      fd.append("image", image);
 
-      if (movieType === "movie" && durationSeconds !== "") {
-        fd.append("durationSeconds", String(durationSeconds));
-      }
-      if (movieType === "series") {
-        if (totalSeasons !== "") fd.append("totalSeasons", String(totalSeasons));
-        if (totalEpisodes !== "") fd.append("totalEpisodes", String(totalEpisodes));
-      }
-
-      if (year !== "") fd.append("year", String(year));
-      if (rated) fd.append("rated", rated);
-      fd.append("regionID", String(regionID));
-      if (popularity !== "") fd.append("popularity", String(popularity));
-
-      // tagIDs[]
-      parsedTagIDs.forEach((id, idx) => {
-        fd.append(`tagIDs[${idx}]`, String(id));
+      selectedTagIDs.forEach((id) => {
+        fd.append("tagIDs", id);
       });
 
-      // person[]
-      const validPeople = people.filter((p) => p.personID !== "");
-      validPeople.forEach((p, idx) => {
-        fd.append("person.index", String(idx));
-        fd.append(`person[${idx}].personID`, String(p.personID));
+      people.filter(p => p.personID).forEach((p, idx) => {
+        fd.append(`person[${idx}].personID`, parseInt(p.personID));
         fd.append(`person[${idx}].role`, p.role);
-        if (p.characterName) fd.append(`person[${idx}].characterName`, p.characterName);
-        if (p.creditOrder !== "") fd.append(`person[${idx}].creditOrder`, String(p.creditOrder));
+        fd.append(`person[${idx}].characterName`, p.characterName || "");
+        fd.append(`person[${idx}].creditOrder`, parseInt(p.creditOrder || 0));
       });
 
-      // movieImages[]
       movieImages.forEach((file, idx) => {
-        fd.append("movieImages.index", String(idx));
+        fd.append('movieImages.index', String(idx));
         fd.append(`movieImages[${idx}].image`, file);
       });
 
@@ -198,474 +139,447 @@ const MovieCreate = () => {
 
       if (response.data.errorCode === 200) {
         setSuccess("Tạo phim thành công!");
-        setTimeout(() => {
-          navigate("/movies");
-        }, 2000);
+        setTimeout(() => navigate("/movies"), 2000);
       } else {
         setError(response.data.errorMessage || "Tạo phim thất bại");
       }
     } catch (err) {
-      console.error("Error creating movie:", err);
-      setError(err.response?.data?.errorMessage || "Có lỗi xảy ra khi tạo phim");
+      console.error("Submit error:", err);
+      setError(err.response?.data?.title || "Lỗi dữ liệu đầu vào. Vui lòng kiểm tra lại.");
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <Box m="20px">
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Header title="THÊM PHIM MỚI" subtitle="Tạo phim mới trong hệ thống" />
-        <Button
-          startIcon={<ArrowBackIcon />}
-          onClick={() => navigate("/movies")}
-          sx={{
-            color: colors.grey[100],
-            borderColor: colors.grey[400],
-          }}
+    <Box m="20px" maxWidth="800px" mx="auto">
+      {/* Header */}
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
+        <Header title="THÊM PHIM MỚI" subtitle="Tạo phim mới dựa trên API" />
+        <Button 
+          startIcon={<ArrowBackIcon />} 
+          onClick={() => navigate("/movies")} 
           variant="outlined"
+          size="large"
+          sx={{ 
+            color: colors.grey[100], 
+            borderColor: colors.grey[400],
+            fontSize: "15px",
+            fontWeight: 600,
+            px: 3
+          }}
         >
           Quay lại
         </Button>
       </Box>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
-        </Alert>
-      )}
+      {/* Alerts */}
+      {error && <Alert severity="error" sx={{ mb: 3, fontSize: "15px" }}>{error}</Alert>}
+      {success && <Alert severity="success" sx={{ mb: 3, fontSize: "15px" }}>{success}</Alert>}
 
-      {success && (
-        <Alert severity="success" sx={{ mb: 3 }}>
-          {success}
-        </Alert>
-      )}
-
-      <Box component="form" onSubmit={handleSubmit}>
-        {/* Thông tin cơ bản */}
-        <Card sx={{ backgroundColor: colors.primary[400], mb: 3 }}>
-          <CardContent>
-            <Typography variant="h5" color={colors.grey[100]} fontWeight="600" mb={3}>
-              Thông tin cơ bản
-            </Typography>
-            <Stack spacing={2}>
-              <TextField
-                fullWidth
-                variant="filled"
-                label="Slug"
-                value={slug}
-                onChange={(e) => setSlug(e.target.value)}
-                required
-              />
-              <TextField
-                fullWidth
-                variant="filled"
-                label="Tên phim"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                required
-              />
-              <TextField
-                fullWidth
-                variant="filled"
-                label="Tên gốc"
-                value={originalTitle}
-                onChange={(e) => setOriginalTitle(e.target.value)}
-              />
-              
-              {/* Poster Image */}
-              <Box>
-                <Typography variant="body2" color={colors.grey[300]} mb={1}>
-                  Poster Image *
-                </Typography>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handlePosterChange}
-                  style={{
-                    width: "100%",
-                    padding: "10px",
-                    backgroundColor: colors.primary[500],
-                    border: `1px solid ${colors.grey[700]}`,
-                    borderRadius: "4px",
-                    color: colors.grey[100],
-                  }}
-                  required
+      {/* Form */}
+      <Card sx={{ backgroundColor: colors.primary[400], boxShadow: 3 }}>
+        <CardContent sx={{ p: 4 }}>
+          <Box component="form" onSubmit={handleSubmit}>
+            
+            {/* SECTION 1: Poster Preview */}
+            {imagePreview && (
+              <Box mb={4} display="flex" justifyContent="center">
+                <Box 
+                  component="img" 
+                  src={imagePreview} 
+                  sx={{ 
+                    width: 240, 
+                    height: 360, 
+                    objectFit: "cover", 
+                    borderRadius: 2,
+                    border: `3px solid ${colors.greenAccent[500]}`,
+                    boxShadow: 4
+                  }} 
                 />
-                {imagePreview && (
-                  <Box mt={2} display="flex" justifyContent="center">
-                    <img
-                      src={imagePreview}
-                      alt="Poster preview"
-                      style={{
-                        maxWidth: "200px",
-                        maxHeight: "300px",
-                        borderRadius: "8px",
-                        border: `2px solid ${colors.grey[700]}`,
-                      }}
-                    />
-                  </Box>
-                )}
               </Box>
+            )}
 
-              <TextField
-                fullWidth
-                variant="filled"
-                label="Mô tả"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                multiline
-                rows={4}
-              />
-            </Stack>
-          </CardContent>
-        </Card>
-
-        {/* Thông tin phim */}
-        <Card sx={{ backgroundColor: colors.primary[400], mb: 3 }}>
-          <CardContent>
-            <Typography variant="h5" color={colors.grey[100]} fontWeight="600" mb={3}>
-              Thông tin phim
-            </Typography>
-            <Stack spacing={2}>
-              <TextField
-                fullWidth
-                variant="filled"
-                select
-                label="Loại phim"
-                value={movieType}
-                onChange={(e) => setMovieType(e.target.value)}
+            {/* SECTION 2: Basic Info */}
+            <Box mb={4}>
+              <Typography 
+                variant="h3" 
+                color={colors.greenAccent[400]} 
+                fontWeight={700}
+                mb={3}
+                sx={{ fontSize: "22px" }}
               >
-                <MenuItem value="movie">Phim lẻ</MenuItem>
-                <MenuItem value="series">Phim bộ</MenuItem>
-              </TextField>
-
-              <TextField
-                fullWidth
-                variant="filled"
-                select
-                label="Trạng thái"
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-              >
-                <MenuItem value="ongoing">Đang chiếu</MenuItem>
-                <MenuItem value="completed">Hoàn thành</MenuItem>
-                <MenuItem value="coming_soon">Sắp ra mắt</MenuItem>
-              </TextField>
-
-              <TextField
-                fullWidth
-                variant="filled"
-                type="date"
-                label="Ngày phát hành"
-                value={releaseDate}
-                onChange={(e) => setReleaseDate(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-              />
-
-              {movieType === "movie" && (
-                <TextField
-                  fullWidth
-                  variant="filled"
-                  type="number"
-                  label="Thời lượng (giây)"
-                  value={durationSeconds}
-                  onChange={(e) => setDurationSeconds(e.target.value)}
-                />
-              )}
-
-              {movieType === "series" && (
-                <>
-                  <TextField
-                    fullWidth
-                    variant="filled"
-                    type="number"
-                    label="Số mùa"
-                    value={totalSeasons}
-                    onChange={(e) => setTotalSeasons(e.target.value)}
-                  />
-                  <TextField
-                    fullWidth
-                    variant="filled"
-                    type="number"
-                    label="Số tập"
-                    value={totalEpisodes}
-                    onChange={(e) => setTotalEpisodes(e.target.value)}
-                  />
-                </>
-              )}
-
-              <TextField
-                fullWidth
-                variant="filled"
-                type="number"
-                label="Năm"
-                value={year}
-                onChange={(e) => setYear(e.target.value)}
-              />
-
-              <TextField
-                fullWidth
-                variant="filled"
-                label="Rated"
-                value={rated}
-                onChange={(e) => setRated(e.target.value)}
-              />
-
-              <TextField
-                fullWidth
-                variant="filled"
-                type="number"
-                label="Region ID *"
-                value={regionID}
-                onChange={(e) => setRegionID(e.target.value)}
-                required
-              />
-
-              <TextField
-                fullWidth
-                variant="filled"
-                type="number"
-                label="Độ phổ biến"
-                value={popularity}
-                onChange={(e) => setPopularity(e.target.value)}
-                inputProps={{ step: "0.1" }}
-              />
-
-              <Box>
-                <TextField
-                  fullWidth
-                  variant="filled"
-                  label="Tag IDs (phân cách bằng dấu phẩy)"
-                  value={tagIDsInput}
-                  onChange={(e) => setTagIDsInput(e.target.value)}
-                  placeholder="VD: 1,2,3"
-                />
-                {parsedTagIDs.length > 0 && (
-                  <Typography variant="caption" color={colors.grey[400]} mt={1} display="block">
-                    Parsed: [{parsedTagIDs.join(", ")}]
-                  </Typography>
-                )}
-              </Box>
-            </Stack>
-          </CardContent>
-        </Card>
-
-        {/* Người tham gia */}
-        <Card sx={{ backgroundColor: colors.primary[400], mb: 3 }}>
-          <CardContent>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-              <Typography variant="h5" color={colors.grey[100]} fontWeight="600">
-                Người tham gia
+                1. THÔNG TIN CƠ BẢN
               </Typography>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={addPerson}
-                sx={{
-                  backgroundColor: colors.greenAccent[600],
-                  "&:hover": {
-                    backgroundColor: colors.greenAccent[700],
-                  },
-                }}
-              >
-                Thêm người
-              </Button>
+              <Divider sx={{ mb: 3, borderColor: colors.grey[700] }} />
+              
+              <Stack spacing={3}>
+                <TextField 
+                  fullWidth 
+                  variant="filled" 
+                  label="Slug (Định danh URL)" 
+                  value={slug} 
+                  onChange={(e) => setSlug(e.target.value)} 
+                  required
+                  InputProps={{ style: { fontSize: "16px" } }}
+                  InputLabelProps={{ style: { fontSize: "16px" } }}
+                />
+                
+                <TextField 
+                  fullWidth 
+                  variant="filled" 
+                  label="Tiêu đề phim" 
+                  value={title} 
+                  onChange={(e) => setTitle(e.target.value)} 
+                  required
+                  InputProps={{ style: { fontSize: "16px" } }}
+                  InputLabelProps={{ style: { fontSize: "16px" } }}
+                />
+                
+                <TextField 
+                  fullWidth 
+                  variant="filled" 
+                  label="Tên gốc (Original Title)" 
+                  value={originalTitle} 
+                  onChange={(e) => setOriginalTitle(e.target.value)}
+                  InputProps={{ style: { fontSize: "16px" } }}
+                  InputLabelProps={{ style: { fontSize: "16px" } }}
+                />
+                
+                <Box>
+                  <Typography variant="h6" mb={1} sx={{ fontSize: "16px", fontWeight: 600 }}>
+                    Ảnh Poster <span style={{ color: colors.redAccent[500] }}>*</span>
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    component="label"
+                    startIcon={<ImageIcon />}
+                    sx={{ 
+                      fontSize: "15px", 
+                      py: 1.5, 
+                      px: 3,
+                      backgroundColor: colors.blueAccent[600],
+                      color: "#fff",
+                      fontWeight: 600,
+                      "&:hover": {
+                        backgroundColor: colors.blueAccent[700]
+                      }
+                    }}
+                  >
+                    Chọn ảnh poster
+                    <input type="file" accept="image/*" onChange={handleImageChange} hidden required />
+                  </Button>
+                  {image && (
+                    <Typography variant="body2" mt={1} color={colors.greenAccent[400]} sx={{ fontSize: "14px" }}>
+                      ✓ Đã chọn: {image.name}
+                    </Typography>
+                  )}
+                </Box>
+                
+                <TextField 
+                  fullWidth 
+                  variant="filled" 
+                  label="Mô tả phim" 
+                  value={description} 
+                  onChange={(e) => setDescription(e.target.value)} 
+                  multiline 
+                  rows={4}
+                  InputProps={{ style: { fontSize: "16px" } }}
+                  InputLabelProps={{ style: { fontSize: "16px" } }}
+                />
+              </Stack>
             </Box>
 
-            <TableContainer component={Paper} sx={{ backgroundColor: colors.primary[500] }}>
-              <Table>
-                <TableHead>
-                  <TableRow sx={{ backgroundColor: colors.blueAccent[700] }}>
-                    <TableCell sx={{ color: colors.grey[100] }}>Person ID</TableCell>
-                    <TableCell sx={{ color: colors.grey[100] }}>Vai trò</TableCell>
-                    <TableCell sx={{ color: colors.grey[100] }}>Tên nhân vật</TableCell>
-                    <TableCell sx={{ color: colors.grey[100] }}>Thứ tự</TableCell>
-                    <TableCell sx={{ color: colors.grey[100] }}>Hành động</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {people.map((person, index) => (
-                    <TableRow key={index}>
-                      <TableCell>
-                        <TextField
-                          variant="filled"
-                          type="number"
-                          size="small"
-                          value={person.personID}
-                          onChange={(e) => updatePerson(index, "personID", e.target.value)}
-                          sx={{ width: "120px" }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <TextField
-                          variant="filled"
-                          select
-                          size="small"
-                          value={person.role}
-                          onChange={(e) => updatePerson(index, "role", e.target.value)}
-                          sx={{ width: "150px" }}
-                        >
-                          <MenuItem value="cast">Cast</MenuItem>
-                          <MenuItem value="director">Director</MenuItem>
-                          <MenuItem value="writer">Writer</MenuItem>
-                          <MenuItem value="producer">Producer</MenuItem>
-                          <MenuItem value="editor">Editor</MenuItem>
-                          <MenuItem value="cinematographer">Cinematographer</MenuItem>
-                          <MenuItem value="composer">Composer</MenuItem>
-                        </TextField>
-                      </TableCell>
-                      <TableCell>
-                        <TextField
-                          variant="filled"
-                          size="small"
-                          value={person.characterName}
-                          onChange={(e) => updatePerson(index, "characterName", e.target.value)}
-                          placeholder="Optional"
-                          sx={{ width: "180px" }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <TextField
-                          variant="filled"
-                          type="number"
-                          size="small"
-                          value={person.creditOrder}
-                          onChange={(e) => updatePerson(index, "creditOrder", e.target.value)}
-                          placeholder="Optional"
-                          sx={{ width: "100px" }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <IconButton
-                          onClick={() => removePerson(index)}
-                          disabled={people.length === 1}
-                          sx={{
-                            color: colors.redAccent[500],
-                            "&:hover": {
-                              backgroundColor: colors.redAccent[800],
-                            },
-                          }}
-                        >
-                          <DeleteOutlineIcon />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </CardContent>
-        </Card>
-
-        {/* Hình ảnh bổ sung */}
-        <Card sx={{ backgroundColor: colors.primary[400], mb: 3 }}>
-          <CardContent>
-            <Typography variant="h5" color={colors.grey[100]} fontWeight="600" mb={2}>
-              Hình ảnh bổ sung *
-            </Typography>
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={handleMovieImagesChange}
-              style={{
-                width: "100%",
-                padding: "10px",
-                backgroundColor: colors.primary[500],
-                border: `1px solid ${colors.grey[700]}`,
-                borderRadius: "4px",
-                color: colors.grey[100],
-              }}
-              required
-            />
-            {movieImages.length > 0 && (
-              <Typography variant="caption" color={colors.grey[400]} mt={1} display="block">
-                Đã chọn: {movieImages.length} file(s)
+            {/* SECTION 3: Region & Tags */}
+            <Box mb={4}>
+              <Typography 
+                variant="h3" 
+                color={colors.greenAccent[400]} 
+                fontWeight={700}
+                mb={3}
+                sx={{ fontSize: "22px" }}
+              >
+                2. PHÂN LOẠI & QUỐC GIA
               </Typography>
-            )}
-            
-            {/* Image Previews */}
-            {movieImagesPreviews.length > 0 && (
-              <Box mt={3}>
-                <Typography variant="body2" color={colors.grey[300]} mb={2}>
-                  Xem trước ảnh:
-                </Typography>
-                <Grid container spacing={2}>
-                  {movieImagesPreviews.map((preview, index) => (
-                    <Grid item xs={12} sm={6} md={4} key={index}>
-                      <Box
-                        position="relative"
-                        sx={{
-                          border: `2px solid ${colors.grey[700]}`,
-                          borderRadius: "8px",
-                          overflow: "hidden",
-                        }}
-                      >
-                        <img
-                          src={preview}
-                          alt={`Preview ${index + 1}`}
-                          style={{
-                            width: "100%",
-                            height: "200px",
-                            objectFit: "cover",
-                          }}
-                        />
-                        <IconButton
-                          onClick={() => removeMovieImage(index)}
-                          sx={{
-                            position: "absolute",
-                            top: 5,
-                            right: 5,
-                            backgroundColor: "rgba(0,0,0,0.6)",
-                            color: colors.redAccent[500],
-                            "&:hover": {
-                              backgroundColor: "rgba(0,0,0,0.8)",
-                            },
-                          }}
-                          size="small"
-                        >
-                          <CloseIcon fontSize="small" />
-                        </IconButton>
+              <Divider sx={{ mb: 3, borderColor: colors.grey[700] }} />
+              
+              <Stack spacing={3}>
+                <FormControl fullWidth variant="filled" required>
+                  <InputLabel sx={{ fontSize: "16px" }}>Quốc gia (Region)</InputLabel>
+                  <Select 
+                    value={regionID} 
+                    onChange={(e) => setRegionID(e.target.value)}
+                    sx={{ fontSize: "16px" }}
+                  >
+                    {regions.map(r => (
+                      <MenuItem key={r.regionID} value={r.regionID} sx={{ fontSize: "16px" }}>
+                        {r.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                
+                <FormControl fullWidth variant="filled">
+                  <InputLabel sx={{ fontSize: "16px" }}>Thể loại (Tags)</InputLabel>
+                  <Select
+                    multiple 
+                    value={selectedTagIDs}
+                    onChange={(e) => setSelectedTagIDs(e.target.value)}
+                    input={<OutlinedInput label="Tags" />}
+                    sx={{ fontSize: "16px" }}
+                    renderValue={(selected) => (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                        {selected.map((val) => (
+                          <Chip 
+                            key={val} 
+                            label={tags.find(t => t.tagID === val)?.tagName || val}
+                            sx={{ fontSize: "14px" }}
+                          />
+                        ))}
                       </Box>
-                    </Grid>
-                  ))}
-                </Grid>
-              </Box>
-            )}
-          </CardContent>
-        </Card>
+                    )}
+                  >
+                    {tags.map(t => (
+                      <MenuItem key={t.tagID} value={t.tagID} sx={{ fontSize: "16px" }}>
+                        {t.tagName}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Stack>
+            </Box>
 
-        {/* Submit button */}
-        <Box display="flex" justifyContent="flex-end" gap={2}>
-          <Button
-            variant="outlined"
-            onClick={() => navigate("/movies")}
-            sx={{
-              borderColor: colors.grey[400],
-              color: colors.grey[100],
-            }}
-          >
-            Hủy
-          </Button>
-          <Button
-            type="submit"
-            variant="contained"
-            disabled={submitting}
-            sx={{
-              backgroundColor: colors.greenAccent[600],
-              color: colors.grey[100],
-              fontSize: "14px",
-              fontWeight: "bold",
-              "&:hover": {
-                backgroundColor: colors.greenAccent[700],
-              },
-            }}
-          >
-            {submitting ? "Đang tạo..." : "Tạo phim"}
-          </Button>
-        </Box>
-      </Box>
+            {/* SECTION 4: Technical Details */}
+            <Box mb={4}>
+              <Typography 
+                variant="h3" 
+                color={colors.greenAccent[400]} 
+                fontWeight={700}
+                mb={3}
+                sx={{ fontSize: "22px" }}
+              >
+                3. THÔNG SỐ KỸ THUẬT
+              </Typography>
+              <Divider sx={{ mb: 3, borderColor: colors.grey[700] }} />
+              
+              <Stack spacing={3}>
+                <FormControl fullWidth variant="filled">
+                  <InputLabel sx={{ fontSize: "16px" }}>Loại phim (Type)</InputLabel>
+                  <Select 
+                    value={movieType} 
+                    onChange={(e) => setMovieType(e.target.value)}
+                    sx={{ fontSize: "16px" }}
+                  >
+                    <MenuItem value="movie" sx={{ fontSize: "16px" }}>Phim lẻ (Movie)</MenuItem>
+                    <MenuItem value="series" sx={{ fontSize: "16px" }}>Phim bộ (Series)</MenuItem>
+                  </Select>
+                </FormControl>
+                
+                <TextField 
+                  fullWidth 
+                  variant="filled" 
+                  label="Năm phát hành" 
+                  type="number" 
+                  value={year} 
+                  onChange={(e) => setYear(e.target.value)}
+                  InputProps={{ style: { fontSize: "16px" } }}
+                  InputLabelProps={{ style: { fontSize: "16px" } }}
+                />
+                
+                <TextField 
+                  fullWidth 
+                  variant="filled" 
+                  label="Phân loại độ tuổi (Rated)" 
+                  value={rated} 
+                  onChange={(e) => setRated(e.target.value)}
+                  InputProps={{ style: { fontSize: "16px" } }}
+                  InputLabelProps={{ style: { fontSize: "16px" } }}
+                />
+                
+                <TextField 
+                  fullWidth 
+                  variant="filled" 
+                  label="Độ phổ biến (Popularity)" 
+                  type="number" 
+                  value={popularity} 
+                  onChange={(e) => setPopularity(e.target.value)}
+                  InputProps={{ style: { fontSize: "16px" } }}
+                  InputLabelProps={{ style: { fontSize: "16px" } }}
+                />
+              </Stack>
+            </Box>
+
+            {/* SECTION 5: People */}
+            <Box mb={4}>
+              <Typography 
+                variant="h3" 
+                color={colors.greenAccent[400]} 
+                fontWeight={700}
+                mb={3}
+                sx={{ fontSize: "22px" }}
+              >
+                4. NHÂN SỰ (DIỄN VIÊN & ĐẠO DIỄN)
+              </Typography>
+              <Divider sx={{ mb: 3, borderColor: colors.grey[700] }} />
+              
+              <TableContainer 
+                component={Paper} 
+                sx={{ 
+                  backgroundColor: colors.primary[500],
+                  boxShadow: 2
+                }}
+              >
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ fontSize: "15px", fontWeight: 700 }}>Person ID</TableCell>
+                      <TableCell sx={{ fontSize: "15px", fontWeight: 700 }}>Vai trò</TableCell>
+                      <TableCell sx={{ fontSize: "15px", fontWeight: 700 }}>Tên nhân vật</TableCell>
+                      <TableCell sx={{ fontSize: "15px", fontWeight: 700 }}>Hành động</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {people.map((p, idx) => (
+                      <TableRow key={idx}>
+                        <TableCell>
+                          <TextField 
+                            type="number" 
+                            value={p.personID} 
+                            onChange={(e) => updatePerson(idx, "personID", e.target.value)}
+                            InputProps={{ style: { fontSize: "15px" } }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Select 
+                            value={p.role} 
+                            onChange={(e) => updatePerson(idx, "role", e.target.value)}
+                            sx={{ fontSize: "15px" }}
+                          >
+                            <MenuItem value="cast" sx={{ fontSize: "15px" }}>Diễn viên</MenuItem>
+                            <MenuItem value="director" sx={{ fontSize: "15px" }}>Đạo diễn</MenuItem>
+                            <MenuItem value="writer" sx={{ fontSize: "15px" }}>Biên kịch</MenuItem>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <TextField 
+                            value={p.characterName} 
+                            onChange={(e) => updatePerson(idx, "characterName", e.target.value)}
+                            InputProps={{ style: { fontSize: "15px" } }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <IconButton onClick={() => removePerson(idx)} color="error">
+                            <DeleteIcon />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <Box p={2}>
+                  <Button 
+                    startIcon={<AddIcon />} 
+                    onClick={addPerson}
+                    variant="contained"
+                    sx={{ 
+                      fontSize: "15px",
+                      backgroundColor: colors.greenAccent[600],
+                      color: "#fff",
+                      fontWeight: 600,
+                      px: 3,
+                      py: 1,
+                      "&:hover": {
+                        backgroundColor: colors.greenAccent[700]
+                      }
+                    }}
+                  >
+                    Thêm nhân sự
+                  </Button>
+                </Box>
+              </TableContainer>
+            </Box>
+
+            {/* SECTION 6: Additional Images */}
+            <Box mb={4}>
+              <Typography 
+                variant="h3" 
+                color={colors.greenAccent[400]} 
+                fontWeight={700}
+                mb={3}
+                sx={{ fontSize: "22px" }}
+              >
+                5. ẢNH BỔ SUNG
+              </Typography>
+              <Divider sx={{ mb: 3, borderColor: colors.grey[700] }} />
+              
+              <Box 
+                sx={{ 
+                  p: 3, 
+                  border: `2px dashed ${colors.grey[600]}`,
+                  borderRadius: 2,
+                  textAlign: "center"
+                }}
+              >
+                <Button
+                  variant="contained"
+                  component="label"
+                  startIcon={<ImageIcon />}
+                  sx={{ 
+                    fontSize: "15px", 
+                    py: 1.5, 
+                    px: 4,
+                    backgroundColor: colors.blueAccent[600]
+                  }}
+                >
+                  Chọn nhiều ảnh
+                  <input type="file" accept="image/*" multiple onChange={handleMovieImagesChange} hidden />
+                </Button>
+                <Typography 
+                  variant="body1" 
+                  mt={2} 
+                  color={movieImages.length > 0 ? colors.greenAccent[400] : colors.grey[300]}
+                  sx={{ fontSize: "15px", fontWeight: 600 }}
+                >
+                  {movieImages.length > 0 
+                    ? `✓ Đã chọn ${movieImages.length} ảnh` 
+                    : "Chưa chọn ảnh nào"}
+                </Typography>
+              </Box>
+            </Box>
+
+            {/* Action Buttons */}
+            <Divider sx={{ my: 4, borderColor: colors.grey[700] }} />
+            <Stack direction="row" spacing={2} justifyContent="flex-end">
+              <Button 
+                variant="outlined" 
+                onClick={() => navigate("/movies")}
+                size="large"
+                sx={{ fontSize: "16px", px: 4, py: 1.5 }}
+              >
+                Hủy
+              </Button>
+              <Button 
+                type="submit" 
+                variant="contained" 
+                disabled={submitting}
+                size="large"
+                sx={{ 
+                  backgroundColor: colors.greenAccent[600],
+                  fontSize: "16px",
+                  fontWeight: 700,
+                  px: 4,
+                  py: 1.5,
+                  "&:hover": {
+                    backgroundColor: colors.greenAccent[700]
+                  }
+                }}
+              >
+                {submitting ? "Đang xử lý..." : "TẠO PHIM NGAY"}
+              </Button>
+            </Stack>
+          </Box>
+        </CardContent>
+      </Card>
     </Box>
   );
 };

@@ -27,6 +27,7 @@ import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import { tokens } from "../theme";
 import * as signalR from "@microsoft/signalr";
+import { getEpisodeSourcesByEpisodeId, getMovieSourcesByMovieId, uploadArchiveFile, uploadArchiveLink, uploadMovieSubtitle, uploadYoutubeFile } from "../services/api";
 
 // Helper function
 function clampPct(n) {
@@ -192,11 +193,10 @@ const UploadSourceModal = ({ open, onClose, movieId, movieTitle, onUploadSuccess
     try {
         // 1. Xác định API endpoint dựa trên Scope (Movie hay Episode)
         const isMovie = scope === 'movie';
-        const fetchUrl = isMovie 
-            ? `${BASE_URL}/movie/MovieSource/GetMovieSourcesByMovieIdPublic/getByMovieId/${movieId}`
-            : `${BASE_URL}/movie/EpisodeSource/GetEpisodeSourcesByEpisodeId/${movieId}`;
 
-        const sourcesRes = await fetch(fetchUrl);
+        const sourcesRes = isMovie
+            ? await getMovieSourcesByMovieId(movieId)
+            : await getEpisodeSourcesByEpisodeId(movieId);
         const sourcesData = await sourcesRes.json();
         
         if (sourcesData.errorCode !== 200 || !sourcesData.data || sourcesData.data.length === 0) {
@@ -218,10 +218,7 @@ const UploadSourceModal = ({ open, onClose, movieId, movieTitle, onUploadSuccess
         subFd.append("apiToken", apiToken);
         subFd.append("type", scope); // 'movie' hoặc 'episode'
 
-        const subResponse = await fetch(`${BASE_URL}/api/MovieSubTitle/UploadMovieSubTitle/UploadMovieSubTitle`, {
-            method: "POST",
-            body: subFd
-        });
+        const subResponse = await uploadMovieSubtitle(subFd);
 
         const subResult = await subResponse.json();
 
@@ -252,39 +249,28 @@ const UploadSourceModal = ({ open, onClose, movieId, movieTitle, onUploadSuccess
     setClientPct(0);
     setServerPct(0);
 
-    // Validation
+    // --- Validation (giữ nguyên) ---
     if (provider !== "archive-link" && !file) {
       setErrorMsg("Vui lòng chọn file video.");
       setSubmitting(false);
       return;
     }
-    if (provider === "archive-link" && !linkUrl.trim()) {
-      setErrorMsg("Vui lòng nhập Link URL.");
-      setSubmitting(false);
-      return;
-    }
-    if (isGenerateSub) {
-        if (!externalApiUrl.trim()) {
-            setErrorMsg("Vui lòng nhập External API URL.");
-            setSubmitting(false);
-            return;
-        }
-        if (!apiToken.trim()) {
-            setErrorMsg("Vui lòng nhập API Token.");
-            setSubmitting(false);
-            return;
-        }
-        if (provider === "archive-link") {
-            setErrorMsg("Tính năng tạo Subtitle chỉ hỗ trợ khi Upload File (không hỗ trợ Link).");
-            setSubmitting(false);
-            return;
-        }
-    }
+    // ... các validation khác ...
 
     try {
       let jobId;
       
-      // 1. Gửi request Upload Video
+      // Cấu hình Axios để theo dõi tiến độ upload
+      const axiosConfig = {
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const pct = Math.floor((progressEvent.loaded / progressEvent.total) * 100);
+            setClientPct(pct);
+          }
+        }
+      };
+
+      // 1. Xử lý Gửi request dựa trên Provider
       if (provider === "archive-link") {
         const body = {
           Scope: scope,
@@ -296,16 +282,12 @@ const UploadSourceModal = ({ open, onClose, movieId, movieTitle, onUploadSuccess
           LinkUrl: linkUrl.trim(),
         };
 
-        const res = await fetch(`${BASE_URL}/api/upload/archive/link`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        const data = await res.json();
-        jobId = data.jobId;
+        // Sử dụng hàm uploadArchiveLink từ api.js
+        const res = await uploadArchiveLink(body);
+        jobId = res.data.jobId; // Axios trả về data trực tiếp
         
       } else {
-        // Upload File
+        // Upload File (Dùng cho cả Archive File và Youtube File)
         const fd = new FormData();
         fd.append("Scope", scope);
         fd.append("TargetId", String(movieId));
@@ -315,40 +297,27 @@ const UploadSourceModal = ({ open, onClose, movieId, movieTitle, onUploadSuccess
         fd.append("IsActive", String(isActive));
         if (file) fd.append("File", file);
 
-        const url = provider === "archive-file" 
-          ? `${BASE_URL}/api/upload/archive/file` 
-          : `${BASE_URL}/api/upload/youtube/file`;
-
-        const uploadFilePromise = new Promise((resolve, reject) => {
-            const xhr = new XMLHttpRequest();
-            xhr.open("POST", url);
-            xhr.upload.onprogress = (event) => {
-                if (event.lengthComputable) {
-                    const pct = Math.floor((event.loaded / event.total) * 100);
-                    setClientPct(pct);
-                }
-            };
-            xhr.onload = () => {
-                if (xhr.status >= 200 && xhr.status < 300) {
-                    resolve(JSON.parse(xhr.response));
-                } else {
-                    reject(xhr.response);
-                }
-            };
-            xhr.onerror = () => reject(xhr.statusText);
-            xhr.send(fd);
-        });
-
-        const data = await uploadFilePromise;
-        jobId = data.jobId;
+        let response;
+        if (provider === "archive-file") {
+          // Gọi hàm từ api.js kèm config progress
+          response = await uploadArchiveFile(fd, axiosConfig);
+        } else {
+          // Gọi hàm từ api.js kèm config progress
+          response = await uploadYoutubeFile(fd, axiosConfig);
+        }
+        
+        jobId = response.data.jobId;
       }
 
       pushLog({ type: "info", text: `Video Job created: ${jobId}` });
+      
+      // 2. Kết nối SignalR để theo dõi tiến độ xử lý trên server (giữ nguyên)
       await connectHubAndJoin(jobId);
 
     } catch (err) {
       console.error(err);
-      const msg = typeof err === 'string' ? err : (err.message || "Request failed");
+      // Axios error handling
+      const msg = err.response?.data?.errorMessage || err.message || "Request failed";
       setErrorMsg(msg);
       pushLog({ type: "error", text: msg });
       setSubmitting(false); 

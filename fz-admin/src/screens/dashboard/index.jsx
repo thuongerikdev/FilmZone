@@ -11,8 +11,9 @@ import RevenueLineChart from "../../components/RevenueLineChart";
 import BarChart from "../../components/BarChart";
 import StatBox from "../../components/StatBox";
 import ProgressCircle from "../../components/ProgressCircle";
-import { getAllMovies, getAllPersons, getAllPlans, getAllUsers } from "../../services/api";
-import axios from "axios";
+// ✅ Import tất cả API functions từ api.js
+// ✅ Import tất cả API functions từ api.js
+import { getAllMovies, getAllPersons, getAllUsers, getAllOrders } from "../../services/api";
 
 const Dashboard = () => {
   const theme = useTheme();
@@ -44,19 +45,19 @@ const Dashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      // Fetch movies
+      // ✅ Fetch movies
       const moviesResponse = await getAllMovies();
       const totalMovies = moviesResponse.data.errorCode === 200 
         ? moviesResponse.data.data.length 
         : 0;
 
-      // Fetch persons
+      // ✅ Fetch persons
       const personsResponse = await getAllPersons();
       const totalPersons = personsResponse.data.errorCode === 200 
         ? personsResponse.data.data.length 
         : 0;
 
-      // Fetch users for customer statistics
+      // ✅ Fetch users for customer statistics
       const usersResponse = await getAllUsers();
       let totalUsers = 0;
       let vipUsers = 0;
@@ -83,15 +84,8 @@ const Dashboard = () => {
         vipPercentage,
       });
 
-      // Fetch orders
-      const ordersResponse = await axios.get(
-        'https://filmzone-api.koyeb.app/api/payment/order/all',
-        {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        }
-      );
+      // ✅ Fetch orders - Sử dụng getAllOrders từ api.js
+      const ordersResponse = await getAllOrders();
 
       let totalOrders = 0;
       let totalRevenue = 0;
@@ -397,22 +391,6 @@ const Dashboard = () => {
             </Box>
           </Box>
         </Box>
-        {/* <Box
-          gridColumn="span 6"
-          gridRow="span 2"
-          backgroundColor={colors.primary[400]}
-        >
-          <Typography
-            variant="h5"
-            fontWeight="600"
-            sx={{ padding: "30px 30px 0 30px" }}
-          >
-            Lượt xem theo thể loại
-          </Typography>
-          <Box height="250px" mt="-20px">
-            <BarChart isDashboard={true} />
-          </Box>
-        </Box> */}
       </Box>
     </Box>
   );

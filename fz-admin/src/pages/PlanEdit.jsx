@@ -5,12 +5,12 @@ import {
   useTheme,
   Button,
   TextField,
-  Grid,
   Card,
   CardContent,
   Alert,
   FormControlLabel,
   Switch,
+  CircularProgress,
 } from "@mui/material";
 import { tokens } from "../theme";
 import Header from "../components/Header";
@@ -95,8 +95,8 @@ const PlanEdit = () => {
 
   if (loading) {
     return (
-      <Box m="20px">
-        <Header title="CHỈNH SỬA GÓI DỊCH VỤ" subtitle="Đang tải dữ liệu..." />
+      <Box m="20px" display="flex" justifyContent="center" alignItems="center" height="60vh">
+        <CircularProgress />
       </Box>
     );
   }
@@ -133,49 +133,43 @@ const PlanEdit = () => {
         </Alert>
       )}
 
-      <Card sx={{ backgroundColor: colors.primary[400] }}>
+      <Card sx={{ backgroundColor: colors.primary[400], maxWidth: 600, margin: "0 auto" }}>
         <CardContent>
           <Box component="form" onSubmit={handleSubmit}>
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  variant="filled"
-                  label="Mã gói *"
-                  name="code"
-                  value={formData.code}
-                  onChange={handleChange}
-                  required
-                />
-              </Grid>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              <TextField
+                fullWidth
+                variant="filled"
+                label="Mã gói *"
+                name="code"
+                value={formData.code}
+                onChange={handleChange}
+                required
+              />
 
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  variant="filled"
-                  label="Tên gói *"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                />
-              </Grid>
+              <TextField
+                fullWidth
+                variant="filled"
+                label="Tên gói *"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                required
+              />
 
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  variant="filled"
-                  label="Mô tả"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleChange}
-                  multiline
-                  rows={6}
-                  placeholder="Nhập mô tả chi tiết về gói dịch vụ..."
-                />
-              </Grid>
+              <TextField
+                fullWidth
+                variant="filled"
+                label="Mô tả"
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                multiline
+                rows={6}
+                placeholder="Nhập mô tả chi tiết về gói dịch vụ..."
+              />
 
-              <Grid item xs={12}>
+              <Box sx={{ py: 2, px: 2, backgroundColor: colors.primary[300], borderRadius: 1 }}>
                 <FormControlLabel
                   control={
                     <Switch
@@ -196,7 +190,7 @@ const PlanEdit = () => {
                       <Box sx={{ fontWeight: "600", color: colors.grey[100] }}>
                         Trạng thái: {formData.isActive ? "Đang hoạt động" : "Không hoạt động"}
                       </Box>
-                      <Box sx={{ fontSize: "12px", color: colors.grey[400] }}>
+                      <Box sx={{ fontSize: "12px", color: colors.grey[400], mt: 0.5 }}>
                         {formData.isActive 
                           ? "Gói này sẽ hiển thị cho người dùng" 
                           : "Gói này sẽ bị ẩn khỏi danh sách"}
@@ -204,39 +198,39 @@ const PlanEdit = () => {
                     </Box>
                   }
                 />
-              </Grid>
+              </Box>
 
-              <Grid item xs={12}>
-                <Box display="flex" justifyContent="flex-end" gap={2}>
-                  <Button
-                    variant="outlined"
-                    onClick={() => navigate("/plans")}
-                    sx={{
-                      borderColor: colors.grey[400],
-                      color: colors.grey[100],
-                    }}
-                  >
-                    Hủy
-                  </Button>
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    disabled={submitting}
-                    sx={{
-                      backgroundColor: colors.greenAccent[600],
-                      color: colors.grey[100],
-                      fontSize: "14px",
-                      fontWeight: "bold",
-                      "&:hover": {
-                        backgroundColor: colors.greenAccent[700],
-                      },
-                    }}
-                  >
-                    {submitting ? "Đang cập nhật..." : "Cập nhật"}
-                  </Button>
-                </Box>
-              </Grid>
-            </Grid>
+              <Box display="flex" gap={2} justifyContent="flex-end" sx={{ mt: 2 }}>
+                <Button
+                  variant="outlined"
+                  onClick={() => navigate("/plans")}
+                  sx={{
+                    borderColor: colors.grey[400],
+                    color: colors.grey[100],
+                    flex: 1,
+                  }}
+                >
+                  Hủy
+                </Button>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  disabled={submitting}
+                  sx={{
+                    backgroundColor: colors.greenAccent[600],
+                    color: colors.grey[100],
+                    fontSize: "14px",
+                    fontWeight: "bold",
+                    flex: 1,
+                    "&:hover": {
+                      backgroundColor: colors.greenAccent[700],
+                    },
+                  }}
+                >
+                  {submitting ? "Đang cập nhật..." : "Cập nhật"}
+                </Button>
+              </Box>
+            </Box>
           </Box>
         </CardContent>
       </Card>

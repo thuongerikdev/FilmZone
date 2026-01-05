@@ -17,12 +17,12 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import { tokens } from "../theme";
+import { uploadMovieSubtitle } from "../services/api"; // ✅ Import từ api.js
 
 const AddSubtitleModal = ({ open, onClose, sourceId, sourceName, onSuccess }) => {
   const theme = useTheme();
   const colors = tokens(theme.palette.mode);
 
-  // State
   const [file, setFile] = useState(null);
   const [externalApiUrl, setExternalApiUrl] = useState("https://e63c1dc514e4.ngrok-free.app");
   const [apiToken, setApiToken] = useState("");
@@ -37,7 +37,6 @@ const AddSubtitleModal = ({ open, onClose, sourceId, sourceName, onSuccess }) =>
     setErrorMsg(null);
     setSuccessMsg(null);
 
-    // Validate
     if (!file) {
       setErrorMsg("Vui lòng chọn file video để tạo sub.");
       setSubmitting(false);
@@ -62,19 +61,17 @@ const AddSubtitleModal = ({ open, onClose, sourceId, sourceName, onSuccess }) =>
       fd.append("apiToken", apiToken);
       fd.append("type", "movie");
 
-      // Gọi API tạo Subtitle
-      const response = await fetch("https://filmzone-api.koyeb.app/api/MovieSubTitle/UploadMovieSubTitle/UploadMovieSubTitle", {
-        method: "POST",
-        body: fd,
-      });
-
+      // ✅ Sử dụng function từ api.js
+      const response = await uploadMovieSubtitle(fd);
+      
+      // uploadMovieSubtitle trả về Promise từ fetch, cần .json()
       const data = await response.json();
 
       if (data.errorCode === 200) {
         setSuccessMsg(`Yêu cầu tạo sub thành công! Job ID: ${data.data}`);
         setTimeout(() => {
-            onClose(); // Đóng modal sau 2s
-            if(onSuccess) onSuccess();
+          onClose();
+          if(onSuccess) onSuccess();
         }, 2000);
       } else {
         setErrorMsg(data.errorMessage || "Có lỗi xảy ra khi gửi yêu cầu.");
@@ -107,7 +104,6 @@ const AddSubtitleModal = ({ open, onClose, sourceId, sourceName, onSuccess }) =>
       <DialogContent sx={{ backgroundColor: colors.primary[400], pt: 3 }}>
         <Grid container spacing={3} sx={{ mt: 0.5 }}>
           
-          {/* File Input */}
           <Grid item xs={12}>
             <Box border={`1px dashed ${colors.grey[500]}`} p={2} textAlign="center" borderRadius="4px" sx={{ backgroundColor: colors.primary[500] }}>
               <input
@@ -131,7 +127,6 @@ const AddSubtitleModal = ({ open, onClose, sourceId, sourceName, onSuccess }) =>
             </Box>
           </Grid>
 
-          {/* API Info */}
           <Grid item xs={12}>
             <TextField
               fullWidth
@@ -154,7 +149,6 @@ const AddSubtitleModal = ({ open, onClose, sourceId, sourceName, onSuccess }) =>
             />
           </Grid>
 
-          {/* Feedback */}
           <Grid item xs={12}>
             {submitting && <LinearProgress sx={{ mb: 2, backgroundColor: colors.blueAccent[800], "& .MuiLinearProgress-bar": { backgroundColor: colors.blueAccent[400] } }} />}
             {errorMsg && <Alert severity="error">{errorMsg}</Alert>}

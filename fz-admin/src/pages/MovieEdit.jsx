@@ -28,6 +28,7 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import CloseIcon from "@mui/icons-material/Close";
+import { updateMovie, getMovieById, getPersonsByMovie } from "../services/api";
 
 const MovieEdit = () => {
   const theme = useTheme();
@@ -80,10 +81,10 @@ const MovieEdit = () => {
     const fetchMovie = async () => {
       try {
         setLoading(true);
-        const response = await fetch(
-          `https://filmzone-api.koyeb.app/api/Movie/GetMovieById/${movieID}`
-        );
-        const data = await response.json();
+        const response = await getMovieById(movieID);
+        
+        // AXIOS trả về data trực tiếp, KHÔNG dùng .json()
+        const data = response.data; 
 
         if (data.errorCode === 200 && data.data) {
           const movie = data.data;
@@ -103,23 +104,18 @@ const MovieEdit = () => {
           setRegionID(movie.regionID || "");
           setPopularity(movie.popularity || "");
 
-          // Parse tag IDs
-          if (movie.movieTags && movie.movieTags.length > 0) {
-            const tagIds = movie.movieTags.map((tag) => tag.tagID).join(",");
-            setTagIDsInput(tagIds);
+          if (movie.movieTags) {
+            setTagIDsInput(movie.movieTags.map(t => t.tagID).join(","));
           }
 
-          // Parse people
           if (movie.credits && movie.credits.length > 0) {
-            const parsedPeople = movie.credits.map((credit) => ({
-              personID: credit.personID || "",
-              role: credit.role || "cast",
-              characterName: credit.characterName || "",
-              creditOrder: credit.creditOrder || "",
-            }));
-            setPeople(parsedPeople);
+            setPeople(movie.credits.map(c => ({
+              personID: c.personID || "",
+              role: c.role || "cast",
+              characterName: c.characterName || "",
+              creditOrder: c.creditOrder || "",
+            })));
           }
-
           setError("");
         } else {
           setError(data.errorMessage || "Không thể tải dữ liệu phim");
@@ -133,6 +129,80 @@ const MovieEdit = () => {
     };
 
     fetchMovie();
+  }, [movieID]);
+
+  useEffect(() => {
+    const fetchMovieAndPeople = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        // Gọi đồng thời 2 API
+        const [movieRes, personsRes] = await Promise.all([
+          getMovieById(movieID),
+          getPersonsByMovie(movieID)
+        ]);
+
+        const movieData = movieRes.data;
+        const personsData = personsRes.data;
+
+        // 1. Xử lý thông tin phim cơ bản
+        if (movieData.errorCode === 200 && movieData.data) {
+          const movie = movieData.data;
+          setSlug(movie.slug || "");
+          setTitle(movie.title || "");
+          setImagePoster(movie.image || "");
+          setOriginalTitle(movie.originalTitle || "");
+          setDescription(movie.description || "");
+          setMovieType(movie.movieType || "movie");
+          setStatus(movie.status || "completed");
+          setReleaseDate(movie.releaseDate ? movie.releaseDate.split("T")[0] : "");
+          setDurationSeconds(movie.durationSeconds || "");
+          setTotalSeasons(movie.totalSeasons || "");
+          setTotalEpisodes(movie.totalEpisodes || "");
+          setYear(movie.year || "");
+          setRated(movie.rated || "0");
+          setRegionID(movie.regionID || "");
+          setPopularity(movie.popularity || "");
+
+          // Load Tags
+          if (movie.movieTags && movie.movieTags.length > 0) {
+            setTagIDsInput(movie.movieTags.map((tag) => tag.tagID).join(","));
+          }
+
+          // 2. Xử lý danh sách Người tham gia (Credits)
+          // Ưu tiên lấy từ movie.credits vì nó chứa Role và CharacterName
+          if (movie.credits && movie.credits.length > 0) {
+            const mappedPeople = movie.credits.map((c) => ({
+              personID: c.personID || "",
+              role: c.role || "cast",
+              characterName: c.characterName || "",
+              creditOrder: c.creditOrder || "",
+            }));
+            setPeople(mappedPeople);
+          } 
+          // Nếu movie.credits trống, thử lấy từ API GetPersonsByMovie
+          else if (personsData.errorCode === 200 && personsData.data.length > 0) {
+            const mappedPeople = personsData.data.map((p) => ({
+              personID: p.personID,
+              role: "cast", // Mặc định nếu không có dữ liệu role
+              characterName: "",
+              creditOrder: "",
+            }));
+            setPeople(mappedPeople);
+          }
+        } else {
+          setError(movieData.errorMessage || "Không thể tải dữ liệu phim");
+        }
+      } catch (err) {
+        console.error("Error loading movie detail:", err);
+        setError("Có lỗi xảy ra khi tải thông tin chi tiết phim");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMovieAndPeople();
   }, [movieID]);
 
   const handlePosterChange = (e) => {
@@ -193,94 +263,54 @@ const MovieEdit = () => {
     setError("");
     setSuccess("");
 
-    if (!regionID) {
-      setError("Region ID là bắt buộc");
-      setSubmitting(false);
-      return;
-    }
-
     try {
       const fd = new FormData();
-
-      // Add movieID
-      fd.append("movieID", movieID);
-
-      // Scalars
+      fd.append("movieID", movieID); // Bắt buộc phải có ID để update
       fd.append("slug", slug);
       fd.append("title", title);
-      
-      // Only append image if a new one was selected
-      if (image) {
-        fd.append("image", image);
-      }
-      
-      if (originalTitle) fd.append("originalTitle", originalTitle);
-      if (description) fd.append("description", description);
+      if (image) fd.append("image", image);
+      fd.append("originalTitle", originalTitle || "");
+      fd.append("description", description || "");
       fd.append("movieType", movieType);
       fd.append("status", status);
       if (releaseDate) fd.append("releaseDate", releaseDate);
+      if (year) fd.append("year", year);
+      fd.append("rated", rated);
+      fd.append("regionID", regionID);
+      fd.append("popularity", popularity || 0);
+      fd.append("durationSeconds", durationSeconds || 0);
 
-      if (movieType === "movie" && durationSeconds !== "") {
-        fd.append("durationSeconds", String(durationSeconds));
-      }
-      if (movieType === "series") {
-        if (totalSeasons !== "") fd.append("totalSeasons", String(totalSeasons));
-        if (totalEpisodes !== "") fd.append("totalEpisodes", String(totalEpisodes));
-      }
+      // Tags
+      parsedTagIDs.forEach((id) => fd.append("tagIDs", id));
 
-      if (year !== "") fd.append("year", String(year));
-      if (rated) fd.append("rated", rated);
-      fd.append("regionID", String(regionID));
-      if (popularity !== "") fd.append("popularity", String(popularity));
-
-      // tagIDs[]
-      parsedTagIDs.forEach((id, idx) => {
-        fd.append(`tagIDs[${idx}]`, String(id));
-      });
-
-      // person[]
-      const validPeople = people.filter((p) => p.personID !== "");
-      validPeople.forEach((p, idx) => {
-        fd.append("person.index", String(idx));
-        fd.append(`person[${idx}].personID`, String(p.personID));
+      // Persons (Theo cấu trúc Swagger: person[0].personID)
+      people.filter(p => p.personID).forEach((p, idx) => {
+        fd.append(`person[${idx}].personID`, p.personID);
         fd.append(`person[${idx}].role`, p.role);
-        if (p.characterName) fd.append(`person[${idx}].characterName`, p.characterName);
-        if (p.creditOrder !== "") fd.append(`person[${idx}].creditOrder`, String(p.creditOrder));
+        fd.append(`person[${idx}].characterName`, p.characterName || "");
+        fd.append(`person[${idx}].creditOrder`, p.creditOrder || 0);
       });
 
-      // Only add new movieImages if selected
-      movieImages.forEach((file, idx) => {
-        fd.append("movieImages.index", String(idx));
-        fd.append(`movieImages[${idx}].image`, file);
+      // Movie Images (Swagger ghi là MovieImage viết hoa chữ M)
+      movieImages.forEach((file) => {
+        fd.append("MovieImage", file); 
       });
 
-      const response = await fetch(
-        "https://filmzone-api.koyeb.app/api/Movie/UpdateMovie",
-        {
-          method: "PUT",
-          body: fd,
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const response = await updateMovie(fd);
+      
+      // AXIOS: Kết quả nằm trong response.data
+      const data = response.data;
 
       if (data.errorCode === 200) {
         setSuccess("Cập nhật phim thành công!");
-        setTimeout(() => {
-          navigate("/movies");
-        }, 2000);
+        setTimeout(() => navigate("/movies"), 2000);
       } else {
-        console.error("Backend Error:", data);
-        setError(data.errorMessage || data.title || "Cập nhật phim thất bại");
-        window.scrollTo(0, 0);
+        setError(data.errorMessage || "Cập nhật phim thất bại");
       }
     } catch (err) {
-      console.error("Error updating movie:", err);
-      setError(err.message || "Có lỗi xảy ra khi cập nhật phim");
+      // Axios bắn lỗi vào catch nếu status code >= 400
+      const msg = err.response?.data?.errorMessage || err.message;
+      setError("Lỗi: " + msg);
     } finally {
       setSubmitting(false);
     }

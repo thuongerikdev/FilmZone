@@ -13,6 +13,7 @@ import {
 import { tokens } from "../theme";
 import Header from "../components/Header";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import { createPerson } from "../services/api"; // ✅ Import từ api.js
 
 const PersonCreate = () => {
   const theme = useTheme();
@@ -45,66 +46,60 @@ const PersonCreate = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-    setError("");
-    setSuccess("");
+  e.preventDefault();
+  setSubmitting(true);
+  setError("");
+  setSuccess("");
 
-    if (!avatar) {
-      setError("Avatar là bắt buộc");
-      setSubmitting(false);
-      return;
+  if (!avatar) {
+    setError("Avatar là bắt buộc");
+    setSubmitting(false);
+    return;
+  }
+
+  if (!fullName.trim()) {
+    setError("Họ và tên là bắt buộc");
+    setSubmitting(false);
+    return;
+  }
+
+  try {
+    const formData = new FormData();
+    formData.append("fullName", fullName);
+    formData.append("knownFor", "cast");
+    formData.append("biography", biography);
+    formData.append("regionID", "1");
+    formData.append("avatar", avatar);
+    
+    if (birthDate) {
+      const date = new Date(birthDate);
+      formData.append("birthDate", date.toISOString());
     }
 
-    if (!fullName.trim()) {
-      setError("Họ và tên là bắt buộc");
-      setSubmitting(false);
-      return;
+    // ✅ Kiểm tra FormData đúng cách
+    console.log("=== FormData entries ===");
+    for (let [key, value] of formData.entries()) {
+      console.log(key, ":", value);
     }
 
-    try {
-      const formData = new FormData();
-      formData.append("fullName", fullName);
-      formData.append("knownFor", "cast");
-      formData.append("biography", biography);
-      formData.append("regionID", "1");
-      formData.append("avatar", avatar);
-      
-      if (birthDate) {
-        const date = new Date(birthDate);
-        formData.append("birthDate", date.toISOString());
-      }
+    // ✅ Gọi API với FormData
+    const response = await createPerson(formData);
+    console.log("Create Person Response:", response);
+    const data = await response.data;
 
-      console.log("Submitting person:", {
-        fullName,
-        biography,
-        avatar: avatar.name,
-        birthDate,
-      });
-
-      const response = await fetch(
-        "https://filmzone-api.koyeb.app/movie/Person/CreatePerson",
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
-
-      const data = await response.json();
-
-      if (data.errorCode === 200) {
-        setSuccess("Tạo diễn viên thành công!");
-        setTimeout(() => navigate("/persons"), 2000);
-      } else {
-        setError(data.errorMessage || "Tạo diễn viên thất bại");
-      }
-    } catch (err) {
-      console.error("Error creating person:", err);
-      setError(err.message || "Có lỗi xảy ra khi tạo diễn viên");
-    } finally {
-      setSubmitting(false);
+    if (data.errorCode === 200) {
+      setSuccess("Tạo diễn viên thành công!");
+      setTimeout(() => navigate("/persons"), 2000);
+    } else {
+      setError(data.errorMessage || "Tạo diễn viên thất bại");
     }
-  };
+  } catch (err) {
+    console.error("Error creating person:", err);
+    setError(err.message || "Có lỗi xảy ra khi tạo diễn viên");
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   return (
     <Box m="20px">
@@ -139,7 +134,6 @@ const PersonCreate = () => {
         <CardContent>
           <Box component="form" onSubmit={handleSubmit} display="flex" flexDirection="column" gap={3}>
             
-            {/* Avatar Preview */}
             {avatarPreview && (
               <Box
                 sx={{
@@ -164,7 +158,6 @@ const PersonCreate = () => {
               </Box>
             )}
 
-            {/* Full Name */}
             <TextField
               fullWidth
               variant="filled"
@@ -175,7 +168,6 @@ const PersonCreate = () => {
               placeholder="Nhập họ và tên diễn viên"
             />
 
-            {/* Birth Date */}
             <TextField
               fullWidth
               variant="filled"
@@ -186,7 +178,6 @@ const PersonCreate = () => {
               InputLabelProps={{ shrink: true }}
             />
 
-            {/* Avatar Upload */}
             <Box>
               <Typography variant="body2" color={colors.grey[300]} mb={1}>
                 Avatar * {avatar && <span style={{ color: colors.greenAccent[500] }}>✓ {avatar.name}</span>}
@@ -209,7 +200,6 @@ const PersonCreate = () => {
               />
             </Box>
 
-            {/* Biography */}
             <TextField
               fullWidth
               variant="filled"
@@ -221,7 +211,6 @@ const PersonCreate = () => {
               placeholder="Nhập tiểu sử của diễn viên..."
             />
 
-            {/* Buttons */}
             <Box display="flex" justifyContent="flex-end" gap={2}>
               <Button
                 variant="outlined"

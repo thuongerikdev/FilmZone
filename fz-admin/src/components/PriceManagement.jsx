@@ -41,7 +41,7 @@ const PriceManagement = ({ planId, prices = [], onPricesUpdate }) => {
   const [success, setSuccess] = useState("");
 
   const [formData, setFormData] = useState({
-    planID: planId || 0,
+    planID: parseInt(planId) || 0,
     currency: "VND",
     amount: 0,
     intervalUnit: "month",
@@ -74,7 +74,7 @@ const PriceManagement = ({ planId, prices = [], onPricesUpdate }) => {
     } else {
       setEditingPrice(null);
       setFormData({
-        planID: planId || 0,
+        planID: parseInt(planId) || 0,
         currency: "VND",
         amount: 0,
         intervalUnit: "month",
@@ -99,7 +99,7 @@ const PriceManagement = ({ planId, prices = [], onPricesUpdate }) => {
       ...prev,
       [name]: name === "isActive" 
         ? checked 
-        : ["amount", "intervalCount", "trialDays", "planID"].includes(name)
+        : ["amount", "intervalCount", "trialDays"].includes(name)
         ? Number(value)
         : value,
     }));
@@ -119,8 +119,13 @@ const PriceManagement = ({ planId, prices = [], onPricesUpdate }) => {
     setLoading(true);
     try {
       const dataToSubmit = {
-        ...formData,
         planID: parseInt(formData.planID),
+        currency: formData.currency,
+        amount: formData.amount,
+        intervalUnit: formData.intervalUnit,
+        intervalCount: formData.intervalCount,
+        trialDays: formData.trialDays,
+        isActive: formData.isActive,
       };
 
       let response;
@@ -213,10 +218,10 @@ const PriceManagement = ({ planId, prices = [], onPricesUpdate }) => {
           startIcon={<AddIcon />}
           onClick={() => handleOpenDialog()}
           sx={{
-            backgroundColor: colors.blueAccent,
+            backgroundColor: colors.blueAccent[600],
             color: colors.grey[100],
             "&:hover": {
-              backgroundColor: colors.blueAccent,
+              backgroundColor: colors.blueAccent[700],
             },
           }}
         >
@@ -331,111 +336,115 @@ const PriceManagement = ({ planId, prices = [], onPricesUpdate }) => {
       )}
 
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ backgroundColor: colors.primary[400], color: colors.grey[100] }}>
+        <DialogTitle sx={{ backgroundColor: colors.primary[400], color: colors.grey[100], fontWeight: "bold" }}>
           {editingPrice ? "Chỉnh sửa giá tiền" : "Thêm giá tiền mới"}
         </DialogTitle>
-        <DialogContent sx={{ backgroundColor: colors.primary[400], pt: 2 }}>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                select
-                fullWidth
-                label="Tiền tệ"
-                name="currency"
-                value={formData.currency}
-                onChange={handleChange}
-                SelectProps={{
-                  native: true,
-                }}
-                variant="filled"
-              >
-                {currencies.map((curr) => (
-                  <option key={curr} value={curr}>
-                    {curr}
-                  </option>
-                ))}
-              </TextField>
-            </Grid>
+        <DialogContent sx={{ backgroundColor: colors.primary[400], pt: 3 }}>
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
 
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Giá tiền"
-                name="amount"
-                type="number"
-                value={formData.amount}
-                onChange={handleChange}
-                variant="filled"
-                inputProps={{ min: 0, step: "0.01" }}
-              />
-            </Grid>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <TextField
+              select
+              fullWidth
+              label="Tiền tệ"
+              name="currency"
+              value={formData.currency}
+              onChange={handleChange}
+              SelectProps={{
+                native: true,
+              }}
+              variant="filled"
+            >
+              {currencies.map((curr) => (
+                <option key={curr} value={curr}>
+                  {curr}
+                </option>
+              ))}
+            </TextField>
 
-            <Grid item xs={12} sm={6}>
-              <TextField
-                select
-                fullWidth
-                label="Chu kỳ"
-                name="intervalUnit"
-                value={formData.intervalUnit}
-                onChange={handleChange}
-                SelectProps={{
-                  native: true,
-                }}
-                variant="filled"
-              >
-                {intervalUnits.map((unit) => (
-                  <option key={unit.value} value={unit.value}>
-                    {unit.label}
-                  </option>
-                ))}
-              </TextField>
-            </Grid>
+            <TextField
+              fullWidth
+              label="Giá tiền"
+              name="amount"
+              type="number"
+              value={formData.amount}
+              onChange={handleChange}
+              variant="filled"
+              inputProps={{ min: 0, step: "0.01" }}
+            />
 
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Số kỳ"
-                name="intervalCount"
-                type="number"
-                value={formData.intervalCount}
-                onChange={handleChange}
-                variant="filled"
-                inputProps={{ min: 1 }}
-              />
-            </Grid>
+            <TextField
+              select
+              fullWidth
+              label="Chu kỳ"
+              name="intervalUnit"
+              value={formData.intervalUnit}
+              onChange={handleChange}
+              SelectProps={{
+                native: true,
+              }}
+              variant="filled"
+            >
+              {intervalUnits.map((unit) => (
+                <option key={unit.value} value={unit.value}>
+                  {unit.label}
+                </option>
+              ))}
+            </TextField>
 
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Ngày dùng thử (0 nếu không có)"
-                name="trialDays"
-                type="number"
-                value={formData.trialDays}
-                onChange={handleChange}
-                variant="filled"
-                inputProps={{ min: 0 }}
-              />
-            </Grid>
+            <TextField
+              fullWidth
+              label="Số kỳ"
+              name="intervalCount"
+              type="number"
+              value={formData.intervalCount}
+              onChange={handleChange}
+              variant="filled"
+              inputProps={{ min: 1 }}
+            />
 
-            <Grid item xs={12}>
+            <TextField
+              fullWidth
+              label="Ngày dùng thử (0 nếu không có)"
+              name="trialDays"
+              type="number"
+              value={formData.trialDays}
+              onChange={handleChange}
+              variant="filled"
+              inputProps={{ min: 0 }}
+            />
+
+            <Box sx={{ py: 2, px: 2, backgroundColor: colors.primary[300], borderRadius: 1 }}>
               <FormControlLabel
                 control={
                   <Switch
                     checked={formData.isActive}
                     onChange={handleChange}
                     name="isActive"
+                    sx={{
+                      "& .MuiSwitch-switchBase.Mui-checked": {
+                        color: colors.greenAccent[500],
+                      },
+                      "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+                        backgroundColor: colors.greenAccent[600],
+                      },
+                    }}
                   />
                 }
                 label={
                   <Box>
-                    <Box sx={{ fontWeight: "600" }}>
+                    <Box sx={{ fontWeight: "600", color: colors.grey[100] }}>
                       Trạng thái: {formData.isActive ? "Hoạt động" : "Không hoạt động"}
                     </Box>
                   </Box>
                 }
               />
-            </Grid>
-          </Grid>
+            </Box>
+          </Box>
         </DialogContent>
         <DialogActions sx={{ backgroundColor: colors.primary[400], p: 2 }}>
           <Button onClick={handleCloseDialog} sx={{ color: colors.grey[100] }}>
@@ -447,6 +456,7 @@ const PriceManagement = ({ planId, prices = [], onPricesUpdate }) => {
             variant="contained"
             sx={{
               backgroundColor: colors.greenAccent[600],
+              color: colors.grey[100],
               "&:hover": {
                 backgroundColor: colors.greenAccent[700],
               },

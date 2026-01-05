@@ -8,7 +8,7 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import PendingIcon from "@mui/icons-material/Pending";
 import CancelIcon from "@mui/icons-material/Cancel";
 import CloseIcon from "@mui/icons-material/Close";
-import axios from "axios";
+import { getAllOrders } from "../../services/api"; // ✅ Import từ api.js
 
 const Invoices = () => {
   const theme = useTheme();
@@ -26,14 +26,10 @@ const Invoices = () => {
 
   const fetchOrders = async () => {
     try {
-      const response = await axios.get('https://filmzone-api.koyeb.app/api/payment/order/all', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      // ✅ Sử dụng function từ api.js thay vì axios trực tiếp
+      const response = await getAllOrders();
       
       if (response.data.errorCode === 200) {
-        // Transform data
         const transformedData = response.data.data.map((order) => ({
           id: order.orderID,
           ...order,
@@ -289,7 +285,6 @@ const Invoices = () => {
         <DialogContent sx={{ mt: 2 }}>
           {selectedOrder && (
             <Grid container spacing={3}>
-              {/* Thông tin đơn hàng */}
               <Grid item xs={12}>
                 <Typography variant="h5" color={colors.grey[100]} fontWeight="600" mb={2}>
                   Thông tin đơn hàng
@@ -374,7 +369,6 @@ const Invoices = () => {
                 </Grid>
               </Grid>
 
-              {/* Provider Info */}
               <Grid item xs={12}>
                 <Typography variant="h5" color={colors.grey[100]} fontWeight="600" mb={2}>
                   Thông tin thanh toán
@@ -402,7 +396,6 @@ const Invoices = () => {
                 </Box>
               </Grid>
 
-              {/* Thời gian */}
               <Grid item xs={12}>
                 <Typography variant="h5" color={colors.grey[100]} fontWeight="600" mb={2}>
                   Thời gian
@@ -430,7 +423,6 @@ const Invoices = () => {
                 </Grid>
               </Grid>
 
-              {/* Invoices */}
               {selectedOrder.invoices && selectedOrder.invoices.length > 0 && (
                 <Grid item xs={12}>
                   <Typography variant="h5" color={colors.grey[100]} fontWeight="600" mb={2}>

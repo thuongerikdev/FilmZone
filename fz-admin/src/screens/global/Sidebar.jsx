@@ -4,22 +4,24 @@ import { Box, IconButton, Typography, useTheme } from "@mui/material";
 import { Link } from "react-router-dom";
 import "react-pro-sidebar/dist/css/styles.css";
 import { tokens } from "../../theme";
+
+// Icons
 import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
 import PeopleOutlinedIcon from "@mui/icons-material/PeopleOutlined";
-// import ContactsOutlinedIcon from "@mui/icons-material/ContactsOutlined";
-import ReceiptOutlinedIcon from "@mui/icons-material/ReceiptOutlined";
 import PersonOutlinedIcon from "@mui/icons-material/PersonOutlined";
 import MovieOutlinedIcon from "@mui/icons-material/MovieOutlined";
 import PeopleAltOutlinedIcon from "@mui/icons-material/PeopleAltOutlined";
-import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
-import HelpOutlineOutlinedIcon from "@mui/icons-material/HelpOutlineOutlined";
+import ReceiptOutlinedIcon from "@mui/icons-material/ReceiptOutlined";
 import BarChartOutlinedIcon from "@mui/icons-material/BarChartOutlined";
 import PieChartOutlineOutlinedIcon from "@mui/icons-material/PieChartOutlineOutlined";
 import TimelineOutlinedIcon from "@mui/icons-material/TimelineOutlined";
 import MenuOutlinedIcon from "@mui/icons-material/MenuOutlined";
-import MapOutlinedIcon from "@mui/icons-material/MapOutlined";
 import CardMembershipOutlinedIcon from "@mui/icons-material/CardMembershipOutlined";
-// import AttachMoneyOutlinedIcon from "@mui/icons-material/AttachMoneyOutlined";
+import AttachMoneyOutlinedIcon from "@mui/icons-material/AttachMoneyOutlined";
+import MapOutlinedIcon from "@mui/icons-material/MapOutlined";
+import LocalOfferOutlinedIcon from "@mui/icons-material/LocalOfferOutlined";
+import AdminPanelSettingsOutlinedIcon from "@mui/icons-material/AdminPanelSettingsOutlined";
+import VpnKeyOutlinedIcon from "@mui/icons-material/VpnKeyOutlined";
 
 const Item = ({ title, to, icon, selected, setSelected }) => {
   const theme = useTheme();
@@ -106,36 +108,9 @@ const Sidebar = ({ onCollapsedChange }) => {
             )}
           </MenuItem>
 
-          {/* USER INFO */}
-          {!isCollapsed && (
-            <Box mb="25px">
-              <Box display="flex" justifyContent="center" alignItems="center">
-                <img
-                  alt="profile-user"
-                  width="100px"
-                  height="100px"
-                  src={`../../assets/user.png`}
-                  style={{ cursor: "pointer", borderRadius: "50%" }}
-                />
-              </Box>
-              <Box textAlign="center">
-                <Typography
-                  variant="h2"
-                  color={colors.grey[100]}
-                  fontWeight="bold"
-                  sx={{ m: "10px 0 0 0" }}
-                >
-                  Admin
-                </Typography>
-                <Typography variant="h5" color={colors.greenAccent[500]}>
-                  VP Fancy Admin
-                </Typography>
-              </Box>
-            </Box>
-          )}
-
           {/* MENU ITEMS */}
           <Box paddingLeft={isCollapsed ? undefined : "10%"}>
+            {/* DASHBOARD */}
             <Item
               title="Bảng Điều Khiển"
               to="/"
@@ -144,36 +119,96 @@ const Sidebar = ({ onCollapsedChange }) => {
               setSelected={setSelected}
             />
 
+            {/* ============================================ */}
+            {/* NHÓM 1: QUẢN LÝ NGƯỜI DÙNG */}
+            {/* ============================================ */}
             <Typography
               variant="h6"
               color={colors.grey[300]}
-              sx={{ m: "15px 0 5px 20px" }}
+              sx={{ m: "15px 0 5px 20px", fontWeight: 600 }}
             >
-              Quản Lý
+              👥 Quản lý Người Dùng
             </Typography>
             <Item
-              title="Quản Lý Users"
+              title="Danh Sách Users"
               to="/users"
               icon={<PeopleOutlinedIcon />}
               selected={selected}
               setSelected={setSelected}
             />
             <Item
-              title="Quản Lý Phim"
+              title="Hồ Sơ Cá Nhân"
+              to="/profile"
+              icon={<PersonOutlinedIcon />}
+              selected={selected}
+              setSelected={setSelected}
+            />
+            <Item
+              title="Vai Trò (Roles)"
+              to="/roles"
+              icon={<AdminPanelSettingsOutlinedIcon />}
+              selected={selected}
+              setSelected={setSelected}
+            />
+            <Item
+              title="Quyền Hạn (Permissions)"
+              to="/permissions"
+              icon={<VpnKeyOutlinedIcon />}
+              selected={selected}
+              setSelected={setSelected}
+            />
+
+            {/* ============================================ */}
+            {/* NHÓM 2: QUẢN LÝ NỘI DUNG */}
+            {/* ============================================ */}
+            <Typography
+              variant="h6"
+              color={colors.grey[300]}
+              sx={{ m: "15px 0 5px 20px", fontWeight: 600 }}
+            >
+              🎬 Quản lý Nội dung
+            </Typography>
+            <Item
+              title="Danh Sách Phim"
               to="/movies"
               icon={<MovieOutlinedIcon />}
               selected={selected}
               setSelected={setSelected}
             />
             <Item
-              title="Quản Lý Diễn Viên"
+              title="Diễn Viên & Đạo Diễn"
               to="/persons"
               icon={<PeopleAltOutlinedIcon />}
               selected={selected}
               setSelected={setSelected}
             />
             <Item
-              title="Quản Lý Gói Dịch Vụ"
+              title="Quốc Gia (Regions)"
+              to="/regions"
+              icon={<MapOutlinedIcon />}
+              selected={selected}
+              setSelected={setSelected}
+            />
+            <Item
+              title="Thể Loại (Tags)"
+              to="/tags"
+              icon={<LocalOfferOutlinedIcon />}
+              selected={selected}
+              setSelected={setSelected}
+            />
+
+            {/* ============================================ */}
+            {/* NHÓM 3: QUẢN LÝ TÀI CHÍNH */}
+            {/* ============================================ */}
+            <Typography
+              variant="h6"
+              color={colors.grey[300]}
+              sx={{ m: "15px 0 5px 20px", fontWeight: 600 }}
+            >
+              💰 Quản lý Tài Chính
+            </Typography>
+            <Item
+              title="Gói Dịch Vụ"
               to="/plans"
               icon={<CardMembershipOutlinedIcon />}
               selected={selected}
@@ -186,71 +221,20 @@ const Sidebar = ({ onCollapsedChange }) => {
               selected={selected}
               setSelected={setSelected}
             />
-
-            {/* <Typography
-              variant="h6"
-              color={colors.grey[300]}
-              sx={{ m: "15px 0 5px 20px" }}
-            >
-              Trang
-            </Typography>
             <Item
-              title="Biểu Mẫu Hồ Sơ"
-              to="/form"
-              icon={<PersonOutlinedIcon />}
-              selected={selected}
-              setSelected={setSelected}
-            />
-            <Item
-              title="Lịch"
-              to="/calendar"
-              icon={<CalendarTodayOutlinedIcon />}
-              selected={selected}
-              setSelected={setSelected}
-            />
-            <Item
-              title="FAQ"
-              to="/faq"
-              icon={<HelpOutlineOutlinedIcon />}
-              selected={selected}
-              setSelected={setSelected}
-            />
-
-            <Typography
-              variant="h6"
-              color={colors.grey[300]}
-              sx={{ m: "15px 0 5px 20px" }}
-            >
-              Biểu Đồ
-            </Typography>
-            <Item
-              title="Biểu Đồ Cột"
+              title="Biểu Đồ Doanh Thu"
               to="/bar"
               icon={<BarChartOutlinedIcon />}
               selected={selected}
               setSelected={setSelected}
             />
             <Item
-              title="Biểu Đồ Tròn"
-              to="/pie"
-              icon={<PieChartOutlineOutlinedIcon />}
-              selected={selected}
-              setSelected={setSelected}
-            />
-            <Item
-              title="Biểu Đồ Đường"
+              title="Xu Hướng Tăng Trưởng"
               to="/line"
               icon={<TimelineOutlinedIcon />}
               selected={selected}
               setSelected={setSelected}
             />
-            <Item
-              title="Biểu Đồ Địa Lý"
-              to="/geography"
-              icon={<MapOutlinedIcon />}
-              selected={selected}
-              setSelected={setSelected}
-            /> */}
           </Box>
         </Menu>
       </ProSidebar>

@@ -3,209 +3,212 @@ import { useTheme } from "@mui/material";
 import { tokens } from "../theme";
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { getAllInvoices } from "../services/api";
 
 const RevenueLineChart = ({ isDashboard = false }) => {
   const theme = useTheme();
   const colors = tokens(theme.palette.mode);
   const [chartData, setChartData] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchRevenueData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchRevenueData = async () => {
     try {
-      const response = await axios.get(
-        'https://filmzone-api.koyeb.app/api/payment/order/all',
-        {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        }
-      );
+      setLoading(true);
+      // Gọi API lấy tất cả invoices
+      const response = await getAllInvoices();
 
-      if (response.data.errorCode === 200) {
-        const orders = response.data.data.filter(order => order.status === 'paid');
-        
-        // Group orders by month
-        const revenueByMonth = {};
-        
-        orders.forEach(order => {
-          const date = new Date(order.createdAt);
-          const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-          const monthLabel = date.toLocaleDateString('vi-VN', { month: 'short', year: 'numeric' });
-          
-          if (!revenueByMonth[monthKey]) {
-            revenueByMonth[monthKey] = {
-              month: monthLabel,
-              revenue: 0
-            };
-          }
-          
-          revenueByMonth[monthKey].revenue += order.amount;
+      if (response.data && response.data.errorCode === 200) {
+        const invoices = response.data.data;
+
+        console.log("📊 Invoices từ API:", invoices);
+        console.log("📊 Số lượng invoices:", invoices.length);
+
+        if (!invoices || invoices.length === 0) {
+          console.warn("⚠️ Không có invoices");
+          setChartData([
+            {
+              id: "Doanh thu tích lũy",
+              color: colors.greenAccent[500],
+              data: [],
+            },
+          ]);
+          setLoading(false);
+          return;
+        }
+
+        // Sắp xếp invoices theo thời gian
+        const sortedInvoices = [...invoices].sort((a, b) => {
+          return new Date(a.issuedAt) - new Date(b.issuedAt);
         });
 
-        // Sort by date and convert to array
-        const sortedData = Object.keys(revenueByMonth)
-          .sort()
-          .map(key => ({
-            x: revenueByMonth[key].month,
-            y: revenueByMonth[key].revenue / 1000000 // Convert to millions
-          }));
+        console.log("📊 Invoices sau khi sort:", sortedInvoices);
 
-        // If no data, use sample data
-        if (sortedData.length === 0) {
-          setChartData([
-            {
-              id: "Doanh thu",
-              color: colors.greenAccent[500],
-              data: [
-                { x: "Tháng 1", y: 0 },
-                { x: "Tháng 2", y: 0 },
-                { x: "Tháng 3", y: 0 },
-              ]
-            }
-          ]);
-        } else {
-          setChartData([
-            {
-              id: "Doanh thu",
-              color: colors.greenAccent[500],
-              data: sortedData
-            }
-          ]);
-        }
+        // Tính doanh thu tích lũy
+        let cumulativeRevenue = 0;
+        const chartDataPoints = sortedInvoices.map((invoice, index) => {
+          cumulativeRevenue += invoice.total;
+          const date = new Date(invoice.issuedAt);
+          const dateLabel = date.toLocaleDateString("vi-VN", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+          });
+
+          const point = {
+            x: dateLabel,
+            y: Math.round(cumulativeRevenue / 1000),
+          };
+          console.log(`📊 Point ${index}:`, point, "| Total:", invoice.total);
+          return point;
+        });
+
+        console.log("📊 Chart Data Points:", chartDataPoints);
+
+        setChartData([
+          {
+            id: "Doanh thu tích lũy",
+            color: colors.greenAccent[500],
+            data: chartDataPoints,
+          },
+        ]);
+      } else {
+        console.error("❌ Error:", response.data.errorMessage);
+        setChartData([
+          {
+            id: "Doanh thu tích lũy",
+            color: colors.greenAccent[500],
+            data: [],
+          },
+        ]);
       }
     } catch (error) {
-      console.error("Error fetching revenue data:", error);
-      // Use empty data on error
+      console.error("❌ Error fetching revenue data:", error);
       setChartData([
         {
-          id: "Doanh thu",
+          id: "Doanh thu tích lũy",
           color: colors.greenAccent[500],
-          data: []
-        }
+          data: [],
+        },
       ]);
+    } finally {
+      setLoading(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100%",
+          color: colors.grey[100],
+        }}
+      >
+        Đang tải dữ liệu...
+      </div>
+    );
+  }
 
   return (
     <ResponsiveLine
       data={chartData}
       theme={{
         axis: {
-          domain: {
-            line: {
-              stroke: colors.grey[100],
-            },
-          },
-          legend: {
-            text: {
-              fill: colors.grey[100],
-            },
-          },
+          domain: { line: { stroke: colors.grey[100] } },
+          legend: { text: { fill: colors.grey[100] } },
           ticks: {
-            line: {
-              stroke: colors.grey[100],
-              strokeWidth: 1,
-            },
-            text: {
-              fill: colors.grey[100],
-            },
+            line: { stroke: colors.grey[100], strokeWidth: 1 },
+            text: { fill: colors.grey[100] },
           },
         },
-        legends: {
-          text: {
-            fill: colors.grey[100],
-          },
-        },
-        tooltip: {
-          container: {
-            color: colors.primary[500],
-          },
-        },
+        legends: { text: { fill: colors.grey[100] } },
+        tooltip: { container: { color: colors.primary[500] } },
       }}
       colors={{ datum: "color" }}
-      margin={{ top: 50, right: 110, bottom: 50, left: 60 }}
+      margin={{ top: 50, right: 110, bottom: 50, left: 70 }}
       xScale={{ type: "point" }}
       yScale={{
         type: "linear",
-        min: "auto",
+        min: 0,
         max: "auto",
         stacked: false,
         reverse: false,
       }}
-      yFormat={(value) => `${value.toFixed(1)}M`}
-      curve="catmullRom"
+      // Định dạng hiển thị trên trục Y (ví dụ: 99k)
+      yFormat={(value) => `${value.toLocaleString()}k`}
+      curve="linear"
       axisTop={null}
       axisRight={null}
       axisBottom={{
         orient: "bottom",
         tickSize: 5,
         tickPadding: 5,
-        tickRotation: 0,
-        legend: isDashboard ? undefined : "Tháng",
-        legendOffset: 36,
+        tickRotation: 45,
+        legend: isDashboard ? undefined : "Ngày",
+        legendOffset: 50,
         legendPosition: "middle",
       }}
       axisLeft={{
         orient: "left",
-        tickValues: 5,
         tickSize: 5,
         tickPadding: 5,
         tickRotation: 0,
-        legend: isDashboard ? undefined : "Doanh thu (Triệu VNĐ)",
-        legendOffset: -50,
+        legend: isDashboard ? undefined : "Doanh thu tích lũy (nghìn VNĐ)",
+        legendOffset: -60,
         legendPosition: "middle",
-        format: (value) => `${value}M`,
+        format: (value) => `${value}k`,
       }}
       enableGridX={false}
-      enableGridY={false}
-      pointSize={10}
+      enableGridY={true}
+      gridYValues={5}
+      pointSize={8}
       pointColor={{ theme: "background" }}
       pointBorderWidth={2}
       pointBorderColor={{ from: "serieColor" }}
       pointLabelYOffset={-12}
       useMesh={true}
-      legends={[
-        {
-          anchor: "bottom-right",
-          direction: "column",
-          justify: false,
-          translateX: 100,
-          translateY: 0,
-          itemsSpacing: 0,
-          itemDirection: "left-to-right",
-          itemWidth: 80,
-          itemHeight: 20,
-          itemOpacity: 0.75,
-          symbolSize: 12,
-          symbolShape: "circle",
-          symbolBorderColor: "rgba(0, 0, 0, .5)",
-          effects: [
-            {
-              on: "hover",
-              style: {
-                itemBackground: "rgba(0, 0, 0, .03)",
-                itemOpacity: 1,
+      legends={
+        isDashboard
+          ? []
+          : [
+              {
+                anchor: "bottom-right",
+                direction: "column",
+                justify: false,
+                translateX: 100,
+                translateY: 0,
+                itemsSpacing: 0,
+                itemDirection: "left-to-right",
+                itemWidth: 120,
+                itemHeight: 20,
+                itemOpacity: 0.75,
+                symbolSize: 12,
+                symbolShape: "circle",
+                effects: [{ on: "hover", style: { itemOpacity: 1 } }],
               },
-            },
-          ],
-        },
-      ]}
+            ]
+      }
       tooltip={({ point }) => (
         <div
           style={{
             background: colors.primary[400],
-            padding: "9px 12px",
+            padding: "12px 16px",
             border: `1px solid ${colors.grey[700]}`,
             borderRadius: "4px",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
           }}
         >
           <strong style={{ color: colors.grey[100] }}>{point.data.xFormatted}</strong>
           <br />
           <span style={{ color: colors.greenAccent[500] }}>
-            Doanh thu: {(point.data.y * 1000000).toLocaleString('vi-VN')} VNĐ
+            Tích lũy: {(point.data.y * 1000).toLocaleString("vi-VN")} VNĐ
           </span>
         </div>
       )}
