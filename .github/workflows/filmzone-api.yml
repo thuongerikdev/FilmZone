@@ -1,0 +1,73 @@
+name: Build & Deploy FilmZone API
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+concurrency:
+  group: filmzone-api
+  cancel-in-progress: true
+
+env:
+  IMAGE_NAME: emyeuaidayy/filmzone-api
+
+jobs:
+  build-push-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build & Push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: FZ.WebAPI
+          file: FZ.WebAPI/Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache
+          cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache,mode=max
+
+      - name: Setup flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Login to Fly.io
+        run: flyctl auth login --access-token "${FLY_API_TOKEN}"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Sanity check (app visibility)
+        run: |
+          flyctl auth whoami
+          flyctl apps list
+          flyctl status --app filmzone-api || true
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Deploy to Fly.io (using built image)
+        run: |
+          flyctl deploy \
+            --app filmzone-api \
+            --image docker.io/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            --remote-only \
+            --strategy immediate
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

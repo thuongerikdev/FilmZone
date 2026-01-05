@@ -1,0 +1,19 @@
+app = "filmzone-sql"
+primary_region = "sin"
+
+[build]
+  # Khuyên dùng image chính chủ, ổn định:
+  # image = "mcr.microsoft.com/mssql/server:2022-latest"
+  # Nếu bắt buộc dùng image riêng:
+  image = "emyeuaidayy/sqlserver:latest"
+
+[env]
+  ACCEPT_EULA = "Y"
+  MSSQL_PID = "Developer"   # hoặc "Express" nếu muốn nhẹ hơn
+  # KHÔNG để SA_PASSWORD ở đây, sẽ set bằng secrets
+
+[[mounts]]
+  source = "mssqldata"
+  destination = "/var/opt/mssql"
+
+# Không khai báo [[services]] => KHÔNG public port, chỉ private .internal

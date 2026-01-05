@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Xem phim từ Internet Archive - Demo</title>
+    <style>
+        :root {
+            --bg: #0f1115;
+            --card: #171923;
+            --text: #e2e8f0;
+            --muted: #a0aec0;
+            --accent: #60a5fa;
+            --radius: 14px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, Inter, sans-serif;
+            background: radial-gradient(1200px 600px at 20% -10%, #1f2937, transparent 60%), var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1080px;
+            margin: 32px auto;
+            padding: 0 16px;
+        }
+
+        header {
+            margin-bottom: 18px;
+        }
+
+        h1 {
+            font-size: 22px;
+            margin: 0 0 8px;
+            letter-spacing: .3px;
+        }
+
+        .hint {
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .bar {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin: 10px 0 2px;
+        }
+
+        .input {
+            flex: 1;
+            background: #0f1320;
+            color: var(--text);
+            border: 1px solid #23283a;
+            border-radius: 10px;
+            padding: 10px 12px;
+            font-size: 14px;
+        }
+
+        .btn {
+            background: var(--accent);
+            color: #0b1020;
+            border: 0;
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            filter: brightness(1.05);
+        }
+
+        .player {
+            background: #000;
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, .35);
+            aspect-ratio: 16/9;
+            position: relative;
+            margin-top: 12px;
+        }
+
+        .player iframe {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+
+        .list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 14px;
+            margin-top: 18px;
+        }
+
+        .item {
+            background: linear-gradient(180deg, #1f2432, #181c29);
+            border: 1px solid #23283a;
+            border-radius: calc(var(--radius) - 4px);
+            cursor: pointer;
+            overflow: hidden;
+            transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+        }
+
+        .item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 28px rgba(0, 0, 0, .28);
+            border-color: #2a3150;
+        }
+
+        .thumb {
+            position: relative;
+            aspect-ratio: 16/9;
+            overflow: hidden;
+        }
+
+        .thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .badge {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background: rgba(0, 0, 0, .65);
+            color: #fff;
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, .12);
+            backdrop-filter: blur(4px);
+        }
+
+        .meta {
+            padding: 10px 12px 12px;
+        }
+
+        .title {
+            font-size: 14px;
+            margin: 0 0 4px;
+            color: #dbe2ef;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            min-height: 38px;
+        }
+
+        .desc {
+            color: var(--muted);
+            font-size: 12px;
+            margin: 0;
+        }
+
+        .active {
+            outline: 2px solid var(--accent);
+            outline-offset: 0;
+        }
+
+        footer {
+            color: var(--muted);
+            font-size: 12px;
+            margin-top: 20px;
+        }
+
+        a {
+            color: #93c5fd;
+            text-decoration: none;
+        }
+
+        code {
+            background: #0b0e17;
+            padding: 2px 6px;
+            border-radius: 6px;
+            border: 1px solid #1f2640;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>🎬 Xem phim từ Internet Archive (Demo)</h1>
+            <div class="hint">
+                Dán <b>identifier</b> của Internet Archive để phát. Ví dụ:
+                <code>big_buck_bunny_1080p_surround</code>, <code>ElephantsDream</code>,
+                <code>NightOfTheLivingDead</code>.
+            </div>
+            <div class="bar">
+                <input id="iaIdInput" class="input" placeholder="Nhập identifier Archive, ví dụ: ElephantsDream" />
+                <button class="btn" id="playBtn">Phát video</button>
+            </div>
+        </header>
+
+        <!-- Player chính (iframe embed của Archive) -->
+        <div class="player">
+            <iframe id="player" src="https://archive.org/embed/ElephantsDream?autoplay=0" title="Archive.org player"
+                allow="fullscreen" webkitallowfullscreen="true" mozallowfullscreen="true">
+            </iframe>
+        </div>
+
+        <!-- Danh sách phim gợi ý (dùng identifier của Archive) -->
+        <section class="list" id="videoList"></section>
+
+        <footer>
+            Ảnh thumbnail lấy từ <code>https://archive.org/services/img/&lt;IDENTIFIER&gt;</code>.
+            Phát trực tiếp qua iframe: <code>https://archive.org/embed/&lt;IDENTIFIER&gt;?autoplay=1</code>
+            (Chỉ dùng nội dung hợp pháp/public domain hoặc bạn có quyền phân phối).
+        </footer>
+    </div>
+
+    <script>
+        // Danh sách ví dụ (bạn thay tùy ý bằng identifier hợp lệ trên archive.org)
+        const videos = [
+            {
+                id: "ElephantsDream",
+                title: "Elephant's Dream (Open Movie)",
+                desc: "Blender Foundation - phim mở, hợp pháp để demo",
+                tag: "Open Movie"
+            },
+            {
+                id: "big_buck_bunny_1080p_surround",
+                title: "Big Buck Bunny (1080p)",
+                desc: "Open Movie kinh điển - chất lượng cao",
+                tag: "Open Movie"
+            },
+            {
+                id: "NightOfTheLivingDead",
+                title: "Night of the Living Dead (1968)",
+                desc: "Phim kinh dị cổ điển - public domain",
+                tag: "Public Domain"
+            }
+        ];
+
+        const listEl = document.getElementById("videoList");
+        const playerEl = document.getElementById("player");
+        const inputEl = document.getElementById("iaIdInput");
+        const playBtn = document.getElementById("playBtn");
+
+        function embedUrl(identifier, autoplay = true) {
+            const ap = autoplay ? "1" : "0";
+            return `https://archive.org/embed/${encodeURIComponent(identifier)}?autoplay=${ap}`;
+        }
+
+        function thumbUrl(identifier) {
+            // Dịch vụ ảnh bìa của Archive
+            return `https://archive.org/services/img/${encodeURIComponent(identifier)}`;
+        }
+
+        function setActiveCard(card) {
+            document.querySelectorAll(".item").forEach(el => el.classList.remove("active"));
+            card?.classList.add("active");
+            card?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+        }
+
+        function playIdentifier(identifier, card) {
+            playerEl.src = embedUrl(identifier, true);
+            setActiveCard(card);
+        }
+
+        function renderList() {
+            listEl.innerHTML = "";
+            videos.forEach(v => {
+                const card = document.createElement("article");
+                card.className = "item";
+                card.innerHTML = `
+          <div class="thumb">
+            <img loading="lazy" src="${thumbUrl(v.id)}" alt="${v.title}" />
+            <span class="badge">${v.tag ?? "Video"}</span>
+          </div>
+          <div class="meta">
+            <h3 class="title" title="${v.title}">${v.title}</h3>
+            <p class="desc">${v.desc ?? ""}</p>
+          </div>
+        `;
+                card.addEventListener("click", () => playIdentifier(v.id, card));
+                listEl.appendChild(card);
+            });
+
+            // Đặt active cho video đang phát (theo src hiện tại)
+            try {
+                const u = new URL(playerEl.src);
+                const parts = u.pathname.split("/");
+                const currentId = decodeURIComponent(parts[parts.length - 1] || "");
+                const idx = videos.findIndex(x => x.id.toLowerCase() === currentId.toLowerCase());
+                if (idx >= 0) setActiveCard(listEl.children[idx]);
+            } catch (_) { }
+        }
+
+        playBtn.addEventListener("click", () => {
+            const id = inputEl.value.trim();
+            if (!id) return;
+            playIdentifier(id, null);
+        });
+
+        // Khởi tạo
+        renderList();
+    </script>
+</body>
+
+</html>

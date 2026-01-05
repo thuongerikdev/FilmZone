@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Xem phim YouTube - Demo</title>
+    <style>
+        :root {
+            --bg: #0f1115;
+            --card: #171923;
+            --text: #e2e8f0;
+            --muted: #a0aec0;
+            --accent: #60a5fa;
+            --radius: 14px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, Inter, sans-serif;
+            background: radial-gradient(1200px 600px at 20% -10%, #1f2937, transparent 60%), var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1080px;
+            margin: 32px auto;
+            padding: 0 16px;
+        }
+
+        header {
+            margin-bottom: 18px;
+        }
+
+        h1 {
+            font-size: 22px;
+            margin: 0 0 8px;
+            letter-spacing: .3px;
+        }
+
+        .hint {
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .player {
+            background: #000;
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, .35);
+            aspect-ratio: 16/9;
+            /* responsive */
+            position: relative;
+        }
+
+        .player iframe {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+
+        .list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 14px;
+            margin-top: 18px;
+        }
+
+        .item {
+            background: linear-gradient(180deg, #1f2432, #181c29);
+            border: 1px solid #23283a;
+            border-radius: calc(var(--radius) - 4px);
+            cursor: pointer;
+            overflow: hidden;
+            transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+        }
+
+        .item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 28px rgba(0, 0, 0, .28);
+            border-color: #2a3150;
+        }
+
+        .thumb {
+            position: relative;
+            aspect-ratio: 16/9;
+            overflow: hidden;
+        }
+
+        .thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            filter: saturate(1.05) contrast(1.02);
+        }
+
+        .badge {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background: rgba(0, 0, 0, .65);
+            color: #fff;
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, .12);
+            backdrop-filter: blur(4px);
+        }
+
+        .meta {
+            padding: 10px 12px 12px;
+        }
+
+        .title {
+            font-size: 14px;
+            margin: 0 0 4px;
+            color: #dbe2ef;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            min-height: 38px;
+        }
+
+        .desc {
+            color: var(--muted);
+            font-size: 12px;
+            margin: 0;
+        }
+
+        .active {
+            outline: 2px solid var(--accent);
+            outline-offset: 0;
+        }
+
+        .bar {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin: 10px 0 2px;
+        }
+
+        .input {
+            flex: 1;
+            background: #0f1320;
+            color: var(--text);
+            border: 1px solid #23283a;
+            border-radius: 10px;
+            padding: 10px 12px;
+            font-size: 14px;
+        }
+
+        .btn {
+            background: var(--accent);
+            color: #0b1020;
+            border: 0;
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            filter: brightness(1.05);
+        }
+
+        footer {
+            color: var(--muted);
+            font-size: 12px;
+            margin-top: 20px;
+        }
+
+        a {
+            color: #93c5fd;
+            text-decoration: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>🎬 Xem phim YouTube (Demo)</h1>
+            <div class="hint">Chọn phim phía dưới hoặc dán <b>Video ID</b> YouTube để phát.</div>
+            <div class="bar">
+                <input id="videoIdInput" class="input" placeholder="Ví dụ: M7lc1UVf-VE" />
+                <button class="btn" id="playBtn">Phát video</button>
+            </div>
+        </header>
+
+        <!-- Player chính -->
+        <div class="player">
+            <iframe id="player" src="https://www.youtube.com/embed/M7lc1UVf-VE?rel=0&modestbranding=1"
+                title="YouTube player"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowfullscreen>
+            </iframe>
+        </div>
+
+        <!-- Danh sách phim gợi ý -->
+        <section class="list" id="videoList">
+            <!-- Render bằng JS -->
+        </section>
+
+        <footer>
+            Mẹo: Ảnh thumbnail dùng từ <code>https://img.youtube.com/vi/&lt;VIDEO_ID&gt;/hqdefault.jpg</code>.
+            Thay Video ID bằng video hợp pháp theo Quy định YouTube.
+        </footer>
+    </div>
+
+    <script>
+        // Danh sách mẫu (bạn thay ID + tiêu đề tuỳ ý)
+        const videos = [
+            {
+                id: "M7lc1UVf-VE",
+                title: "YouTube IFrame API Demo",
+                desc: "Video mẫu của YouTube",
+                duration: "3:33",
+            },
+            {
+                id: "aqz-KE-bpKQ",
+                title: "Big Buck Bunny (Open Movie)",
+                desc: "Phim mở - phù hợp demo phát trực tuyến",
+                duration: "10:34",
+            },
+            {
+                id: "ysz5S6PUM-U",
+                title: "Live Stream Test",
+                desc: "Video test phát trực tiếp",
+                duration: "—",
+            },
+            {
+                id: "dQw4w9WgXcQ",
+                title: "Surprise Classic",
+                desc: "MV nổi tiếng, dễ tìm",
+                duration: "3:33",
+            },
+        ];
+
+        const listEl = document.getElementById("videoList");
+        const playerEl = document.getElementById("player");
+        const inputEl = document.getElementById("videoIdInput");
+        const playBtn = document.getElementById("playBtn");
+
+        function thumbUrl(id) {
+            return `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
+        }
+
+        function setActiveCard(card) {
+            document.querySelectorAll(".item").forEach(el => el.classList.remove("active"));
+            card?.classList.add("active");
+            card?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+        }
+
+        function playVideo(id, card) {
+            const url = `https://www.youtube.com/embed/${id}?rel=0&modestbranding=1&autoplay=1`;
+            playerEl.src = url;
+            setActiveCard(card);
+        }
+
+        function renderList() {
+            listEl.innerHTML = "";
+            videos.forEach(v => {
+                const card = document.createElement("article");
+                card.className = "item";
+                card.innerHTML = `
+          <div class="thumb">
+            <img loading="lazy" src="${thumbUrl(v.id)}" alt="${v.title}" />
+            <span class="badge">${v.duration}</span>
+          </div>
+          <div class="meta">
+            <h3 class="title" title="${v.title}">${v.title}</h3>
+            <p class="desc">${v.desc}</p>
+          </div>
+        `;
+                card.addEventListener("click", () => playVideo(v.id, card));
+                listEl.appendChild(card);
+            });
+            // Đặt active cho video đang phát (theo src hiện tại)
+            const currentId = (new URL(playerEl.src)).pathname.split("/").pop()?.split("?")[0];
+            const initialIndex = videos.findIndex(x => x.id === currentId);
+            if (initialIndex >= 0) setActiveCard(listEl.children[initialIndex]);
+        }
+
+        playBtn.addEventListener("click", () => {
+            const id = inputEl.value.trim();
+            if (!id) return;
+            playVideo(id, null);
+        });
+
+        // Khởi tạo
+        renderList();
+    </script>
+</body>
+
+</html>
