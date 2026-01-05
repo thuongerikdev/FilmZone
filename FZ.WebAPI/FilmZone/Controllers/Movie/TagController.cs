@@ -81,7 +81,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("{TagID}")]
-        [Authorize(Policy = "TagRead")]
+        //[Authorize(Policy = "TagRead")]
         public async Task<IActionResult> GetTagById(int TagID, CancellationToken ct)
         {
             if (TagID <= 0)

@@ -69,7 +69,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("{tagID}")]
-        [Authorize(Policy = "MovieTagRead")]
+
         public async Task<IActionResult> GetMoviesByTag(int tagID, CancellationToken ct)
         {
             try
@@ -87,7 +87,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("{movieID}")]
-        [Authorize(Policy = "MovieTagRead")]
+
         public async Task<IActionResult> GetTagsByMovie(int movieID, CancellationToken ct)
         {
             try
@@ -105,7 +105,7 @@ namespace FZ.WebAPI.Controllers.Movie
             }
         }
         [HttpGet("getMovieByTagID")]
-        [Authorize(Policy = "MovieTagRead")]
+
         public async Task<IActionResult> GetMoviesByTagIDs ( [FromQuery] List<int> tagID ,CancellationToken ct)
         {
             try
