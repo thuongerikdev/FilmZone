@@ -11,11 +11,15 @@ import {
   FormControlLabel,
   Switch,
   CircularProgress,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from "@mui/material";
 import { tokens } from "../theme";
 import Header from "../components/Header";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import { getPlanById, updatePlan } from "../services/api";
+import { getPlanById, updatePlan, getAllScopeUser } from "../services/api";
 
 const PlanEdit = () => {
   const { planId } = useParams();
@@ -29,16 +33,43 @@ const PlanEdit = () => {
     name: "",
     description: "",
     isActive: true,
+    roleID: "", // Thêm roleID vào formData
   });
 
+  const [roles, setRoles] = useState([]); // State lưu danh sách vai trò
+  const [loadingRoles, setLoadingRoles] = useState(true); // State loading cho vai trò
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
   useEffect(() => {
-    fetchPlanDetail();
+    const initData = async () => {
+      await fetchRoles();
+      await fetchPlanDetail();
+    };
+    initData();
   }, [planId]);
+
+  // Hàm lấy danh sách vai trò (giống PlanCreate)
+  const fetchRoles = async () => {
+    try {
+      setLoadingRoles(true);
+      const response = await getAllScopeUser();
+      if (response.data.errorCode === 200) {
+        // Lọc các vai trò có scope là "user"
+        const userRoles = response.data.data.filter(role => role.scope === "user");
+        setRoles(userRoles);
+      } else {
+        setError("Không thể lấy danh sách vai trò");
+      }
+    } catch (err) {
+      console.error("Error fetching roles:", err);
+      setError("Có lỗi xảy ra khi lấy danh sách vai trò");
+    } finally {
+      setLoadingRoles(false);
+    }
+  };
 
   const fetchPlanDetail = async () => {
     try {
@@ -51,6 +82,7 @@ const PlanEdit = () => {
           name: data.name,
           description: data.description || "",
           isActive: data.isActive,
+          roleID: data.roleID, // Lấy roleID từ API detail
         });
       }
     } catch (error) {
@@ -169,6 +201,29 @@ const PlanEdit = () => {
                 placeholder="Nhập mô tả chi tiết về gói dịch vụ..."
               />
 
+              {/* Phần chọn vai trò được thêm vào */}
+              <FormControl variant="filled" fullWidth>
+                <InputLabel>Vai trò *</InputLabel>
+                {loadingRoles ? (
+                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", py: 2 }}>
+                    <CircularProgress size={24} />
+                  </Box>
+                ) : (
+                  <Select
+                    name="roleID"
+                    value={formData.roleID}
+                    onChange={handleChange}
+                    required
+                  >
+                    {roles.map((role) => (
+                      <MenuItem key={role.roleID} value={role.roleID}>
+                        {role.roleDescription} ({role.roleName})
+                      </MenuItem>
+                    ))}
+                  </Select>
+                )}
+              </FormControl>
+
               <Box sx={{ py: 2, px: 2, backgroundColor: colors.primary[300], borderRadius: 1 }}>
                 <FormControlLabel
                   control={
@@ -215,7 +270,7 @@ const PlanEdit = () => {
                 <Button
                   type="submit"
                   variant="contained"
-                  disabled={submitting}
+                  disabled={submitting || loadingRoles}
                   sx={{
                     backgroundColor: colors.greenAccent[600],
                     color: colors.grey[100],

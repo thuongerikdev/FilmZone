@@ -263,7 +263,7 @@ const Permissions = () => {
   return (
     <Box m="20px">
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-        <Header title="QUẢN LÝ QUYỀN (PERMISSIONS)" subtitle="Danh sách các quyền hạn trong hệ thống" />
+        <Header title="QUẢN LÝ QUYỀN" subtitle="Danh sách các quyền hạn trong hệ thống" />
         
         <Button
           variant="contained"

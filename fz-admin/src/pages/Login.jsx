@@ -44,6 +44,12 @@ const Login = () => {
         localStorage.setItem("refreshTokenExpiration", userData.refreshTokenExpiration);
         localStorage.setItem("sessionId", userData.sessionId);
         localStorage.setItem("deviceId", userData.deviceId);
+        
+        // Lưu permissions vào localStorage
+        if (userData.permissions) {
+          localStorage.setItem("permissions", JSON.stringify(userData.permissions));
+        }
+        
         localStorage.setItem("user", JSON.stringify({
           userID: userData.userID,
           userName: userData.userName,

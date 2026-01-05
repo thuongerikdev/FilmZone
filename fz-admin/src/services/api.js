@@ -201,7 +201,7 @@ export const createComment = data => {
 export const updateComment = data => {
     const token = localStorage.getItem('token');
     return api.put("/api/Comment/UpdateComment", data, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${token}`,  }
     });
 };
 
@@ -651,7 +651,7 @@ export const createPerson = (formData) => {
 export const updatePerson = data => {
     const token = localStorage.getItem('token');
     return api.put("/movie/Person/UpdatePerson", data, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'multipart/form-data' }
     });
 };
 
@@ -817,6 +817,13 @@ export const verifyRegisterEmail = data => {
 export const getAllRoles = () => {
     const token = localStorage.getItem('token');
     return api.get("/roles/getall", {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+};
+
+export const getAllScopeUser = () => {
+    const token = localStorage.getItem('token');
+    return api.get("/roles/getallscope-user", {
         headers: { 'Authorization': `Bearer ${token}` }
     });
 };
@@ -1331,6 +1338,11 @@ export const translateSubtitleFromSource = (data) => {
         headers: { 'Authorization': `Bearer ${token}` }
     });
 };
+
+export const cloneRole = data => {
+    const prefix = isAdmin() ? "/roles/admin" : "/roles";  
+    return api.post(`${prefix}/clonerole`, data)
+}
 
 // RolePermission APIs
 export const assignPermissionToRole = (data) => {

@@ -6,7 +6,6 @@ import {
   useTheme,
   Button,
   TextField,
-  Grid,
   Card,
   CardContent,
   Alert,
@@ -72,9 +71,9 @@ const PersonEdit = () => {
       const fd = new FormData();
       fd.append("personID", personId);
       fd.append("fullName", fullName);
-      fd.append("knownFor", knownFor); // Gửi nhưng backend không cho sửa
+      fd.append("knownFor", knownFor);
       if (biography) fd.append("biography", biography);
-      fd.append("regionID", regionID); // Gửi nhưng backend không cho sửa
+      fd.append("regionID", regionID);
       if (avatar) {
         fd.append("avatar", avatar);
       }
@@ -135,149 +134,150 @@ const PersonEdit = () => {
         </Alert>
       )}
 
-      <Card sx={{ backgroundColor: colors.primary[400] }}>
+      <Card sx={{ backgroundColor: colors.primary[400], maxWidth: "600px" }}>
         <CardContent>
-          <Box component="form" onSubmit={handleSubmit}>
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  variant="filled"
-                  label="Họ và tên *"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  required
-                />
-              </Grid>
+          <Box component="form" onSubmit={handleSubmit} sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            
+            {/* Họ và tên */}
+            <TextField
+              fullWidth
+              variant="filled"
+              label="Họ và tên *"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              required
+            />
 
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  variant="filled"
-                  label="Vai trò (Known For)"
-                  value={knownFor}
-                  disabled
-                  helperText="Không thể chỉnh sửa"
+            {/* Vai trò */}
+            <TextField
+              fullWidth
+              variant="filled"
+              label="Vai trò (Known For)"
+              value={knownFor}
+              disabled
+              helperText="Không thể chỉnh sửa"
+              sx={{
+                "& .MuiInputBase-input.Mui-disabled": {
+                  WebkitTextFillColor: colors.grey[300],
+                }
+              }}
+            />
+
+            {/* Ngày sinh */}
+            <TextField
+              fullWidth
+              variant="filled"
+              type="date"
+              label="Ngày sinh"
+              value={birthDate}
+              onChange={(e) => setBirthDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
+
+            {/* Region ID */}
+            <TextField
+              fullWidth
+              variant="filled"
+              type="number"
+              label="Region ID"
+              value={regionID}
+              disabled
+              helperText="Không thể chỉnh sửa"
+              sx={{
+                "& .MuiInputBase-input.Mui-disabled": {
+                  WebkitTextFillColor: colors.grey[300],
+                }
+              }}
+            />
+
+            {/* Avatar */}
+            <Box>
+              <Typography variant="body2" color={colors.grey[300]} mb={1} fontWeight="600">
+                Avatar hiện tại:
+              </Typography>
+              {currentAvatar && (
+                <Box
+                  component="img"
+                  src={currentAvatar}
+                  alt="Current avatar"
                   sx={{
-                    "& .MuiInputBase-input.Mui-disabled": {
-                      WebkitTextFillColor: colors.grey[300],
-                    }
+                    width: "120px",
+                    height: "120px",
+                    objectFit: "cover",
+                    borderRadius: "50%",
+                    mb: 2,
+                    border: `2px solid ${colors.grey[600]}`,
                   }}
                 />
-              </Grid>
+              )}
+              <Typography variant="body2" color={colors.grey[300]} mb={1} fontWeight="600">
+                Avatar mới (tùy chọn):
+              </Typography>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setAvatar(e.target.files?.[0] || null)}
+                style={{
+                  width: "100%",
+                  padding: "10px",
+                  backgroundColor: colors.primary[500],
+                  border: `1px solid ${colors.grey[700]}`,
+                  borderRadius: "4px",
+                  color: colors.grey[100],
+                  boxSizing: "border-box",
+                }}
+              />
+              <Typography variant="caption" color={colors.grey[400]} mt={1} display="block">
+                Để trống nếu không muốn thay đổi avatar
+              </Typography>
+            </Box>
 
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  variant="filled"
-                  type="date"
-                  label="Ngày sinh"
-                  value={birthDate}
-                  onChange={(e) => setBirthDate(e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
+            {/* Tiểu sử */}
+            <TextField
+              fullWidth
+              variant="filled"
+              label="Tiểu sử"
+              value={biography}
+              onChange={(e) => setBiography(e.target.value)}
+              multiline
+              rows={6}
+              placeholder="Nhập tiểu sử của diễn viên..."
+            />
 
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  variant="filled"
-                  type="number"
-                  label="Region ID"
-                  value={regionID}
-                  disabled
-                  helperText="Không thể chỉnh sửa"
-                  sx={{
-                    "& .MuiInputBase-input.Mui-disabled": {
-                      WebkitTextFillColor: colors.grey[300],
-                    }
-                  }}
-                />
-              </Grid>
-
-              <Grid item xs={12}>
-                <Typography variant="body2" color={colors.grey[300]} mb={1}>
-                  Avatar hiện tại:
-                </Typography>
-                {currentAvatar && (
-                  <Box
-                    component="img"
-                    src={currentAvatar}
-                    alt="Current avatar"
-                    sx={{
-                      width: "120px",
-                      height: "120px",
-                      objectFit: "cover",
-                      borderRadius: "50%",
-                      mb: 2,
-                    }}
-                  />
-                )}
-                <Typography variant="body2" color={colors.grey[300]} mb={1}>
-                  Avatar mới (tùy chọn):
-                </Typography>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setAvatar(e.target.files?.[0] || null)}
-                  style={{
-                    width: "100%",
-                    padding: "10px",
-                    backgroundColor: colors.primary[500],
-                    border: `1px solid ${colors.grey[700]}`,
-                    borderRadius: "4px",
-                    color: colors.grey[100],
-                  }}
-                />
-                <Typography variant="caption" color={colors.grey[400]} mt={1}>
-                  Để trống nếu không muốn thay đổi avatar
-                </Typography>
-              </Grid>
-
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  variant="filled"
-                  label="Tiểu sử"
-                  value={biography}
-                  onChange={(e) => setBiography(e.target.value)}
-                  multiline
-                  rows={6}
-                  placeholder="Nhập tiểu sử của diễn viên..."
-                />
-              </Grid>
-
-              <Grid item xs={12}>
-                <Box display="flex" justifyContent="flex-end" gap={2}>
-                  <Button
-                    variant="outlined"
-                    onClick={() => navigate("/persons")}
-                    sx={{
-                      borderColor: colors.grey[400],
-                      color: colors.grey[100],
-                    }}
-                  >
-                    Hủy
-                  </Button>
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    disabled={submitting}
-                    sx={{
-                      backgroundColor: colors.greenAccent[600],
-                      color: colors.grey[100],
-                      fontSize: "14px",
-                      fontWeight: "bold",
-                      "&:hover": {
-                        backgroundColor: colors.greenAccent[700],
-                      },
-                    }}
-                  >
-                    {submitting ? "Đang cập nhật..." : "Cập nhật"}
-                  </Button>
-                </Box>
-              </Grid>
-            </Grid>
+            {/* Nút action */}
+            <Box display="flex" justifyContent="flex-end" gap={2}>
+              <Button
+                variant="outlined"
+                onClick={() => navigate("/persons")}
+                sx={{
+                  borderColor: colors.grey[400],
+                  color: colors.grey[100],
+                  minWidth: "120px",
+                }}
+              >
+                Hủy
+              </Button>
+              <Button
+                type="submit"
+                variant="contained"
+                disabled={submitting}
+                sx={{
+                  backgroundColor: colors.greenAccent[600],
+                  color: colors.grey[100],
+                  fontSize: "14px",
+                  fontWeight: "bold",
+                  minWidth: "120px",
+                  "&:hover": {
+                    backgroundColor: colors.greenAccent[700],
+                  },
+                  "&:disabled": {
+                    backgroundColor: colors.greenAccent[800],
+                  },
+                }}
+              >
+                {submitting ? "Đang cập nhật..." : "Cập nhật"}
+              </Button>
+            </Box>
           </Box>
         </CardContent>
       </Card>

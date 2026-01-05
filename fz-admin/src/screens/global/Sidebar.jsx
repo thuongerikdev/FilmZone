@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ProSidebar, Menu, MenuItem } from "react-pro-sidebar";
 import { Box, IconButton, Typography, useTheme } from "@mui/material";
 import { Link } from "react-router-dom";
@@ -46,6 +46,29 @@ const Sidebar = ({ onCollapsedChange }) => {
   const colors = tokens(theme.palette.mode);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [selected, setSelected] = useState("Bảng Điều Khiển");
+  const [permissions, setPermissions] = useState([]);
+
+  // Lấy permissions từ localStorage khi component mount
+  useEffect(() => {
+    const userData = localStorage.getItem("user");
+    if (userData) {
+      try {
+        const user = JSON.parse(userData);
+        // Lấy permissions từ response login
+        const storedPermissions = localStorage.getItem("permissions");
+        if (storedPermissions) {
+          setPermissions(JSON.parse(storedPermissions));
+        }
+      } catch (error) {
+        console.error("Error parsing user data:", error);
+      }
+    }
+  }, []);
+
+  // Hàm kiểm tra quyền hạn
+  const hasPermission = (permission) => {
+    return permissions.includes(permission);
+  };
 
   const handleCollapse = () => {
     const newCollapsedState = !isCollapsed;
@@ -110,131 +133,162 @@ const Sidebar = ({ onCollapsedChange }) => {
 
           {/* MENU ITEMS */}
           <Box paddingLeft={isCollapsed ? undefined : "10%"}>
-            {/* DASHBOARD */}
-            <Item
-              title="Bảng Điều Khiển"
-              to="/"
-              icon={<HomeOutlinedIcon />}
-              selected={selected}
-              setSelected={setSelected}
-            />
+            {/* DASHBOARD - Chỉ hiển thị khi có cả 3 quyền */}
+            {hasPermission("user.read_list") && 
+             hasPermission("movie.manage") && 
+             hasPermission("plan.manage") && (
+              <Item
+                title="Bảng Điều Khiển"
+                to="/"
+                icon={<HomeOutlinedIcon />}
+                selected={selected}
+                setSelected={setSelected}
+              />
+            )}
 
             {/* ============================================ */}
             {/* NHÓM 1: QUẢN LÝ NGƯỜI DÙNG */}
             {/* ============================================ */}
-            <Typography
-              variant="h6"
-              color={colors.grey[300]}
-              sx={{ m: "15px 0 5px 20px", fontWeight: 600 }}
-            >
-              👥 Quản lý Người Dùng
-            </Typography>
-            <Item
-              title="Danh Sách Users"
-              to="/users"
-              icon={<PeopleOutlinedIcon />}
-              selected={selected}
-              setSelected={setSelected}
-            />
-            <Item
-              title="Hồ Sơ Cá Nhân"
-              to="/profile"
-              icon={<PersonOutlinedIcon />}
-              selected={selected}
-              setSelected={setSelected}
-            />
-            <Item
-              title="Vai Trò (Roles)"
-              to="/roles"
-              icon={<AdminPanelSettingsOutlinedIcon />}
-              selected={selected}
-              setSelected={setSelected}
-            />
-            <Item
-              title="Quyền Hạn (Permissions)"
-              to="/permissions"
-              icon={<VpnKeyOutlinedIcon />}
-              selected={selected}
-              setSelected={setSelected}
-            />
+            {hasPermission("user.read_list") && (
+              <>
+                <Typography
+                  variant="h6"
+                  color={colors.grey[300]}
+                  sx={{ m: "15px 0 5px 20px", fontWeight: 600 }}
+                >
+                  👥 Quản lý Người Dùng
+                </Typography>
+                {hasPermission("user.read_list") && (
+                  <Item
+                    title="Danh Sách Users"
+                    to="/users"
+                    icon={<PeopleOutlinedIcon />}
+                    selected={selected}
+                    setSelected={setSelected}
+                  />
+                )}
+                {hasPermission("role.read") && (
+                  <Item
+                    title="Vai Trò"
+                    to="/roles"
+                    icon={<AdminPanelSettingsOutlinedIcon />}
+                    selected={selected}
+                    setSelected={setSelected}
+                  />
+                )}
+                {hasPermission("permission.read") && (
+                  <Item
+                    title="Quyền Hạn"
+                    to="/permissions"
+                    icon={<VpnKeyOutlinedIcon />}
+                    selected={selected}
+                    setSelected={setSelected}
+                  />
+                )}
+              </>
+            )}
 
             {/* ============================================ */}
             {/* NHÓM 2: QUẢN LÝ NỘI DUNG */}
             {/* ============================================ */}
-            <Typography
-              variant="h6"
-              color={colors.grey[300]}
-              sx={{ m: "15px 0 5px 20px", fontWeight: 600 }}
-            >
-              🎬 Quản lý Nội dung
-            </Typography>
-            <Item
-              title="Danh Sách Phim"
-              to="/movies"
-              icon={<MovieOutlinedIcon />}
-              selected={selected}
-              setSelected={setSelected}
-            />
-            <Item
-              title="Diễn Viên & Đạo Diễn"
-              to="/persons"
-              icon={<PeopleAltOutlinedIcon />}
-              selected={selected}
-              setSelected={setSelected}
-            />
-            <Item
-              title="Quốc Gia (Regions)"
-              to="/regions"
-              icon={<MapOutlinedIcon />}
-              selected={selected}
-              setSelected={setSelected}
-            />
-            <Item
-              title="Thể Loại (Tags)"
-              to="/tags"
-              icon={<LocalOfferOutlinedIcon />}
-              selected={selected}
-              setSelected={setSelected}
-            />
+            {hasPermission("movie.manage") && (
+              <>
+                <Typography
+                  variant="h6"
+                  color={colors.grey[300]}
+                  sx={{ m: "15px 0 5px 20px", fontWeight: 600 }}
+                >
+                  🎬 Quản lý Nội dung
+                </Typography>
+                {hasPermission("movie.manage") && (
+                  <Item
+                    title="Danh Sách Phim"
+                    to="/movies"
+                    icon={<MovieOutlinedIcon />}
+                    selected={selected}
+                    setSelected={setSelected}
+                  />
+                )}
+                {hasPermission("person.manage") && (
+                  <Item
+                    title="Diễn Viên & Đạo Diễn"
+                    to="/persons"
+                    icon={<PeopleAltOutlinedIcon />}
+                    selected={selected}
+                    setSelected={setSelected}
+                  />
+                )}
+                {hasPermission("region.manage") && (
+                  <Item
+                    title="Quốc Gia"
+                    to="/regions"
+                    icon={<MapOutlinedIcon />}
+                    selected={selected}
+                    setSelected={setSelected}
+                  />
+                )}
+                {hasPermission("tag.manage") && (
+                  <Item
+                    title="Thể Loại"
+                    to="/tags"
+                    icon={<LocalOfferOutlinedIcon />}
+                    selected={selected}
+                    setSelected={setSelected}
+                  />
+                )}
+              </>
+            )}
 
             {/* ============================================ */}
             {/* NHÓM 3: QUẢN LÝ TÀI CHÍNH */}
             {/* ============================================ */}
-            <Typography
-              variant="h6"
-              color={colors.grey[300]}
-              sx={{ m: "15px 0 5px 20px", fontWeight: 600 }}
-            >
-              💰 Quản lý Tài Chính
-            </Typography>
-            <Item
-              title="Gói Dịch Vụ"
-              to="/plans"
-              icon={<CardMembershipOutlinedIcon />}
-              selected={selected}
-              setSelected={setSelected}
-            />
-            <Item
-              title="Hóa Đơn"
-              to="/invoices"
-              icon={<ReceiptOutlinedIcon />}
-              selected={selected}
-              setSelected={setSelected}
-            />
-            <Item
-              title="Biểu Đồ Doanh Thu"
-              to="/bar"
-              icon={<BarChartOutlinedIcon />}
-              selected={selected}
-              setSelected={setSelected}
-            />
-            <Item
-              title="Xu Hướng Tăng Trưởng"
-              to="/line"
-              icon={<TimelineOutlinedIcon />}
-              selected={selected}
-              setSelected={setSelected}
-            />
+            {hasPermission("plan.manage") && (
+              <>
+                <Typography
+                  variant="h6"
+                  color={colors.grey[300]}
+                  sx={{ m: "15px 0 5px 20px", fontWeight: 600 }}
+                >
+                  💰 Quản lý Tài Chính
+                </Typography>
+                {hasPermission("plan.manage") && (
+                  <Item
+                    title="Gói Dịch Vụ"
+                    to="/plans"
+                    icon={<CardMembershipOutlinedIcon />}
+                    selected={selected}
+                    setSelected={setSelected}
+                  />
+                )}
+                {hasPermission("invoice.read_all") && (
+                  <Item
+                    title="Hóa Đơn"
+                    to="/invoices"
+                    icon={<ReceiptOutlinedIcon />}
+                    selected={selected}
+                    setSelected={setSelected}
+                  />
+                )}
+                {hasPermission("order.read_all") && (
+                  <Item
+                    title="Biểu Đồ Doanh Thu"
+                    to="/bar"
+                    icon={<BarChartOutlinedIcon />}
+                    selected={selected}
+                    setSelected={setSelected}
+                  />
+                )}
+                {hasPermission("order.read_all") && (
+                  <Item
+                    title="Xu Hướng Tăng Trưởng"
+                    to="/line"
+                    icon={<TimelineOutlinedIcon />}
+                    selected={selected}
+                    setSelected={setSelected}
+                  />
+                )}
+              </>
+            )}
           </Box>
         </Menu>
       </ProSidebar>

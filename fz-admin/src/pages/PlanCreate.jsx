@@ -19,7 +19,7 @@ import {
 import { tokens } from "../theme";
 import Header from "../components/Header";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import { createPlan, getAllRoles } from "../services/api";
+import { createPlan, getAllRoles, getAllScopeUser } from "../services/api";
 
 const PlanCreate = () => {
   const theme = useTheme();
@@ -48,7 +48,7 @@ const PlanCreate = () => {
   const fetchRoles = async () => {
     try {
       setLoadingRoles(true);
-      const response = await getAllRoles();
+      const response = await getAllScopeUser();
       
       if (response.data.errorCode === 200) {
         // Filter roles with scope "user"

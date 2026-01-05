@@ -215,8 +215,8 @@ const Invoices = () => {
   return (
     <Box m="20px">
       <Header 
-        title="QUẢN LÝ ĐƠN HÀNG" 
-        subtitle="Danh sách tất cả đơn hàng và thanh toán" 
+        title="QUẢN LÝ HOÁ ĐƠN" 
+        subtitle="Danh sách tất cả Hoá đơn" 
       />
       <Box
         m="40px 0 0 0"
