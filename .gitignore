@@ -1,0 +1,101 @@
+﻿############################
+# OS / IDE
+############################
+# Windows / macOS
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+# VS / VS Code / JetBrains
+.vs/
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.sample.json
+
+############################
+# .NET (C#)
+############################
+**/bin/
+**/obj/
+*.user
+*.suo
+*.rsuser
+*.sln.iml
+
+# Publish / Test
+**/TestResults/
+*.coverage
+*.coveragexml
+*.trx
+
+# Local config thường chứa bí mật
+appsettings.*.Local.json
+
+# SQL Server artifacts
+*.mdf
+*.ldf
+*.ndf
+*.bak
+
+############################
+# Node / Next.js (filmzone)
+############################
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json.*
+pnpm-lock.yaml.*
+yarn.lock.*
+
+.next/
+.next/cache/
+.turbo/
+dist/
+out/
+coverage/
+.cache/
+.eslintcache
+
+############################
+# Docker / Compose / Fly.io
+############################
+# Không ignore .dockerignore – cần theo dõi để tối ưu build context
+# .dockerignore
+
+# Compose override/local (nếu có)
+docker-compose.override.yml
+docker-compose.local.yml
+
+# Runtime artifacts
+**/*.pid
+**/*.pid.lock
+
+############################
+# Env files
+############################
+# Bảo vệ biến môi trường thật – dùng Actions Secrets thay thế
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.sample
+
+############################
+# Logs & Misc
+############################
+logs/
+*.log
+*.tmp
+*.temp
+
+# Redis / DB dumps
+dump.rdb
+*.sql
+
+# NPM/PNPM store
+.pnpm-store/
+
+*.txt
