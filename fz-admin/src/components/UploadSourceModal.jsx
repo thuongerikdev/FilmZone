@@ -411,8 +411,33 @@ const UploadSourceModal = ({ open, onClose, movieId, movieTitle, onUploadSuccess
 
           {/* --- PROGRESS & LOGS --- */}
           <Grid item xs={12}>
-             <ProgressBar label="Video Upload" percent={clientPct} color={colors.blueAccent[500]} />
-             <ProgressBar label="Processing" percent={serverPct} color={colors.greenAccent[500]} />
+              {/* THANH 1: CLIENT UPLOAD (Chỉ hiện khi không phải là Link) */}
+              {provider !== "archive-link" && (
+                  <Collapse in={clientPct < 100 || serverPct === 0}>
+                      <ProgressBar 
+                          label="1. Upload Video từ máy lên Server" 
+                          percent={clientPct} 
+                          color={colors.blueAccent[500]}
+                          hint={clientPct === 100 
+                              ? "Upload hoàn tất. Đang chờ Server xử lý..." 
+                              : "Đang tải file video lên..."} 
+                      />
+                  </Collapse>
+              )}
+
+              {/* THANH 2: SERVER PROCESSING (Hiện khi đang dùng Link hoặc File đã upload xong) */}
+              <Collapse in={provider === "archive-link" || clientPct >= 100 || serverPct > 0}>
+                  <ProgressBar 
+                      label={provider === "archive-link" ? "Tiến độ xử lý" : "2. Server xử lý (Encode / Upload Cloud)"}
+                      percent={serverPct} 
+                      color={colors.greenAccent[500]} 
+                      hint={
+                          serverPct === 100 
+                          ? "Hoàn tất!" 
+                          : (serverProgress.length > 0 ? serverProgress[serverProgress.length - 1].text : "Đang chờ hàng đợi...")
+                      }
+                  />
+              </Collapse>
           </Grid>
 
           <Grid item xs={12}>

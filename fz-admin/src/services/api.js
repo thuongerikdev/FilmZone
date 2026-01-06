@@ -193,10 +193,21 @@ export const commitPasswordForgot = data => {
     })
 }
 
-// ArchiveUpload APIs
-export const uploadArchiveFile = data => {
+export const uploadArchiveFile = (data, config) => {
+    // 1. Thêm tham số config
     const token = localStorage.getItem("token")
     return api.post("/api/upload/archive/file", data, {
+        ...config, // 2. Truyền config (chứa onUploadProgress) vào axios
+        headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+        },
+    })
+}
+
+export const uploadYoutubeFile = data => {
+    const token = localStorage.getItem("token")
+    return api.post("/api/upload/youtube/file", data, {
         headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "multipart/form-data",
@@ -1203,15 +1214,6 @@ export const getWatchProgressByMovieId = movieId => {
 }
 
 // YouTubeUpload APIs
-export const uploadYoutubeFile = data => {
-    const token = localStorage.getItem("token")
-    return api.post("/api/upload/youtube/file", data, {
-        headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-        },
-    })
-}
 
 // Movie Subtitle APIs
 export const updateMovieSubtitle = async data => {
