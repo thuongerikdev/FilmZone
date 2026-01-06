@@ -191,50 +191,64 @@ const UploadSourceModal = ({ open, onClose, movieId, movieTitle, onUploadSuccess
     pushLog({ type: "info", text: "Đang tìm Source ID vừa tạo..." });
 
     try {
-        // 1. Xác định API endpoint dựa trên Scope (Movie hay Episode)
+        // 1. Xác định API endpoint dựa trên Scope
         const isMovie = scope === 'movie';
 
         const sourcesRes = isMovie
             ? await getMovieSourcesByMovieId(movieId)
             : await getEpisodeSourcesByEpisodeId(movieId);
-        const sourcesData = await sourcesRes.json();
+        
+        // --- SỬA Ở ĐÂY: Bỏ .json(), dùng .data ---
+        // SAI: const sourcesData = await sourcesRes.json();
+        const sourcesData = sourcesRes.data; 
         
         if (sourcesData.errorCode !== 200 || !sourcesData.data || sourcesData.data.length === 0) {
             throw new Error("Không tìm thấy Source ID để tạo Subtitle.");
         }
 
-        // 2. Tìm Source mới nhất (ID lớn nhất)
+        // 2. Tìm Source mới nhất (giữ nguyên)
         const idKey = isMovie ? 'movieSourceID' : 'episodeSourceID';
         const latestSource = sourcesData.data.sort((a, b) => b[idKey] - a[idKey])[0];
         const sourceId = latestSource[idKey];
 
         pushLog({ type: "info", text: `Đã tìm thấy ${isMovie ? 'Movie' : 'Episode'} Source ID: ${sourceId}. Đang gửi video để tạo sub...` });
 
-        // 3. Gọi API Upload Subtitle
+        // 3. Gọi API Upload Subtitle (giữ nguyên)
         const subFd = new FormData();
         subFd.append("sourceID", sourceId);
-        subFd.append("videoFile", file); // Dùng lại file video vừa upload
+        subFd.append("videoFile", file);
         subFd.append("externalApiUrl", externalApiUrl);
         subFd.append("apiToken", apiToken);
-        subFd.append("type", scope); // 'movie' hoặc 'episode'
+        subFd.append("type", scope);
 
+        console.log("Đang gọi API Subtitle...");
         const subResponse = await uploadMovieSubtitle(subFd);
+        
+        // Log để kiểm tra (như bạn vừa làm)
+        console.log("Sub Response Raw:", subResponse);
 
-        const subResult = await subResponse.json();
+        // --- SỬA LẠI ĐOẠN NÀY ---
+        // Vì log cho thấy đây là 'Response' object của Fetch API
+        // Chúng ta MẮT BUỘC phải dùng .json() để lấy dữ liệu
+        const subResult = await subResponse.json(); 
 
-        if (subResult.errorCode === 200) {
+        console.log("Sub Result Parsed:", subResult);
+
+        // Kiểm tra kết quả sau khi parse
+        if (subResult && subResult.errorCode === 200) {
             pushLog({ type: "completed", text: `Subtitle Job Created! ID: ${subResult.data}` });
             setSuccessMsg("Hoàn tất! Video đã lên và yêu cầu tạo Subtitle đã được gửi.");
         } else {
-            throw new Error(subResult.errorMessage || "Lỗi khi gọi API Subtitle");
+            throw new Error(subResult?.errorMessage || "Lỗi khi gọi API Subtitle");
         }
 
     } catch (err) {
+        // ... giữ nguyên phần catch lỗi
         const msg = err.message || "Lỗi quy trình tạo Subtitle";
         pushLog({ type: "error", text: msg });
         setErrorMsg(`Video thành công nhưng Subtitle lỗi: ${msg}`);
     } finally {
-        setSubmitting(false); // Enable nút đóng
+        setSubmitting(false);
         if (onUploadSuccess) onUploadSuccess();
     }
   };
