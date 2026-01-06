@@ -13,6 +13,7 @@ using System.Linq;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using System.Threading; // Cần thêm namespace này để dùng Timeout
 using System.Threading.Tasks;
 
 namespace FZ.Movie.ApplicationService.Service.Implements.Media
@@ -21,7 +22,6 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media
     {
         Task<ResponseDto<string>> SendRequestAsync(AutoGenerateSubTitleRequest request, CancellationToken ct);
         Task<ResponseDto<bool>> HandleCallbackAsync(TranscribeCallbackRequest request, CancellationToken ct);
-
         Task<ResponseDto<string>> TranslateFromRawDataAsync(TranslateSourceRawRequest request, CancellationToken ct);
     }
 
@@ -36,7 +36,6 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media
         private readonly IMovieSourceRepository _movieSourceRepository;
         private readonly IEpisodeSubTitleRepository _episodeSubTitleRepository;
         private readonly IEpisodeSourceRepository _episodeSourceRepository;
-        // private readonly IEpisodeSourceRepository _episodeSourceRepository; // Inject thêm nếu cần update raw data cho episode
 
         public TranscribeIntegrationService(
             IHttpClientFactory httpClientFactory,
@@ -57,6 +56,7 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media
             _episodeSourceRepository = episodeSourceRepository;
             _episodeSubTitleRepository = episodeSubTitleRepository;
         }
+
         public async Task<ResponseDto<string>> TranslateFromRawDataAsync(TranslateSourceRawRequest request, CancellationToken ct)
         {
             try
@@ -91,8 +91,7 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media
                     return ResponseConst.Error<string>(400, "Source này chưa có dữ liệu Raw SubTitle.");
                 }
 
-                // 3. Deserialize chuỗi JSON từ DB thành List Object
-                // DB lưu: "[{\"start\":0...}]" -> Cần chuyển thành List<RawSegmentDto>
+                // 3. Deserialize
                 List<RawSegmentDto> segments;
                 try
                 {
@@ -111,7 +110,11 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media
 
                 // 4. Chuẩn bị gọi External API
                 var client = _httpClientFactory.CreateClient();
-                client.Timeout = TimeSpan.FromMinutes(5);
+
+                // --- CHỈNH SỬA Ở ĐÂY: KHÔNG BAO GIỜ TIMEOUT ---
+                client.Timeout = Timeout.InfiniteTimeSpan;
+                // ----------------------------------------------
+
                 var targetUrl = request.externalApiUrl.TrimEnd('/') + "/translate/segments";
 
                 if (!string.IsNullOrEmpty(request.apiToken))
@@ -124,7 +127,7 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media
                 // 5. Đóng gói Payload gửi đi
                 var payload = new
                 {
-                    segments = segments,           // List object đã deserialize
+                    segments = segments,
                     language = request.targetLanguage,
                     type = request.type.ToLower(),
                     source_id = request.sourceID.ToString()
@@ -159,7 +162,10 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media
             try
             {
                 var client = _httpClientFactory.CreateClient();
-                client.Timeout = TimeSpan.FromMinutes(30);
+
+                // --- CHỈNH SỬA Ở ĐÂY: KHÔNG BAO GIỜ TIMEOUT ---
+                client.Timeout = Timeout.InfiniteTimeSpan;
+                // ----------------------------------------------
 
                 var targetUrl = request.externalApiUrl.TrimEnd('/') + "/transcribe/process";
 
@@ -169,8 +175,6 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media
                 content.Add(new StreamContent(fileStream), "file", request.videoFile.FileName);
                 content.Add(new StringContent("turbo"), "model_id");
                 content.Add(new StringContent("srt"), "output_format");
-
-                // QUAN TRỌNG: Gửi Type và SourceID đi
                 content.Add(new StringContent(request.type.ToLower()), "type");
                 content.Add(new StringContent(request.sourceID.ToString()), "source_id");
 
@@ -187,7 +191,6 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media
                     return ResponseConst.Error<string>((int)response.StatusCode, msg);
                 }
 
-                // Giả sử API trả về JSON: { "task_id": "..." }
                 var result = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: ct);
                 string taskId = result.GetProperty("task_id").GetString();
 
@@ -200,11 +203,11 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media
             }
         }
 
+        // ... (Phần HandleCallbackAsync giữ nguyên không thay đổi) ...
         public async Task<ResponseDto<bool>> HandleCallbackAsync(TranscribeCallbackRequest request, CancellationToken ct)
         {
             _logger.LogInformation("Callback Received: Type={Type}, ID={Id}", request.type, request.sourceID);
 
-            // 1. Upload SRT (Logic chung)
             var srtFileName = $"{request.type}_{request.sourceID}_{DateTime.UtcNow.Ticks}.srt";
             var srtBytes = Encoding.UTF8.GetBytes(request.srt);
             using var stream = new MemoryStream(srtBytes);
@@ -217,7 +220,6 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media
             var cloudUrl = await _cloudinaryService.UploadSrtAsync(formFile);
             if (string.IsNullOrEmpty(cloudUrl)) return ResponseConst.Error<bool>(500, "Upload Cloudinary Failed");
 
-            // 2. Phân loại xử lý
             switch (request.type?.ToLower())
             {
                 case "movie":
@@ -260,7 +262,6 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media
 
         private async Task<ResponseDto<bool>> SaveEpisodeData(TranscribeCallbackRequest request, string cloudUrl, CancellationToken ct)
         {
-
             var source = await _episodeSourceRepository.GetByIdAsync(request.sourceID, ct);
             if (source == null) return ResponseConst.Error<bool>(404, "Movie Source Not Found");
 
@@ -275,7 +276,6 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media
                 updatedAt = DateTime.UtcNow
             };
 
-            // Có thể update rawSubTitle cho EpisodeSource tại đây nếu cần
             source.rawSubTitle = JsonSerializer.Serialize(request.RawSegments);
             source.updatedAt = DateTime.UtcNow;
 
@@ -289,5 +289,4 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media
             return ResponseConst.Success("Saved Episode Subtitle", true);
         }
     }
-
 }
