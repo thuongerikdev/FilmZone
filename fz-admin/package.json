@@ -1,6 +1,7 @@
 {
   "name": "fz-admin",
   "version": "0.1.0",
+  "homepage": "https://thuongerikdev.github.io/FilmZone",
   "private": true,
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -41,6 +42,8 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
+    "predeploy": "npm run build && shx cp build/index.html build/404.html",
+    "deploy": "gh-pages -d build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
@@ -61,5 +64,9 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "gh-pages": "^6.3.0",
+    "shx": "^0.4.0"
   }
 }
