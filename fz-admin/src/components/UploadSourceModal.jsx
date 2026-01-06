@@ -197,7 +197,7 @@ const UploadSourceModal = ({ open, onClose, movieId, movieTitle, onUploadSuccess
         const sourcesRes = isMovie
             ? await getMovieSourcesByMovieId(movieId)
             : await getEpisodeSourcesByEpisodeId(movieId);
-        const sourcesData = await sourcesRes.json();
+        const sourcesData = sourcesRes.data;
         
         if (sourcesData.errorCode !== 200 || !sourcesData.data || sourcesData.data.length === 0) {
             throw new Error("Không tìm thấy Source ID để tạo Subtitle.");
