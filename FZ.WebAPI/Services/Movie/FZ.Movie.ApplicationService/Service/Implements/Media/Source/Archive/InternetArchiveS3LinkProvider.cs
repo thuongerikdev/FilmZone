@@ -38,11 +38,17 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media.Source.Archive
                     return new(false, null, null, null, $"Fetch link failed: {(int)res.StatusCode}");
 
                 var total = res.Content.Headers.ContentLength ?? 0;
-                var fileName = GuessFileName(ctx.LinkUrl, res) ?? "video.mp4";
+
+                // --- SỬA ĐỔI 1: Xử lý tên file kỹ hơn để đảm bảo có đuôi video ---
+                var rawFileName = GuessFileName(ctx.LinkUrl, res) ?? "video.mp4";
+                var fileName = EnsureVideoExtension(rawFileName);
+                // -----------------------------------------------------------------
 
                 // nếu không biết length → buffer tạm để có Content-Length
                 Stream uploadStream;
                 long uploadLength;
+
+                // (Giữ nguyên phần logic buffer temp file...)
                 if (total <= 0)
                 {
                     tempPath = Path.Combine(Path.GetTempPath(), $"ia_buf_{Guid.NewGuid():N}.bin");
@@ -83,8 +89,13 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media.Source.Archive
                 {
                     // 2) Build identifier + target URL
                     var prefix = _cfg["Archive:BucketPrefix"] ?? "fz-";
+                    // Lưu ý: DateTime.UtcNow nên format cố định để tránh lỗi identifier
                     var identifier = MakeIdentifier(prefix, fileName, DateTime.UtcNow);
+
+                    // Mã hóa tên file để dùng trên URL
                     var safeFileName = WebUtility.UrlEncode(fileName);
+
+                    // URL để upload lên S3
                     var targetUrl = $"https://s3.us.archive.org/{identifier}/{safeFileName}";
 
                     // 3) Headers
@@ -115,6 +126,7 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media.Source.Archive
 
                     if (uploadStream.CanSeek) uploadStream.Seek(0, SeekOrigin.Begin);
 
+                    // (Giữ nguyên logic ProgressStream...)
                     long uploaded = 0;
                     var ps = new ProgressStream(uploadStream, adv =>
                     {
@@ -141,7 +153,7 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media.Source.Archive
 
                     var content = new StreamContent(ps);
                     content.Headers.ContentType = new MediaTypeHeaderValue(mime);
-                    content.Headers.ContentLength = uploadLength; // ✅ BẮT BUỘC
+                    content.Headers.ContentLength = uploadLength;
                     req.Content = content;
 
                     var http = _httpFactory.CreateClient("archive");
@@ -154,14 +166,18 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media.Source.Archive
                         return new(false, null, null, null, $"Archive PUT failed: {(int)put.StatusCode} {body}");
                     }
 
-                    var details = $"https://archive.org/details/{identifier}";
+                    // --- SỬA ĐỔI 2: Tạo direct link MP4 thay vì link details ---
+                    var detailsLink = $"https://archive.org/details/{identifier}";
+                    var downloadLink = $"https://archive.org/download/{identifier}/{safeFileName}";
+
                     await _hub.Clients.Group(ctx.JobId).SendAsync(
                         "upload.progress",
                         new { jobId = ctx.JobId, status = "Processing", percent = 100, text = "Deriving on Archive.org..." },
                         ctx.Ct
                     );
 
-                    return new(true, identifier, $"/details/{identifier}", details, null);
+                    // Tham số thứ 4 là PlayerUrl => Trả về downloadLink
+                    return new(true, identifier, $"/details/{identifier}", downloadLink, null);
                 }
             }
             catch (OperationCanceledException)
@@ -191,6 +207,23 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media.Source.Archive
             return string.IsNullOrWhiteSpace(last) ? null : WebUtility.UrlDecode(last);
         }
 
+        // Hàm mới: Đảm bảo file có đuôi video
+        private static string EnsureVideoExtension(string fileName)
+        {
+            // Danh sách đuôi phổ biến
+            var validExtensions = new[] { ".mp4", ".mkv", ".webm", ".avi", ".mov", ".flv", ".wmv", ".m4v" };
+
+            // Kiểm tra xem file đã có đuôi hợp lệ chưa
+            var ext = Path.GetExtension(fileName);
+            if (!string.IsNullOrEmpty(ext) && validExtensions.Contains(ext.ToLowerInvariant()))
+            {
+                return fileName;
+            }
+
+            // Nếu không có hoặc đuôi lạ, ép về .mp4
+            return $"{fileName}.mp4";
+        }
+
         private static string GuessVideoMime(string fileName)
         {
             var lower = fileName.ToLowerInvariant();
@@ -204,7 +237,13 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media.Source.Archive
 
         private static string MakeIdentifier(string prefix, string name, DateTime now)
         {
-            var baseName = Regex.Replace(Path.GetFileNameWithoutExtension(name).ToLowerInvariant(), "[^a-z0-9]+", "-").Trim('-');
+            // Lấy tên file không có đuôi để làm ID
+            var safeName = Path.GetFileNameWithoutExtension(name);
+            var baseName = Regex.Replace(safeName.ToLowerInvariant(), "[^a-z0-9]+", "-").Trim('-');
+
+            // Giới hạn độ dài baseName để tránh ID quá dài
+            if (baseName.Length > 50) baseName = baseName.Substring(0, 50);
+
             return $"{prefix}{baseName}-{now:yyyyMMddHHmmss}";
         }
     }

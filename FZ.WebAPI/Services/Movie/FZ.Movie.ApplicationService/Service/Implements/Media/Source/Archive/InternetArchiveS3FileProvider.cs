@@ -32,10 +32,18 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media.Source.Archive
             {
                 // 1) Build identifier + target URL
                 var prefix = _cfg["Archive:BucketPrefix"] ?? "fz-";
-                // Bắt buộc giữ đuôi hợp lệ để IA nhận diện
-                var fileName = string.IsNullOrWhiteSpace(ctx.FileName) ? "movie.mp4" : ctx.FileName;
+
+                // --- SỬA ĐỔI 1: Đảm bảo tên file luôn có đuôi video ---
+                var rawFileName = string.IsNullOrWhiteSpace(ctx.FileName) ? "movie.mp4" : ctx.FileName;
+                var fileName = EnsureVideoExtension(rawFileName);
+                // ------------------------------------------------------
+
+                // Lưu ý: DateTime.UtcNow nên format cố định để tránh lỗi identifier
                 var identifier = MakeIdentifier(prefix, fileName, DateTime.UtcNow);
+
+                // Mã hóa tên file để dùng trên URL
                 var safeFileName = WebUtility.UrlEncode(fileName);
+
                 var targetUrl = $"https://s3.us.archive.org/{identifier}/{safeFileName}";
 
                 // 2) Headers (ASCII-only)
@@ -44,7 +52,6 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media.Source.Archive
                 if (string.IsNullOrWhiteSpace(ak) || string.IsNullOrWhiteSpace(sk))
                     return new(false, null, null, null, "Archive credentials missing");
 
-                // ⚠️ Chọn collection mà key có quyền: "community" hoặc "opensource_movies" hay collection của bạn
                 var collection = _cfg["Archive:Collection"] ?? "community";
 
                 var titleOriginal = Path.GetFileNameWithoutExtension(fileName);
@@ -54,18 +61,16 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media.Source.Archive
 
                 var req = new HttpRequestMessage(HttpMethod.Put, targetUrl)
                 {
-                    // tránh 100-continue roundtrip
                     Headers = { ExpectContinue = false }
                 };
 
-                // Header chuẩn của IA
                 req.Headers.TryAddWithoutValidation("authorization", $"LOW {ak}:{sk}");
                 req.Headers.TryAddWithoutValidation("x-archive-auto-make-bucket", "1");
                 req.Headers.TryAddWithoutValidation("x-archive-meta-collection", collectionAscii);
                 req.Headers.TryAddWithoutValidation("x-archive-meta-mediatype", "movies");
                 req.Headers.TryAddWithoutValidation("x-archive-meta-title", titleAscii);
                 req.Headers.TryAddWithoutValidation("x-archive-meta-language", languageAscii);
-                req.Headers.TryAddWithoutValidation("x-archive-queue-derive", "1"); // 👈 bắt derive để có preview
+                req.Headers.TryAddWithoutValidation("x-archive-queue-derive", "1");
 
                 // 3) Body + progress + Content-Length + MIME
                 if (ctx.FileStream.CanSeek) ctx.FileStream.Seek(0, SeekOrigin.Begin);
@@ -83,15 +88,14 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media.Source.Archive
                     );
                 });
 
-                // đoán MIME theo đuôi
                 string mime = GuessVideoMime(fileName);
 
                 var content = new StreamContent(ps);
                 content.Headers.ContentType = new MediaTypeHeaderValue(mime);
-                content.Headers.ContentLength = ctx.FileSize; // ✅ tránh TE: chunked
+                content.Headers.ContentLength = ctx.FileSize;
                 req.Content = content;
 
-                var http = _httpFactory.CreateClient("archive"); // bạn đã cấu hình UA, v.v.
+                var http = _httpFactory.CreateClient("archive");
                 using var resp = await http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ctx.Ct);
                 if (!resp.IsSuccessStatusCode)
                 {
@@ -101,15 +105,20 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media.Source.Archive
                     return new(false, null, null, null, $"Archive PUT failed: {(int)resp.StatusCode} {body}");
                 }
 
-                // 4) Derive async — trả về details/player url
-                var details = $"https://archive.org/details/{identifier}";
+                // 4) Derive async
                 await _hub.Clients.Group(ctx.JobId).SendAsync(
                     "upload.progress",
                     new { jobId = ctx.JobId, status = "Processing", percent = 100, text = "Deriving on Archive.org..." },
                     ctx.Ct
                 );
 
-                return new(true, identifier, $"/details/{identifier}", details, null);
+                // --- SỬA ĐỔI 2: Tạo link download trực tiếp ---
+                var detailsLink = $"https://archive.org/details/{identifier}";
+                var downloadLink = $"https://archive.org/download/{identifier}/{safeFileName}";
+
+                // Tham số thứ 4 là PlayerUrl => Trả về downloadLink (.mp4)
+                return new(true, identifier, $"/details/{identifier}", downloadLink, null);
+                // ----------------------------------------------
             }
             catch (OperationCanceledException)
             {
@@ -132,9 +141,27 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Media.Source.Archive
             return "application/octet-stream";
         }
 
+        // Hàm helper: Đảm bảo tên file có đuôi video
+        private static string EnsureVideoExtension(string fileName)
+        {
+            var validExtensions = new[] { ".mp4", ".mkv", ".webm", ".avi", ".mov", ".flv", ".wmv", ".m4v" };
+            var ext = Path.GetExtension(fileName);
+            if (!string.IsNullOrEmpty(ext) && validExtensions.Contains(ext.ToLowerInvariant()))
+            {
+                return fileName;
+            }
+            // Mặc định ép về .mp4 nếu không có đuôi hoặc đuôi lạ
+            return $"{fileName}.mp4";
+        }
+
         private static string MakeIdentifier(string prefix, string name, DateTime now)
         {
-            var baseName = Regex.Replace(Path.GetFileNameWithoutExtension(name).ToLowerInvariant(), "[^a-z0-9]+", "-").Trim('-');
+            var safeName = Path.GetFileNameWithoutExtension(name);
+            var baseName = Regex.Replace(safeName.ToLowerInvariant(), "[^a-z0-9]+", "-").Trim('-');
+
+            // Giới hạn độ dài để tránh ID quá dài
+            if (baseName.Length > 50) baseName = baseName.Substring(0, 50);
+
             return $"{prefix}{baseName}-{now:yyyyMMddHHmmss}";
         }
     }

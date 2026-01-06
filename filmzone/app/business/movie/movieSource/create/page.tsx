@@ -5,6 +5,7 @@ import { http } from '@/app/lib/apiClient'
 import type { AxiosError } from 'axios'
 import * as signalR from '@microsoft/signalr'
 
+// ... (Các phần type Provider, clampPct, ProgressBar giữ nguyên không đổi) ...
 type Provider = 'archive-file' | 'archive-link' | 'youtube-file'
 
 function clampPct(n: number | undefined | null) {
@@ -38,9 +39,8 @@ function ProgressBar({ label, percent, hint }: { label: string; percent: number;
 }
 
 export default function UploadPage() {
-    // ====== provider & common meta ======
+    // ... (Các state giữ nguyên) ...
     const [provider, setProvider] = useState<Provider>('archive-file')
-
     const [scope, setScope] = useState<'movie' | 'episode'>('movie')
     const [targetId, setTargetId] = useState<number | ''>('')
     const [quality, setQuality] = useState('1080p')
@@ -48,12 +48,10 @@ export default function UploadPage() {
     const [isVipOnly, setIsVipOnly] = useState(false)
     const [isActive, setIsActive] = useState(true)
 
-    // ====== file/link state ======
     const [file, setFile] = useState<File | null>(null)
     const [linkUrl, setLinkUrl] = useState('')
     const fileInputRef = useRef<HTMLInputElement | null>(null)
 
-    // ====== runtime / feedback ======
     const [submitting, setSubmitting] = useState(false)
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
     const [successMsg, setSuccessMsg] = useState<string | null>(null)
@@ -89,6 +87,7 @@ export default function UploadPage() {
         const base = http.defaults.baseURL ?? ''
         const hubUrl = `${base}/hubs/upload`
 
+        // SignalR đã có sẵn { withCredentials: true } ở đây, rất tốt.
         const conn = new signalR.HubConnectionBuilder().withUrl(hubUrl, { withCredentials: true }).withAutomaticReconnect().build()
 
         conn.on('upload.progress', (payload: any) => {
@@ -134,6 +133,7 @@ export default function UploadPage() {
         setServerProgress([])
     }, [provider])
 
+    // ============ HÀM ĐƯỢC SỬA ĐỔI CHÍNH ============
     async function onSubmit(e: React.FormEvent) {
         e.preventDefault()
         setSubmitting(true)
@@ -170,7 +170,9 @@ export default function UploadPage() {
                     IsActive: isActive,
                     LinkUrl: linkUrl.trim(),
                 }
+                // SỬA: Thêm withCredentials: true
                 const res = await http.post('/api/upload/archive/link', body, {
+                    withCredentials: true, 
                     timeout: 0,
                     headers: { 'Content-Type': 'application/json' },
                 })
@@ -189,7 +191,9 @@ export default function UploadPage() {
 
                 const url = provider === 'archive-file' ? '/api/upload/archive/file' : '/api/upload/youtube/file'
 
+                // SỬA: Thêm withCredentials: true
                 const res = await http.post(url, fd, {
+                    withCredentials: true,
                     timeout: 0,
                     onUploadProgress: (pe) => {
                         if (!pe.total) return
@@ -243,6 +247,7 @@ export default function UploadPage() {
             </div>
 
             <form onSubmit={onSubmit} className="space-y-8">
+                {/* ... (Phần render form giữ nguyên) ... */}
                 {/* Provider */}
                 <section className="space-y-2">
                     <h2 className="text-lg font-semibold">Chọn nhà cung cấp</h2>
