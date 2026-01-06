@@ -11,6 +11,7 @@ namespace FZ.Movie.Infrastructure.Repository
     public interface IUnitOfWork
     {
         Task<int> SaveChangesAsync(CancellationToken ct = default);
+        void ClearChangeTracker();
         Task<T> ExecuteInTransactionAsync<T>(Func<CancellationToken, Task<T>> action,
                                              System.Data.IsolationLevel iso = System.Data.IsolationLevel.ReadCommitted,
                                              CancellationToken ct = default);
@@ -22,6 +23,11 @@ namespace FZ.Movie.Infrastructure.Repository
 
         public Task<int> SaveChangesAsync(CancellationToken ct = default)
             => _db.SaveChangesAsync(ct);
+
+        public void ClearChangeTracker()
+        {
+            _db.ChangeTracker.Clear();
+        }
 
         public async Task<T> ExecuteInTransactionAsync<T>(
             Func<CancellationToken, Task<T>> action,

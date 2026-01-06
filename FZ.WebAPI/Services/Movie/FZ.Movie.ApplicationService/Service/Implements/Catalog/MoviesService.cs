@@ -357,17 +357,17 @@ namespace FZ.Movie.ApplicationService.Service.Implements.Catalog
                 }
                 catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException)
                 {
+                    // QUAN TRỌNG: Xóa bộ nhớ đệm của Context để tránh lỗi "Already being tracked"
+                    _unitOfWork.ClearChangeTracker();
+
                     currentRetry++;
                     _logger.LogWarning("Concurrency conflict detected for MovieID: {MovieID}. Retrying {Retry}/{Max}...", request.movieID, currentRetry, maxRetries);
 
                     if (currentRetry >= maxRetries)
                     {
-                        // Nếu hết lượt retry mà vẫn lỗi -> Báo lỗi cho người dùng
-                        return ResponseConst.Error<Movies>(409, "Dữ liệu đã bị thay đổi bởi người khác. Vui lòng tải lại trang và thử lại.");
+                        return ResponseConst.Error<Movies>(409, "Dữ liệu đã bị thay đổi bởi người khác. Vui lòng tải lại trang.");
                     }
 
-                    // Nếu chưa hết lượt -> Vòng lặp while sẽ chạy lại, Load lại dữ liệu mới nhất và map lại.
-                    // Có thể thêm delay nhỏ nếu muốn
                     await Task.Delay(100, ct);
                 }
                 catch (KeyNotFoundException)
